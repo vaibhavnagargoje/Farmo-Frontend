@@ -11,7 +11,7 @@ type AuthStep = "phone" | "otp" | "register"
 export default function AuthPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { sendOtp, login, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { sendOtp, login, refreshUser, isAuthenticated, isLoading: authLoading } = useAuth()
 
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode, setCountryCode] = useState("+91")
@@ -35,11 +35,12 @@ export default function AuthPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    // Avoid redirecting while onboarding a new user
+    if (!authLoading && isAuthenticated && step !== "register") {
       const redirect = searchParams.get("redirect") || "/"
       router.push(redirect)
     }
-  }, [isAuthenticated, authLoading, router, searchParams])
+  }, [isAuthenticated, authLoading, router, searchParams, step])
 
   const handleSendOtp = async () => {
     if (phone.length < 10) return
@@ -121,9 +122,33 @@ export default function AuthPage() {
     setIsLoading(true)
     setError(null)
 
-    // TODO: Call profile update API to save name and village
-    // For now, just redirect
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // Split full name into first/last for backend user fields
+    const nameParts = fullName.trim().split(" ").filter(Boolean)
+    const firstName = nameParts[0] || ""
+    const lastName = nameParts.slice(1).join(" ")
+
+    const response = await fetch("/api/auth/profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        full_name: fullName,
+        village,
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      setIsLoading(false)
+      setError(data.message || "Failed to update profile")
+      return
+    }
+
+    // Refresh user state in context
+    await refreshUser()
 
     setIsLoading(false)
 

@@ -10,7 +10,9 @@ export const USER_COOKIE_NAME = "farmo_user"
 // Cookie options for HTTP-only secure cookies
 export const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  // Secure is required for SameSite='None', but strict/lax work on http (localhost)
+  // Only use secure=true if we are definitely on https
+  secure: process.env.NODE_ENV === "production", 
   sameSite: "lax" as const,
   path: "/",
 }

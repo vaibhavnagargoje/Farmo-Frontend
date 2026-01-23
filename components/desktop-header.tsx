@@ -1,10 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
+import { useAuth } from "@/contexts/auth-context"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 
 interface NavItem {
   href: string
@@ -30,6 +32,7 @@ interface DesktopHeaderProps {
 
 export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const pathname = usePathname()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const navItems = variant === "driver" ? driverNavItems : farmerNavItems
 
   return (
@@ -76,36 +79,39 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
 
           {/* Right Section */}
           <div className="flex items-center gap-4">
-            {/* Location Selector */}
-            {variant === "farmer" && (
-              <button className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors">
-                <span className="material-symbols-outlined text-primary text-[18px]">location_on</span>
-                <span className="text-sm font-medium">Rampur Village</span>
-                <span className="material-symbols-outlined text-[16px] text-muted">expand_more</span>
-              </button>
+            {/* Notifications based on auth */}
+            {isAuthenticated && <NotificationDropdown variant={variant} />}
+
+            {/* Profile or Login */}
+            {isLoading ? (
+               <div className="h-9 w-24 bg-muted animate-pulse rounded-full" />
+            ) : isAuthenticated ? (
+              <Link
+                href={variant === "driver" ? "/driver/profile" : "/profile"}
+                className="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
+              >
+                <Avatar className="size-8 border-2 border-primary/20">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                    {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U"}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-sm font-semibold leading-none">
+                        {user?.first_name || "User"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground leading-none">
+                        View Profile
+                    </span>
+                </div>
+              </Link>
+            ) : (
+                <Button asChild variant="default" className="rounded-full px-6">
+                    <Link href="/auth">
+                        Login
+                    </Link>
+                </Button>
             )}
-
-            {/* Notifications */}
-            <NotificationDropdown variant={variant} />
-
-            {/* Profile */}
-            <Link
-              href={variant === "driver" ? "/driver/profile" : "/profile"}
-              className="flex items-center gap-3 pl-3 pr-4 py-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors"
-            >
-              <div className="size-8 rounded-full overflow-hidden border-2 border-primary/20">
-                <Image
-                  src={variant === "driver" ? "/indian-tractor-driver-man-portrait.jpg" : "/indian-farmer-man-portrait-smiling.jpg"}
-                  alt="Profile"
-                  width={32}
-                  height={32}
-                  className="object-cover"
-                />
-              </div>
-              <span className="text-sm font-semibold hidden xl:block">
-                {variant === "driver" ? "Driver" : "Rajesh Kumar"}
-              </span>
-            </Link>
           </div>
         </div>
       </div>

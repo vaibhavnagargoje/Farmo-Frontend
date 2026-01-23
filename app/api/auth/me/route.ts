@@ -30,7 +30,16 @@ export async function GET() {
     // If access token is expired but we have refresh token, try to refresh
     if ((!accessToken || isTokenExpired(accessToken)) && refreshToken) {
       try {
-        const refreshResponse = await fetch(`${API_BASE_URL}/../token/refresh/`, {
+        // Construct clean URL for refresh token endpoint
+        // Assuming API_BASE_URL is like 'http://.../api/v1'
+        // We need 'http://.../api/token/refresh/'
+        const baseUrl = new URL(API_BASE_URL)
+        const rootApiUrl = baseUrl.pathname.replace(/\/v1\/?$/, "") // Remove /v1 suffix
+        const refreshUrl = `${baseUrl.origin}${rootApiUrl}/token/refresh/`
+
+        console.log(`Refreshing token at: ${refreshUrl}`)
+
+        const refreshResponse = await fetch(refreshUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

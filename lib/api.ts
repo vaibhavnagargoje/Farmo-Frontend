@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   // Auth
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
+  USER_PROFILE: `${API_BASE_URL}/users/profile/`,
   
   // Partners
   PARTNER_REGISTER: `${API_BASE_URL}/partners/register/`,
