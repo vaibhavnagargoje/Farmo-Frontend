@@ -1,24 +1,26 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, CheckCircle, Mail, ChevronDown } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 type AuthStep = "phone" | "otp" | "register"
 
-// Simulated existing users (in production, this would be a backend check)
-const existingUsers = ["9876543210", "9988776655"]
-
 export default function AuthPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { sendOtp, login, isAuthenticated, isLoading: authLoading } = useAuth()
+
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode, setCountryCode] = useState("+91")
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState(["", "", "", ""])
-  const [isExistingUser, setIsExistingUser] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [devOtp, setDevOtp] = useState<string | null>(null) // For development testing
 
   // Registration fields
   const [fullName, setFullName] = useState("")
@@ -31,19 +33,38 @@ export default function AuthPage() {
     useRef<HTMLInputElement>(null),
   ]
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      const redirect = searchParams.get("redirect") || "/"
+      router.push(redirect)
+    }
+  }, [isAuthenticated, authLoading, router, searchParams])
+
   const handleSendOtp = async () => {
     if (phone.length < 10) return
     setIsLoading(true)
+    setError(null)
+    setDevOtp(null)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Format phone number (remove country code if accidentally included)
+    const cleanPhone = phone.replace(/\D/g, "").slice(-10)
+    const fullPhone = cleanPhone
 
-    // Check if user exists (simulate backend check)
-    const userExists = existingUsers.includes(phone.replace(/\D/g, ""))
-    setIsExistingUser(userExists)
+    const result = await sendOtp(fullPhone)
 
     setIsLoading(false)
-    setStep("otp")
+
+    if (result.success) {
+      // In development, show the OTP for testing
+      if (result.otp) {
+        setDevOtp(result.otp)
+        console.log("Development OTP:", result.otp)
+      }
+      setStep("otp")
+    } else {
+      setError(result.error || "Failed to send OTP")
+    }
   }
 
   const handleOtpChange = (index: number, value: string) => {
@@ -72,15 +93,25 @@ export default function AuthPage() {
     if (otpValue.length !== 4) return
 
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setError(null)
+
+    const cleanPhone = phone.replace(/\D/g, "").slice(-10)
+    const result = await login(cleanPhone, otpValue)
+
     setIsLoading(false)
 
-    if (isExistingUser) {
-      // Existing user - login directly
-      router.push("/")
+    if (result.success) {
+      if (result.isNewUser) {
+        // New user - show registration form
+        setIsNewUser(true)
+        setStep("register")
+      } else {
+        // Existing user - redirect
+        const redirect = searchParams.get("redirect") || "/"
+        router.push(redirect)
+      }
     } else {
-      // New user - show registration form
-      setStep("register")
+      setError(result.error || "Invalid OTP")
     }
   }
 
@@ -88,19 +119,37 @@ export default function AuthPage() {
     if (!fullName || !village) return
 
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setError(null)
+
+    // TODO: Call profile update API to save name and village
+    // For now, just redirect
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
     setIsLoading(false)
 
-    // Registration complete - redirect to home
-    router.push("/")
+    // Registration complete - redirect
+    const redirect = searchParams.get("redirect") || "/"
+    router.push(redirect)
   }
 
   const handleResendOtp = async () => {
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setError(null)
+
+    const cleanPhone = phone.replace(/\D/g, "").slice(-10)
+    const result = await sendOtp(cleanPhone)
+
     setIsLoading(false)
-    setOtp(["", "", "", ""])
-    otpRefs[0].current?.focus()
+
+    if (result.success) {
+      if (result.otp) {
+        setDevOtp(result.otp)
+      }
+      setOtp(["", "", "", ""])
+      otpRefs[0].current?.focus()
+    } else {
+      setError(result.error || "Failed to resend OTP")
+    }
   }
 
   // Auto-focus first OTP input when step changes
@@ -110,6 +159,15 @@ export default function AuthPage() {
     }
   }, [step])
 
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-[400px] flex flex-col gap-6">
@@ -117,7 +175,10 @@ export default function AuthPage() {
         {step !== "phone" && (
           <div className="flex items-center pt-8 pb-2 px-1">
             <button
-              onClick={() => setStep(step === "register" ? "otp" : "phone")}
+              onClick={() => {
+                setError(null)
+                setStep(step === "register" ? "otp" : "phone")
+              }}
               className="w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-sm text-navy hover:bg-muted/10 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -152,6 +213,20 @@ export default function AuthPage() {
         <div className="bg-card rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col gap-6 relative overflow-hidden">
           {/* Decorative accent */}
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-xl" />
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl px-4 py-3">
+              {error}
+            </div>
+          )}
+
+          {/* Development OTP Display */}
+          {devOtp && step === "otp" && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3">
+              <span className="font-semibold">Dev Mode:</span> OTP is <span className="font-mono font-bold">{devOtp}</span>
+            </div>
+          )}
 
           {/* STEP 1: Phone Input */}
           {step === "phone" && (
@@ -261,16 +336,6 @@ export default function AuthPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Show registration fields if new user (combined OTP + Register step) */}
-              {!isExistingUser && step === "otp" && (
-                <>
-                  <div className="h-px w-full bg-border" />
-                  <p className="text-muted text-xs text-center">
-                    New user? Complete verification to create your account
-                  </p>
-                </>
-              )}
 
               <button
                 onClick={handleVerifyOtp}

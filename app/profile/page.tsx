@@ -1,7 +1,13 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { useAuth } from "@/contexts/auth-context"
+import type { PartnerProfile } from "@/lib/api"
 
 const menuItems = [
   {
@@ -48,6 +54,67 @@ const menuItems = [
 ]
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth()
+  const [partner, setPartner] = useState<PartnerProfile | null>(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+
+  // Fetch partner profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!isAuthenticated) return
+
+      try {
+        const response = await fetch("/api/profile", {
+          method: "GET",
+          credentials: "include",
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setPartner(data.partner)
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile:", error)
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+
+    if (!authLoading && isAuthenticated) {
+      fetchProfile()
+    } else if (!authLoading && !isAuthenticated) {
+      setIsLoadingProfile(false)
+    }
+  }, [isAuthenticated, authLoading])
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+  }
+
+  // Get display name from user or partner data
+  const displayName = user
+    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Farmer"
+    : "Farmer"
+  const location = partner?.base_city || "India"
+  const totalBookings = partner?.jobs_completed || 0
+  const rating = partner?.rating ? parseFloat(partner.rating) : 0
+
+  // Show loading state
+  if (authLoading || isLoadingProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // If not authenticated, redirect to auth page
+  if (!isAuthenticated) {
+    router.push("/auth?redirect=/profile")
+    return null
+  }
   return (
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0">
       {/* Desktop Header */}
@@ -77,10 +144,10 @@ export default function ProfilePage() {
 
           {/* User Info */}
           <div className="text-center space-y-1">
-            <h1 className="text-white text-2xl font-bold tracking-tight">Rajesh Kumar</h1>
+            <h1 className="text-white text-2xl font-bold tracking-tight">{displayName}</h1>
             <div className="flex items-center justify-center gap-1.5 text-white/60 text-sm font-medium">
               <span className="material-symbols-outlined text-[16px]">location_on</span>
-              <span>Punjab, India</span>
+              <span>{location}</span>
             </div>
           </div>
         </div>
@@ -108,20 +175,20 @@ export default function ProfilePage() {
                   </button>
                 </div>
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-foreground">Rajesh Kumar</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
                   <div className="flex items-center justify-center gap-1.5 text-muted text-sm font-medium mt-1">
                     <span className="material-symbols-outlined text-[16px]">location_on</span>
-                    <span>Punjab, India</span>
+                    <span>{location}</span>
                   </div>
                 </div>
                 <div className="w-full pt-4 border-t border-border">
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <p className="text-2xl font-bold text-navy">12</p>
+                      <p className="text-2xl font-bold text-navy">{totalBookings}</p>
                       <p className="text-xs text-muted">Bookings</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-primary">4.8</p>
+                      <p className="text-2xl font-bold text-primary">{rating > 0 ? rating.toFixed(1) : "N/A"}</p>
                       <p className="text-xs text-muted">Rating</p>
                     </div>
                   </div>
@@ -181,7 +248,10 @@ export default function ProfilePage() {
             </div>
 
             {/* Log Out */}
-            <button className="flex items-center gap-4 w-fit px-6 py-3 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-4">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-4 w-fit px-6 py-3 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-4"
+            >
               <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center group-hover:bg-destructive/10 group-hover:text-destructive transition-colors">
                 <span className="material-symbols-outlined">logout</span>
               </div>
@@ -243,7 +313,10 @@ export default function ProfilePage() {
           ))}
 
           {/* Log Out */}
-          <button className="flex items-center justify-between w-full p-4 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-2">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-between w-full p-4 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-2"
+          >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-muted/20 text-muted flex items-center justify-center group-hover:bg-destructive/10 group-hover:text-destructive transition-colors">
                 <span className="material-symbols-outlined">logout</span>

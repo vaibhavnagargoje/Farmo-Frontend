@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { NotificationDropdown } from "@/components/notification-dropdown"
 
 interface NavItem {
   href: string
@@ -85,10 +86,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             )}
 
             {/* Notifications */}
-            <button className="relative size-10 rounded-full bg-muted/30 hover:bg-muted/50 flex items-center justify-center transition-colors">
-              <span className="material-symbols-outlined text-[20px]">notifications</span>
-              <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full"></span>
-            </button>
+            <NotificationDropdown variant={variant} />
 
             {/* Profile */}
             <Link
