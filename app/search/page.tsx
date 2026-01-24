@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
 import { SearchResultCard } from "@/components/search-result-card"
 
 const searchResults = [
@@ -50,6 +51,7 @@ export default function SearchPage() {
     <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
       <DesktopHeader variant="farmer" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-6 pb-2 px-6 lg:hidden">

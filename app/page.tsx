@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
 import { EquipmentCard } from "@/components/equipment-card"
 import { PopularItemCard } from "@/components/popular-item-card"
 import { API_ENDPOINTS, type Category } from "@/lib/api"
@@ -55,66 +56,7 @@ export default async function HomePage() {
       <DesktopHeader variant="farmer" />
 
       {/* Mobile Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 lg:hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2 cursor-pointer group">
-            <div className="flex items-center justify-center size-10 rounded-full bg-card text-primary shadow-sm group-active:scale-95 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">location_on</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-muted font-medium uppercase tracking-wide">Location</span>
-              <div className="flex items-center gap-1">
-                <h2 className="text-lg font-bold leading-none tracking-tight">Rampur Village</h2>
-                <span className="material-symbols-outlined text-[20px] text-foreground">arrow_drop_down</span>
-              </div>
-            </div>
-          </div>
-          <button className="flex items-center justify-center size-10 rounded-full bg-card text-foreground shadow-sm hover:bg-muted/10 active:scale-95 transition-transform relative">
-            <span className="material-symbols-outlined text-[22px]">notifications</span>
-            <span className="absolute top-2 right-2.5 size-2 bg-destructive rounded-full border border-card"></span>
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="px-4 pb-4 pt-1">
-          <Link
-            href="/search"
-            className="relative flex items-center w-full h-14 rounded-full shadow-sm bg-card overflow-hidden group focus-within:ring-2 focus-within:ring-primary/50 transition-all"
-          >
-            <div className="pl-5 pr-3 text-muted">
-              <span className="material-symbols-outlined text-[24px]">search</span>
-            </div>
-            <span className="flex-1 text-muted text-base font-medium">Find tractors, harvesters...</span>
-            <button className="mr-2 p-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20">
-              <span className="material-symbols-outlined text-[20px]">mic</span>
-            </button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Desktop Search Bar */}
-      <div className="hidden lg:block bg-background border-b border-border/50 py-4">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/search"
-              className="flex-1 max-w-2xl relative flex items-center h-12 rounded-full shadow-sm bg-card border border-border overflow-hidden group hover:shadow-md transition-all"
-            >
-              <div className="pl-5 pr-3 text-muted">
-                <span className="material-symbols-outlined text-[22px]">search</span>
-              </div>
-              <span className="flex-1 text-muted text-sm font-medium">Search for tractors, harvesters, sprayers...</span>
-              <button className="mr-2 p-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20">
-                <span className="material-symbols-outlined text-[18px]">mic</span>
-              </button>
-            </Link>
-            <button className="h-12 px-6 bg-primary text-white rounded-full font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">tune</span>
-              <span>Filters</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <MobileHeader />
 
       <main className="flex flex-col gap-6 pt-2 lg:pt-8 lg:max-w-7xl lg:mx-auto lg:px-6 lg:w-full">
         {/* Promo Banner */}

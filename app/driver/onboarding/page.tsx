@@ -4,6 +4,8 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
+
 
 export default function OnboardingPage() {
   const [pricePerAcre, setPricePerAcre] = useState(1200)
@@ -13,6 +15,7 @@ export default function OnboardingPage() {
     <div className="bg-background font-sans min-h-screen flex flex-col">
       {/* Desktop Header */}
       <DesktopHeader variant="driver" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="flex items-center justify-between py-2 px-4 pt-12 lg:hidden">

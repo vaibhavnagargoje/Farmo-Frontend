@@ -2,6 +2,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
+
 
 const bookings = [
   {
@@ -38,6 +40,7 @@ export default function BookingsPage() {
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
       <DesktopHeader variant="farmer" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-12 pb-4 px-6 border-b border-border lg:hidden">

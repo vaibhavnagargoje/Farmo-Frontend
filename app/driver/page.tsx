@@ -2,6 +2,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
+
 import { Switch } from "@/components/ui/switch"
 
 const upcomingSchedule = [
@@ -38,6 +40,7 @@ export default function DriverDashboard() {
     <div className="relative flex h-full w-full flex-col overflow-x-hidden bg-background min-h-screen">
       {/* Desktop Header */}
       <DesktopHeader variant="driver" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="bg-navy pt-14 pb-6 px-5 sticky top-0 z-30 rounded-b-[2rem] shadow-lg lg:hidden">

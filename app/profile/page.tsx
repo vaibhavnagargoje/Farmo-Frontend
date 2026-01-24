@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
 import { useAuth } from "@/contexts/auth-context"
 import type { PartnerProfile } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -198,6 +199,7 @@ export default function ProfilePage() {
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0">
       {/* Desktop Header */}
       <DesktopHeader variant="farmer" />
+      <MobileHeader />
 
       {/* Mobile Navy Header */}
       <header className="bg-navy rounded-b-[2.5rem] pt-14 pb-12 px-6 shadow-lg relative overflow-hidden z-10 lg:hidden">
@@ -228,7 +230,7 @@ export default function ProfilePage() {
             <h1 className="text-white text-2xl font-bold tracking-tight">{displayName}</h1>
             <div className="flex items-center justify-center gap-1.5 text-white/60 text-sm font-medium">
               <span className="material-symbols-outlined text-[16px]">location_on</span>
-              <span>{location}</span>
+              <span></span>
             </div>
           </div>
         </div>

@@ -15,9 +15,6 @@ interface NavItem {
 }
 
 const farmerNavItems: NavItem[] = [
-  { href: "/", icon: "home", label: "Home" },
-  { href: "/search", icon: "search", label: "Search Equipment" },
-  { href: "/bookings", icon: "calendar_month", label: "My Bookings" },
 ]
 
 const driverNavItems: NavItem[] = [
@@ -44,41 +41,34 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             <div className="size-10 bg-navy rounded-xl flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-xl">agriculture</span>
             </div>
-            <span className="text-xl font-bold text-navy tracking-tight">My Farmo</span>
+            <div className="flex flex-col justify-center">
+                   <span className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</span>
+                   <div className="flex items-center">
+                       <span className="text-xs font-medium text-muted-foreground leading-none">Rampur</span>
+                       <span className="material-symbols-outlined text-[14px] text-muted-foreground">arrow_drop_down</span>
+                   </div>
+               </div>
           </Link>
 
-          {/* Navigation */}
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && item.href !== "/driver" && pathname.startsWith(item.href))
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <span
-                    className="material-symbols-outlined text-[20px]"
-                    style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
-                  >
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </Link>
-              )
-            })}
-          </nav>
-
+         
           {/* Right Section */}
           <div className="flex items-center gap-4">
+             {/* Search Bar */}
+             <div className="w-[280px]">
+              <div className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">
+                <div className="pl-3 pr-2 text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">search</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search for tractors..."
+                  className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70 h-full w-full"
+                />
+                 <button className="mr-1 p-1.5 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                   <span className="material-symbols-outlined text-[18px]">tune</span>
+                </button>
+              </div>
+            </div>
             {/* Notifications based on auth */}
             {isAuthenticated && <NotificationDropdown variant={variant} />}
 

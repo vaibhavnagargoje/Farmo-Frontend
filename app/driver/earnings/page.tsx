@@ -1,6 +1,8 @@
 import Image from "next/image"
 import Link from "next/link"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
+
 import { BottomNav } from "@/components/bottom-nav"
 
 const earningsData = {
@@ -36,6 +38,7 @@ export default function EarningsPage() {
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
       <DesktopHeader variant="driver" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="bg-navy pt-14 pb-6 px-5 sticky top-0 z-30 rounded-b-[2rem] shadow-lg lg:hidden">

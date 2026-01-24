@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useParams } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
 import { API_ENDPOINTS, type Service, type Category } from "@/lib/api"
 
 // Sort Options
@@ -104,6 +105,7 @@ export default function CategoryServicesPage() {
     <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
       <DesktopHeader variant="farmer" />
+      <MobileHeader />
 
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-4 pb-3 px-4 border-b border-border/50 lg:hidden">

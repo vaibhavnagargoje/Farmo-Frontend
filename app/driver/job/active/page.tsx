@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { DesktopHeader } from "@/components/desktop-header"
+import { MobileHeader } from "@/components/mobile-header"
+
 
 export default function ActiveJobPage() {
   const [elapsed, setElapsed] = useState({ hours: 1, minutes: 42, seconds: 18 })
@@ -32,6 +34,7 @@ export default function ActiveJobPage() {
     <div className="bg-background font-sans min-h-screen flex flex-col overflow-hidden">
       {/* Desktop Header */}
       <DesktopHeader variant="driver" />
+      <MobileHeader />
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex max-w-7xl mx-auto w-full h-[calc(100vh-80px)]">
