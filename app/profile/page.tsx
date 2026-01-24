@@ -8,6 +8,18 @@ import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { useAuth } from "@/contexts/auth-context"
 import type { PartnerProfile } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 
 const menuItems = [
   {
@@ -55,9 +67,76 @@ const menuItems = [
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth()
+  const { user, isLoading: authLoading, isAuthenticated, logout, refreshUser } = useAuth()
   const [partner, setPartner] = useState<PartnerProfile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const { toast } = useToast()
+
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm, setEditForm] = useState({
+    first_name: "",
+    last_name: "",
+    address: "",
+  })
+
+  // Update form when data available
+  useEffect(() => {
+    if (user) {
+      setEditForm((prev) => ({
+        ...prev,
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        // If user is not a partner, maybe we want to show address here if we had it
+      }))
+    }
+    if (partner) {
+      setEditForm((prev) => ({
+        ...prev,
+        address: partner.base_city || "",
+      }))
+    }
+  }, [user, partner])
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update")
+      }
+
+      const data = await response.json()
+      
+      // Refresh context
+      await refreshUser()
+      
+      // Update local partner state if returned
+      if (data.partner) {
+        setPartner(data.partner)
+      }
+
+      toast({
+        title: "Profile Updated",
+        description: "Your changes have been saved successfully.",
+      })
+      setIsEditOpen(false)
+    } catch (error) {
+      console.error(error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   // Fetch partner profile data
   useEffect(() => {
@@ -137,7 +216,9 @@ export default function ProfilePage() {
                 className="w-full h-full object-cover rounded-full border-2 border-white/20"
               />
             </div>
-            <button className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-white hover:text-primary transition-colors duration-200 border-2 border-navy flex items-center justify-center">
+            <button 
+              onClick={() => setIsEditOpen(true)}
+              className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-white hover:text-primary transition-colors duration-200 border-2 border-navy flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">edit</span>
             </button>
           </div>
@@ -155,110 +236,116 @@ export default function ProfilePage() {
 
       {/* Desktop Layout */}
       <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-8">
-        <div className="grid grid-cols-3 gap-8">
-          {/* Left Sidebar - Profile Card */}
-          <div className="col-span-1">
-            <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative group cursor-pointer">
-                  <div className="w-32 h-32 rounded-full p-1 bg-navy/10">
-                    <Image
-                      src="/indian-farmer-man-portrait-smiling.jpg"
-                      alt="Profile picture"
-                      width={128}
-                      height={128}
-                      className="w-full h-full object-cover rounded-full border-2 border-navy/20"
-                    />
-                  </div>
-                  <button className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
+        <div className="flex flex-col gap-8">
+          {/* Top Banner - Monetization CTA */}
+          <div className="w-full bg-primary rounded-2xl px-8 py-6 text-white shadow-lg shadow-primary/30 relative overflow-hidden group">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-32 pointer-events-none transition-transform group-hover:scale-110 duration-500"></div>
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="hidden md:block p-3 bg-white/20 rounded-xl">
+                    <span className="material-symbols-outlined text-[32px] text-white">agriculture</span>
                 </div>
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
-                  <div className="flex items-center justify-center gap-1.5 text-muted text-sm font-medium mt-1">
-                    <span className="material-symbols-outlined text-[16px]">location_on</span>
-                    <span>{location}</span>
-                  </div>
-                </div>
-                <div className="w-full pt-4 border-t border-border">
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-bold text-navy">{totalBookings}</p>
-                      <p className="text-xs text-muted">Bookings</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{rating > 0 ? rating.toFixed(1) : "N/A"}</p>
-                      <p className="text-xs text-muted">Rating</p>
-                    </div>
-                  </div>
+                <div>
+                  <h2 className="text-2xl font-bold leading-tight">Earn with your Tractor</h2>
+                  <p className="text-white/90 text-sm font-medium opacity-90 mt-1">
+                    List your equipment for rent today and start earning extra income.
+                  </p>
                 </div>
               </div>
+              <Link
+                href="/driver/onboarding"
+                className="inline-flex bg-white text-primary hover:bg-gray-50 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-transform active:scale-95 items-center gap-2"
+              >
+                <span>List Your Service</span>
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </Link>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="col-span-2 flex flex-col gap-6">
-            {/* Monetization CTA */}
-            <div className="bg-primary rounded-2xl p-8 text-white shadow-lg shadow-primary/30 relative overflow-hidden group">
-              <div className="absolute right-0 top-0 w-48 h-48 bg-white/10 rounded-full -mr-12 -mt-12 pointer-events-none transition-transform group-hover:scale-110 duration-500"></div>
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-bold leading-tight">Earn with your Tractor</h2>
-                  <p className="text-white/90 font-medium opacity-90 leading-relaxed max-w-md">
-                    List your equipment for rent today and start earning extra income from farmers in your area.
-                  </p>
-                  <Link
-                    href="/driver/onboarding"
-                    className="inline-flex bg-white text-primary hover:bg-gray-50 px-6 py-3 rounded-xl font-bold shadow-sm transition-transform active:scale-95 items-center gap-2 mt-2"
-                  >
-                    <span>List Your Service</span>
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                  </Link>
-                </div>
-                <div className="hidden xl:block">
-                  <span className="material-symbols-outlined text-[100px] text-white/20">agriculture</span>
+          <div className="grid grid-cols-3 gap-8 items-start">
+            {/* Left Sidebar - Profile Card */}
+            <div className="col-span-1">
+              <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative group cursor-pointer">
+                    <div className="w-32 h-32 rounded-full p-1 bg-navy/10">
+                      <Image
+                        src="/indian-farmer-man-portrait-smiling.jpg"
+                        alt="Profile picture"
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-cover rounded-full border-2 border-navy/20"
+                      />
+                    </div>
+                    <button 
+                      onClick={() => setIsEditOpen(true)}
+                      className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+                    <div className="flex items-center justify-center gap-1.5 text-muted text-sm font-medium mt-1">
+                      <span className="material-symbols-outlined text-[16px]">location_on</span>
+                      <span>{location}</span>
+                    </div>
+                  </div>
+                  <div className="w-full pt-4 border-t border-border">
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-navy">{totalBookings}</p>
+                        <p className="text-xs text-muted">Bookings</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{rating > 0 ? rating.toFixed(1) : "N/A"}</p>
+                        <p className="text-xs text-muted">Rating</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Settings Grid */}
-            <div>
-              <h2 className="text-xl font-bold text-foreground mb-4">Account Settings</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {menuItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="flex items-start gap-4 p-5 bg-card rounded-xl border border-border hover:shadow-lg transition-all group"
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+            {/* Main Content - Settings */}
+            <div className="col-span-2 flex flex-col gap-6">
+              {/* Settings Grid */}
+              <div>
+                <h2 className="text-xl font-bold text-foreground mb-4">Account Settings</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {menuItems.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className="flex items-start gap-4 p-5 bg-card rounded-xl border border-border hover:shadow-lg transition-all group"
                     >
-                      <span className="material-symbols-outlined">{item.icon}</span>
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-foreground font-semibold block">{item.label}</span>
-                      {item.subtitle && <span className="text-xs text-primary font-medium">{item.subtitle}</span>}
-                      <p className="text-xs text-muted mt-1">{item.description}</p>
-                    </div>
-                  </Link>
-                ))}
+                      <div
+                        className={`w-12 h-12 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+                      >
+                        <span className="material-symbols-outlined">{item.icon}</span>
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-foreground font-semibold block">{item.label}</span>
+                        {item.subtitle && <span className="text-xs text-primary font-medium">{item.subtitle}</span>}
+                        <p className="text-xs text-muted mt-1">{item.description}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Log Out */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-4 w-fit px-6 py-3 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-4"
-            >
-              <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center group-hover:bg-destructive/10 group-hover:text-destructive transition-colors">
-                <span className="material-symbols-outlined">logout</span>
-              </div>
-              <span className="text-muted font-medium group-hover:text-destructive transition-colors">
-                Log Out
-              </span>
-            </button>
+              {/* Log Out */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-4 w-fit px-6 py-3 bg-transparent rounded-xl hover:bg-destructive/5 transition-colors group mt-4"
+              >
+                <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center group-hover:bg-destructive/10 group-hover:text-destructive transition-colors">
+                  <span className="material-symbols-outlined">logout</span>
+                </div>
+                <span className="text-muted font-medium group-hover:text-destructive transition-colors">
+                  Log Out
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -330,6 +417,52 @@ export default function ProfilePage() {
       </main>
 
       <BottomNav variant="farmer" />
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Make changes to your profile here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={editForm.first_name}
+                onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={editForm.last_name}
+                onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="address">Location / Village</Label>
+              <Input
+                id="address"
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                placeholder="e.g. Pune, Maharashtra"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

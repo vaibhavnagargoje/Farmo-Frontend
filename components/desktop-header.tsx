@@ -100,9 +100,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                     <span className="text-sm font-semibold leading-none">
                         {user?.first_name || "User"}
                     </span>
-                    <span className="text-[10px] text-muted-foreground leading-none">
-                        View Profile
-                    </span>
+                   
                 </div>
               </Link>
             ) : (

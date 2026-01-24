@@ -95,6 +95,7 @@ export async function GET() {
   }
 }
 
+
 // PATCH - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
@@ -142,47 +143,65 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
+    const { first_name, last_name, address, ...otherData } = body
 
-    // Update partner profile
-    const response = await fetchWithAuth(API_ENDPOINTS.PARTNER_PROFILE, token, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    })
+    // 1. Update basic User info (Name) via /users/profile/
+    if (first_name !== undefined || last_name !== undefined) {
+      const userUpdatePayload: any = {}
+      if (first_name) userUpdatePayload.first_name = first_name
+      if (last_name) userUpdatePayload.last_name = last_name
+      if (address) userUpdatePayload.village = address // Update CustomerProfile default_address as well
 
-    if (!response.ok) {
-      const error = await response.json()
-      return NextResponse.json(
-        { message: error.detail || "Failed to update profile", errors: error },
-        { status: response.status }
-      )
+      await fetchWithAuth(API_ENDPOINTS.USER_PROFILE, token, {
+        method: "POST", 
+        body: JSON.stringify(userUpdatePayload)
+      })
     }
 
-    const updatedProfile = await response.json()
+    // 2. Update Partner Profile (Address/City) if exists
+    let partnerData = null
+    
+    // We attempt to update partner profile if address or other partner fields are present
+    const partnerPayload: any = { ...otherData }
+    if (address) partnerPayload.base_city = address
 
-    // Update the user cookie if name changed
-    if (body.first_name || body.last_name) {
-      const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
-      if (userCookie) {
-        const user = JSON.parse(userCookie)
-        const updatedUser = {
-          ...user,
-          first_name: body.first_name || user.first_name,
-          last_name: body.last_name || user.last_name,
-        }
-        cookieStore.set(USER_COOKIE_NAME, JSON.stringify(updatedUser), {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 7 * 24 * 60 * 60,
-        })
+    if (Object.keys(partnerPayload).length > 0) {
+      const partnerResponse = await fetchWithAuth(API_ENDPOINTS.PARTNER_PROFILE, token, {
+        method: "PATCH",
+        body: JSON.stringify(partnerPayload),
+      })
+      
+      if (partnerResponse.ok) {
+        partnerData = await partnerResponse.json()
       }
     }
 
+    // 3. Update User Cookie
+    const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
+    let user = userCookie ? JSON.parse(userCookie) : null
+
+    if (user && (first_name || last_name)) {
+      if (first_name) user.first_name = first_name
+      if (last_name) user.last_name = last_name
+      
+      cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), {
+        httpOnly: false, // Ensure client side can read it if needed
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+      })
+    }
+    
+    // If no partner data fetched yet (but we didn't fail), try to fetch it to return consistent response
+    // Or just return what we have.
+    
     return NextResponse.json({
       message: "Profile updated successfully",
-      partner: updatedProfile,
+      user,
+      partner: partnerData
     })
+
   } catch (error) {
     console.error("Profile update error:", error)
     return NextResponse.json(
@@ -191,3 +210,4 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+
