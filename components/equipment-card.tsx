@@ -6,13 +6,17 @@ interface EquipmentCardProps {
   name: string
   image: string
   price: string
+  slug?: string
   className?: string
 }
 
-export function EquipmentCard({ name, image, price, className }: EquipmentCardProps) {
+export function EquipmentCard({ name, image, price, slug, className }: EquipmentCardProps) {
+  // Use slug if provided, otherwise create from name
+  const categorySlug = slug || name.toLowerCase().replace(/\s+/g, "-")
+  
   return (
     <Link
-      href={`/search?category=${name.toLowerCase()}`}
+      href={`/category/${categorySlug}`}
       className={cn(
         "group relative flex flex-col items-center p-1 rounded-xl lg:rounded-2xl bg-card border border-border shadow-sm hover:shadow-lg transition-all active:scale-[0.98]",
         className,

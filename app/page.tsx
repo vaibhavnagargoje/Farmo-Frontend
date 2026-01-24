@@ -4,29 +4,26 @@ import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { EquipmentCard } from "@/components/equipment-card"
 import { PopularItemCard } from "@/components/popular-item-card"
+import { API_ENDPOINTS, type Category } from "@/lib/api"
 
-const equipmentCategories = [
-  {
-    name: "Tractor",
-    image: "/red-farm-tractor-in-field.jpg",
-    price: "Starting ₹600/hr",
-  },
-  {
-    name: "Harvester",
-    image: "/green-combine-harvester-wheat-field.jpg",
-    price: "Starting ₹1200/hr",
-  },
-  {
-    name: "Sprayer",
-    image: "/agricultural-sprayer-machinery.jpg",
-    price: "Starting ₹400/hr",
-  },
-  {
-    name: "Cultivator",
-    image: "/soil-cultivator-farm-implement.jpg",
-    price: "Starting ₹300/hr",
-  },
-]
+async function getCategories(): Promise<Category[]> {
+  try {
+    const res = await fetch(API_ENDPOINTS.CATEGORIES, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    })
+    
+    if (!res.ok) {
+      console.error("Failed to fetch categories")
+      return []
+    }
+    
+    const data = await res.json()
+    return data.results || data // Handle pagination or direct array
+  } catch (error) {
+    console.error("Error fetching categories:", error)
+    return []
+  }
+}
 
 const popularItems = [
   {
@@ -49,7 +46,9 @@ const popularItems = [
   },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const categories = await getCategories()
+
   return (
     <div className="flex flex-col min-h-screen pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
@@ -155,9 +154,22 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {equipmentCategories.map((item) => (
-              <EquipmentCard key={item.name} name={item.name} image={item.image} price={item.price} />
-            ))}
+            {categories.length > 0 ? (
+              categories.map((item) => (
+                <EquipmentCard 
+                  key={item.id} 
+                  name={item.name}
+                  slug={item.slug}
+                  image={item.icon || "/placeholder.svg"} 
+                  price="View Services" 
+                />
+              ))
+            ) : (
+              // Fallback if no categories found or error
+              <div className="col-span-2 lg:col-span-4 text-center py-8 text-muted">
+                <p>Loading categories...</p>
+              </div>
+            )}
           </div>
         </section>
 
