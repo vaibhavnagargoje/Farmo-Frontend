@@ -377,7 +377,7 @@ function ServiceCard({ service, viewMode }: { service: Service; viewMode: "grid"
   if (viewMode === "list") {
     return (
       <Link
-        href={`/booking/${service.id}`}
+        href={`/booking/new/${service.id}`}
         className="bg-card rounded-2xl p-4 shadow-sm border border-border/50 flex gap-4 group hover:shadow-lg transition-shadow"
       >
         <div className="relative w-32 h-24 bg-muted/20 rounded-xl overflow-hidden shrink-0">
@@ -420,7 +420,7 @@ function ServiceCard({ service, viewMode }: { service: Service; viewMode: "grid"
   // Grid View
   return (
     <Link
-      href={`/booking/${service.id}`}
+      href={`/booking/new/${service.id}`}
       className="bg-card rounded-2xl p-3 lg:p-4 shadow-sm border border-border/50 flex flex-col gap-3 group hover:shadow-lg transition-shadow"
     >
       <div className="relative w-full aspect-[4/3] bg-muted/20 rounded-xl overflow-hidden">

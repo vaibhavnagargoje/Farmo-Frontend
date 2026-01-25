@@ -74,7 +74,7 @@ export function SearchResultCard({ id, name, image, price, rating, location, dis
         </div>
 
         <Link
-          href={`/booking/${id}`}
+          href={`/booking/new/${id}`}
           className="w-full py-3 lg:py-3.5 rounded-xl bg-primary text-white font-bold text-sm lg:text-base hover:bg-primary/90 transition-all active:scale-[0.98] shadow-sm hover:shadow-md text-center"
         >
           Book Now
