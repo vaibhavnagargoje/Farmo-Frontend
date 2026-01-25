@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
+import { LocationDropdown } from "@/components/location-dropdown"
 import { useAuth } from "@/contexts/auth-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -17,38 +18,37 @@ interface NavItem {
 const farmerNavItems: NavItem[] = [
 ]
 
-const driverNavItems: NavItem[] = [
-  { href: "/driver", icon: "dashboard", label: "Dashboard" },
-  { href: "/driver/earnings", icon: "account_balance_wallet", label: "Earnings" },
-  { href: "/driver/settings", icon: "settings", label: "Settings" },
+const partnerNavItems: NavItem[] = [
+  { href: "/partner", icon: "dashboard", label: "Dashboard" },
+  { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings" },
+  { href: "/partner/settings", icon: "settings", label: "Settings" },
 ]
 
 interface DesktopHeaderProps {
-  variant?: "farmer" | "driver"
+  variant?: "farmer" | "partner"
 }
 
 export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const pathname = usePathname()
   const { user, isAuthenticated, isLoading } = useAuth()
-  const navItems = variant === "driver" ? driverNavItems : farmerNavItems
+  const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
   return (
     <header className="hidden lg:block sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={variant === "driver" ? "/driver" : "/"} className="flex items-center gap-3">
-            <div className="size-10 bg-navy rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <Link href={variant === "partner" ? "/partner" : "/"} className="size-10 bg-navy rounded-xl flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-xl">agriculture</span>
-            </div>
+            </Link>
             <div className="flex flex-col justify-center">
-                   <span className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</span>
-                   <div className="flex items-center">
-                       <span className="text-xs font-medium text-muted-foreground leading-none">Rampur</span>
-                       <span className="material-symbols-outlined text-[14px] text-muted-foreground">arrow_drop_down</span>
-                   </div>
-               </div>
-          </Link>
+              <Link href={variant === "partner" ? "/partner" : "/"} className="text-xl font-bold text-navy leading-none tracking-tight">
+                Farmo
+              </Link>
+              <LocationDropdown variant="desktop" />
+            </div>
+          </div>
 
          
           {/* Right Section */}
@@ -77,7 +77,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                <div className="h-9 w-24 bg-muted animate-pulse rounded-full" />
             ) : isAuthenticated ? (
               <Link
-                href={variant === "driver" ? "/driver/profile" : "/profile"}
+                href={variant === "partner" ? "/partner/profile" : "/profile"}
                 className="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
               >
                 <Avatar className="size-8 border-2 border-primary/20">

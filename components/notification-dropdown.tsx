@@ -31,7 +31,7 @@ const farmerNotifications: Notification[] = [
   },
   {
     id: "3",
-    title: "Driver On The Way",
+    title: "Partner On The Way",
     message: "Suresh is on his way with the harvester",
     time: "3 hours ago",
     read: true,
@@ -47,7 +47,7 @@ const farmerNotifications: Notification[] = [
   },
 ]
 
-const driverNotifications: Notification[] = [
+const partnerNotifications: Notification[] = [
   {
     id: "1",
     title: "New Booking Request",
@@ -96,13 +96,13 @@ const getIconForType = (type: Notification["type"]) => {
 }
 
 interface NotificationDropdownProps {
-  variant?: "farmer" | "driver"
+  variant?: "farmer" | "partner"
 }
 
 export function NotificationDropdown({ variant = "farmer" }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const notifications = variant === "driver" ? driverNotifications : farmerNotifications
+  const notifications = variant === "partner" ? partnerNotifications : farmerNotifications
   const unreadCount = notifications.filter((n) => !n.read).length
 
   useEffect(() => {

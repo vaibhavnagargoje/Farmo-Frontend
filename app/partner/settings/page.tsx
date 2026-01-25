@@ -28,7 +28,7 @@ const settingsGroups: SettingsGroup[] = [
     title: "Account",
     items: [
       { icon: "person", label: "Personal Information", description: "Update your name, phone, and email", href: "#" },
-      { icon: "badge", label: "KYC Documents", description: "Manage your identity documents", href: "/driver/onboarding" },
+      { icon: "badge", label: "KYC Documents", description: "Manage your identity documents", href: "/partner/onboarding" },
       { icon: "agriculture", label: "Vehicle Details", description: "Update your tractor information", href: "#" },
     ],
   },
@@ -44,7 +44,7 @@ const settingsGroups: SettingsGroup[] = [
     title: "Payment",
     items: [
       { icon: "account_balance", label: "Bank Account", description: "HDFC Bank ****4521", href: "#" },
-      { icon: "receipt_long", label: "Payment History", description: "View all transactions", href: "/driver/earnings" },
+      { icon: "receipt_long", label: "Payment History", description: "View all transactions", href: "/partner/earnings" },
       { icon: "request_quote", label: "Tax Documents", description: "Download tax statements", href: "#" },
     ],
   },
@@ -72,14 +72,14 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
-      <DesktopHeader variant="driver" />
+      <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-12 pb-4 px-6 border-b border-border lg:hidden">
         <div className="flex items-center gap-4">
           <Link
-            href="/driver"
+            href="/partner"
             className="size-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground shadow-sm"
           >
             <span className="material-symbols-outlined">arrow_back</span>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
         </button>
       </main>
 
-      <BottomNav variant="driver" />
+      <BottomNav variant="partner" />
     </div>
   )
 }

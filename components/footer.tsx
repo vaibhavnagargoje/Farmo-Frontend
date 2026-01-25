@@ -40,13 +40,13 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* For Operators */}
+          {/* For Partners */}
           <div>
-            <h4 className="font-semibold mb-4">For Operators</h4>
+            <h4 className="font-semibold mb-4">For Partners</h4>
             <ul className="space-y-3">
-              <li><Link href="/driver/onboarding" className="text-white/60 hover:text-white text-sm transition-colors">List Your Equipment</Link></li>
-              <li><Link href="/driver" className="text-white/60 hover:text-white text-sm transition-colors">Driver Dashboard</Link></li>
-              <li><Link href="/driver/earnings" className="text-white/60 hover:text-white text-sm transition-colors">Earnings</Link></li>
+              <li><Link href="/partner/onboarding" className="text-white/60 hover:text-white text-sm transition-colors">List Your Equipment</Link></li>
+              <li><Link href="/partner" className="text-white/60 hover:text-white text-sm transition-colors">Partner Dashboard</Link></li>
+              <li><Link href="/partner/earnings" className="text-white/60 hover:text-white text-sm transition-colors">Earnings</Link></li>
               <li><a href="#" className="text-white/60 hover:text-white text-sm transition-colors">Partner Support</a></li>
             </ul>
           </div>

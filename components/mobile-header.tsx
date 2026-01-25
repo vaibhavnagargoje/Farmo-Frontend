@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { LocationDropdown } from "@/components/location-dropdown"
 
 interface MobileHeaderProps {
   className?: string
   location?: string
 }
 
-export function MobileHeader({ className, location = "Rampur" }: MobileHeaderProps) {
+export function MobileHeader({ className }: MobileHeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -28,18 +29,15 @@ export function MobileHeader({ className, location = "Rampur" }: MobileHeaderPro
             "flex items-center gap-3 transition-all duration-300 ease-in-out",
             isSearchExpanded ? "opacity-0 -translate-x-full absolute pointer-events-none" : "opacity-100 translate-x-0 relative"
           )}>
-            <Link href="/" className="flex items-center gap-3 shrink-0">
-               <div className="size-10 bg-navy rounded-xl flex items-center justify-center shadow-sm">
+            <div className="flex items-center gap-3 shrink-0">
+               <Link href="/" className="size-10 bg-navy rounded-xl flex items-center justify-center shadow-sm">
                    <span className="material-symbols-outlined text-primary text-[24px]">agriculture</span>
-               </div>
+               </Link>
                <div className="flex flex-col justify-center">
-                   <span className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</span>
-                   <div className="flex items-center">
-                       <span className="text-xs font-medium text-muted-foreground leading-none">{location}</span>
-                       <span className="material-symbols-outlined text-[14px] text-muted-foreground">arrow_drop_down</span>
-                   </div>
+                   <Link href="/" className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</Link>
+                   <LocationDropdown variant="mobile" />
                </div>
-            </Link>
+            </div>
         </div>
 
         {/* Right Actions / Search Bar */}

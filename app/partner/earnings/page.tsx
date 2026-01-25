@@ -37,14 +37,14 @@ export default function EarningsPage() {
   return (
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       {/* Desktop Header */}
-      <DesktopHeader variant="driver" />
+      <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Mobile Header */}
       <header className="bg-navy pt-14 pb-6 px-5 sticky top-0 z-30 rounded-b-[2rem] shadow-lg lg:hidden">
         <div className="flex items-center justify-between">
           <Link
-            href="/driver"
+            href="/partner"
             className="size-10 rounded-full bg-white/10 flex items-center justify-center text-white"
           >
             <span className="material-symbols-outlined">arrow_back</span>
@@ -287,7 +287,7 @@ export default function EarningsPage() {
         </div>
       </main>
 
-      <BottomNav variant="driver" />
+      <BottomNav variant="partner" />
     </div>
   )
 }

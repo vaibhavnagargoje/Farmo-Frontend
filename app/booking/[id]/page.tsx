@@ -114,14 +114,14 @@ export default function BookingDetailsPage() {
 
           {/* Sidebar */}
           <div className="col-span-1 flex flex-col gap-6">
-            {/* Driver Info */}
+            {/* Partner Info */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
               <h3 className="font-bold text-lg text-foreground mb-4">Operator Details</h3>
               <div className="flex flex-col items-center gap-4">
                 <div className="size-20 rounded-full overflow-hidden border-2 border-primary/20">
                   <Image
                     src="/placeholder.svg?height=80&width=80"
-                    alt="Driver"
+                    alt="Partner"
                     width={80}
                     height={80}
                     className="object-cover"
@@ -219,14 +219,14 @@ export default function BookingDetailsPage() {
           </div>
         </div>
 
-        {/* Driver Info */}
+        {/* Partner Info */}
         <div className="bg-card rounded-2xl p-5 shadow-sm border border-border">
           <h3 className="font-bold text-foreground mb-4">Operator Details</h3>
           <div className="flex items-center gap-4">
             <div className="size-14 rounded-full overflow-hidden border-2 border-primary/20">
               <Image
                 src="/placeholder.svg?height=56&width=56"
-                alt="Driver"
+                alt="Partner"
                 width={56}
                 height={56}
                 className="object-cover"

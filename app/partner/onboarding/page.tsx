@@ -14,13 +14,13 @@ export default function OnboardingPage() {
   return (
     <div className="bg-background font-sans min-h-screen flex flex-col">
       {/* Desktop Header */}
-      <DesktopHeader variant="driver" />
+      <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Mobile Header */}
       <header className="flex items-center justify-between py-2 px-4 pt-12 lg:hidden">
         <Link
-          href="/driver"
+          href="/partner"
           className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-navy shadow-sm hover:bg-muted/10 transition-colors"
         >
           <span className="material-symbols-outlined">arrow_back</span>
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
           {/* Submit Button */}
           <div className="flex justify-end">
             <Link
-              href="/driver"
+              href="/partner"
               className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
             >
               <span>Save & Continue</span>
@@ -320,7 +320,7 @@ export default function OnboardingPage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border flex justify-center z-50 lg:hidden">
         <div className="w-full max-w-[400px]">
           <Link
-            href="/driver"
+            href="/partner"
             className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
           >
             <span>Save & Continue</span>

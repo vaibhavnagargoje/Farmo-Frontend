@@ -35,11 +35,11 @@ const recentEarnings = [
   { id: "3", job: "Harvesting", farmer: "Rajesh Kumar", amount: 3500, date: "2 days ago" },
 ]
 
-export default function DriverDashboard() {
+export default function PartnerDashboard() {
   return (
     <div className="relative flex h-full w-full flex-col overflow-x-hidden bg-background min-h-screen">
       {/* Desktop Header */}
-      <DesktopHeader variant="driver" />
+      <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Mobile Header */}
@@ -51,7 +51,7 @@ export default function DriverDashboard() {
               <div className="size-12 rounded-full border-2 border-white/30 overflow-hidden">
                 <Image
                   src="/indian-tractor-driver-man-portrait.jpg"
-                  alt="Driver profile"
+                  alt="Partner profile"
                   width={48}
                   height={48}
                   className="object-cover"
@@ -88,7 +88,7 @@ export default function DriverDashboard() {
                   <div className="size-16 rounded-full border-2 border-navy/20 overflow-hidden">
                     <Image
                       src="/indian-tractor-driver-man-portrait.jpg"
-                      alt="Driver profile"
+                      alt="Partner profile"
                       width={64}
                       height={64}
                       className="object-cover"
@@ -97,7 +97,7 @@ export default function DriverDashboard() {
                   <div className="absolute bottom-0 right-0 size-4 bg-success border-2 border-card rounded-full"></div>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Welcome back, Driver!</h2>
+                  <h2 className="text-xl font-bold text-foreground">Welcome back, Partner!</h2>
                   <p className="text-muted">Ready to accept jobs</p>
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function DriverDashboard() {
                 </div>
               </div>
               <Link
-                href="/driver/earnings"
+                href="/partner/earnings"
                 className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
               >
                 View Earnings
@@ -208,7 +208,7 @@ export default function DriverDashboard() {
                         Reject
                       </button>
                       <Link
-                        href="/driver/job/active"
+                        href="/partner/job/active"
                         className="flex-[1.5] h-12 rounded-xl bg-primary text-white font-bold flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all"
                       >
                         ACCEPT JOB
@@ -241,7 +241,7 @@ export default function DriverDashboard() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg text-foreground">Recent Earnings</h3>
-                <Link href="/driver/earnings" className="text-primary text-sm font-semibold">See All</Link>
+                <Link href="/partner/earnings" className="text-primary text-sm font-semibold">See All</Link>
               </div>
               <div className="flex flex-col gap-3">
                 {recentEarnings.map((earning) => (
@@ -367,7 +367,7 @@ export default function DriverDashboard() {
                   Reject
                 </button>
                 <Link
-                  href="/driver/job/active"
+                  href="/partner/job/active"
                   className="flex-[1.5] rounded-full bg-primary text-white font-bold text-lg flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 active:scale-95 transition-all"
                 >
                   ACCEPT JOB
@@ -418,7 +418,7 @@ export default function DriverDashboard() {
         </div>
       </main>
 
-      <BottomNav variant="driver" />
+      <BottomNav variant="partner" />
     </div>
   )
 }

@@ -17,27 +17,27 @@ const farmerNavItems: NavItem[] = [
   { href: "/profile", icon: "person", label: "Profile" },
 ]
 
-const driverNavItems: NavItem[] = [
-  { href: "/driver", icon: "dashboard", label: "Home" },
-  { href: "/driver/earnings", icon: "account_balance_wallet", label: "Earnings" },
-  { href: "/driver/profile", icon: "person", label: "Profile" },
-  { href: "/driver/settings", icon: "settings", label: "Settings" },
+const partnerNavItems: NavItem[] = [
+  { href: "/partner", icon: "dashboard", label: "Home" },
+  { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings" },
+  { href: "/partner/profile", icon: "person", label: "Profile" },
+  { href: "/partner/settings", icon: "settings", label: "Settings" },
 ]
 
 interface BottomNavProps {
-  variant?: "farmer" | "driver"
+  variant?: "farmer" | "partner"
 }
 
 export function BottomNav({ variant = "farmer" }: BottomNavProps) {
   const pathname = usePathname()
-  const navItems = variant === "driver" ? driverNavItems : farmerNavItems
+  const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border pb-safe pt-2 px-6 z-50 max-w-md mx-auto shadow-[0_-5px_15px_rgba(0,0,0,0.05)] lg:hidden">
       <ul className="flex justify-between items-center h-16">
         {navItems.map((item) => {
           const isActive =
-            pathname === item.href || (item.href !== "/" && item.href !== "/driver" && pathname.startsWith(item.href))
+            pathname === item.href || (item.href !== "/" && item.href !== "/partner" && pathname.startsWith(item.href))
 
           return (
             <li key={item.href}>

@@ -255,7 +255,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <Link
-                href="/driver/onboarding"
+                href="/partner/onboarding"
                 className="inline-flex bg-white text-primary hover:bg-gray-50 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-transform active:scale-95 items-center gap-2"
               >
                 <span>List Your Service</span>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-start">
               <Link
-                href="/driver/onboarding"
+                href="/partner/onboarding"
                 className="bg-white text-primary hover:bg-background-soft active:bg-gray-100 px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-2"
               >
                 <span>List Your Service</span>

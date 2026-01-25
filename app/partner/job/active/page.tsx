@@ -33,7 +33,7 @@ export default function ActiveJobPage() {
   return (
     <div className="bg-background font-sans min-h-screen flex flex-col overflow-hidden">
       {/* Desktop Header */}
-      <DesktopHeader variant="driver" />
+      <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Desktop Layout */}
@@ -44,7 +44,7 @@ export default function ActiveJobPage() {
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between mb-4">
               <Link
-                href="/driver"
+                href="/partner"
                 className="size-10 rounded-full bg-background flex items-center justify-center text-navy hover:bg-muted/20 transition-colors"
               >
                 <span className="material-symbols-outlined">arrow_back</span>
@@ -144,7 +144,7 @@ export default function ActiveJobPage() {
           {/* End Job Button */}
           <div className="p-6 border-t border-border">
             <Link
-              href="/driver"
+              href="/partner"
               className="relative w-full h-14 bg-primary rounded-2xl overflow-hidden shadow-lg shadow-primary/30 group cursor-pointer select-none flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-white text-2xl">stop</span>
@@ -240,7 +240,7 @@ export default function ActiveJobPage() {
         <header className="bg-card pt-12 pb-4 px-6 shadow-sm z-20 flex flex-col gap-4 relative">
           <div className="flex justify-between items-center">
             <Link
-              href="/driver"
+              href="/partner"
               className="w-10 h-10 rounded-full bg-background flex items-center justify-center text-navy hover:bg-muted/20 transition-colors"
             >
               <span className="material-symbols-outlined">arrow_back</span>
@@ -359,7 +359,7 @@ export default function ActiveJobPage() {
           {/* Slide to End */}
           <div className="pt-2 pb-4">
             <Link
-              href="/driver"
+              href="/partner"
               className="relative w-full h-16 bg-primary rounded-full overflow-hidden shadow-lg shadow-primary/30 group cursor-pointer select-none flex items-center"
             >
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">

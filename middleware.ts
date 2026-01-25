@@ -7,7 +7,7 @@ const protectedRoutes = [
   "/profile",
   "/bookings",
   "/booking",
-  "/driver",
+  "/partner",
 ]
 
 // Define auth routes (should redirect to home if logged in)

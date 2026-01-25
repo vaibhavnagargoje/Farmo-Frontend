@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
+  UPDATE_LOCATION: `${API_BASE_URL}/users/profile/`,
   
   // Partners
   PARTNER_REGISTER: `${API_BASE_URL}/partners/register/`,
@@ -41,6 +42,13 @@ export interface User {
   first_name: string
   last_name: string
   is_active: boolean
+}
+
+export interface CustomerProfile {
+  full_name: string
+  default_address: string | null
+  default_lat: string | null
+  default_lng: string | null
 }
 
 export interface AuthTokens {

@@ -9,20 +9,13 @@ import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import { API_ENDPOINTS, type Service, type Category } from "@/lib/api"
 
-// Sort Options
-const sortOptions = [
-  { value: "recommended", label: "Recommended" },
-  { value: "price_low", label: "Price: Low to High" },
-  { value: "price_high", label: "Price: High to Low" },
-  { value: "rating", label: "Highest Rated" },
-]
-
-// Price Filters
-const priceFilters = [
-  { value: "all", label: "All" },
-  { value: "under_500", label: "Under ₹500" },
-  { value: "500_1000", label: "₹500-1000" },
-  { value: "above_1000", label: "₹1000+" },
+// Distance Options
+const distanceOptions = [
+  { value: "all", label: "All Areas" },
+  { value: "5", label: "Within 5 km" },
+  { value: "10", label: "Within 10 km" },
+  { value: "20", label: "Within 20 km" },
+  { value: "50", label: "Within 50 km" },
 ]
 
 export default function CategoryServicesPage() {
@@ -35,10 +28,11 @@ export default function CategoryServicesPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Filter States
-  const [activePrice, setActivePrice] = useState("all")
-  const [activeSort, setActiveSort] = useState("recommended")
+  const [locationSearch, setLocationSearch] = useState("")
+  const [activeDistance, setActiveDistance] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [showSortDropdown, setShowSortDropdown] = useState(false)
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([])
 
   // Fetch category and services
   useEffect(() => {
@@ -77,27 +71,31 @@ export default function CategoryServicesPage() {
     }
   }, [slug])
 
-  // Filter and Sort Services
-  const filteredServices = services
-    .filter((service) => {
-      const price = parseFloat(service.price)
-      if (activePrice === "under_500" && price >= 500) return false
-      if (activePrice === "500_1000" && (price < 500 || price > 1000)) return false
-      if (activePrice === "above_1000" && price <= 1000) return false
-      return true
-    })
-    .sort((a, b) => {
-      switch (activeSort) {
-        case "price_low":
-          return parseFloat(a.price) - parseFloat(b.price)
-        case "price_high":
-          return parseFloat(b.price) - parseFloat(a.price)
-        case "rating":
-          return parseFloat(b.partner_rating || "0") - parseFloat(a.partner_rating || "0")
-        default:
-          return 0
-      }
-    })
+  // Handle location search
+  const handleLocationSearch = (value: string) => {
+    setLocationSearch(value)
+    if (value.length > 2) {
+      // Mock suggestions - in real implementation, this would call an API
+      const mockSuggestions = [
+        "Surat", "Bardoli", "Navsari", "Valsad", "Ankleshwar", 
+        "Bharuch", "Vyara", "Mandvi", "Kamrej", "Olpad"
+      ].filter(location => 
+        location.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 5)
+      setLocationSuggestions(mockSuggestions)
+      setShowLocationDropdown(true)
+    } else {
+      setLocationSuggestions([])
+      setShowLocationDropdown(false)
+    }
+  }
+
+  // Filter Services by location and distance (UI only)
+  const filteredServices = services.filter((service) => {
+    // Location filtering logic will be implemented with backend
+    // For now, just return all services
+    return true
+  })
 
   const categoryName = category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
 
@@ -132,49 +130,57 @@ export default function CategoryServicesPage() {
           </button>
         </div>
 
-        {/* Mobile Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {priceFilters.map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setActivePrice(filter.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap active:scale-95 transition-all ${
-                activePrice === filter.value
-                  ? "bg-navy text-white"
-                  : "bg-card border border-border text-foreground"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-          
-          {/* Sort Dropdown Trigger */}
+        {/* Mobile Location Search & Distance Filter */}
+        <div className="space-y-3">
+          {/* Location Search */}
           <div className="relative">
-            <button
-              onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-semibold bg-card border border-border text-foreground shrink-0"
-            >
-              <span className="material-symbols-outlined text-[14px]">sort</span>
-              Sort
-            </button>
-            {showSortDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
-                {sortOptions.map((option) => (
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search village, taluka..."
+                value={locationSearch}
+                onChange={(e) => handleLocationSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              />
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[20px]">search</span>
+            </div>
+            
+            {/* Location Suggestions Dropdown */}
+            {showLocationDropdown && locationSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                {locationSuggestions.map((suggestion, index) => (
                   <button
-                    key={option.value}
+                    key={index}
                     onClick={() => {
-                      setActiveSort(option.value)
-                      setShowSortDropdown(false)
+                      setLocationSearch(suggestion)
+                      setShowLocationDropdown(false)
+                      setLocationSuggestions([])
                     }}
-                    className={`w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-muted/50 transition-colors ${
-                      activeSort === option.value ? "text-primary bg-primary/5" : "text-foreground"
-                    }`}
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
                   >
-                    {option.label}
+                    <span className="material-symbols-outlined text-[18px] text-muted">location_on</span>
+                    {suggestion}
                   </button>
                 ))}
               </div>
             )}
+          </div>
+          
+          {/* Distance Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {distanceOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setActiveDistance(option.value)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap active:scale-95 transition-all ${
+                  activeDistance === option.value
+                    ? "bg-navy text-white"
+                    : "bg-card border border-border text-foreground"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -193,51 +199,56 @@ export default function CategoryServicesPage() {
             <p className="text-sm text-muted mt-1">{filteredServices.length} services available</p>
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Price Filter Pills */}
-            <div className="flex items-center gap-2">
-              {priceFilters.map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setActivePrice(filter.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    activePrice === filter.value
-                      ? "bg-navy text-white"
-                      : "bg-card border border-border text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-muted/50 transition-colors"
-              >
-                <span>Sort: {sortOptions.find((o) => o.value === activeSort)?.label}</span>
-                <span className="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-              {showSortDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
-                  {sortOptions.map((option) => (
+          <div className="flex items-center gap-4">
+            {/* Location Search */}
+            <div className="relative min-w-[300px]">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search village, taluka..."
+                  value={locationSearch}
+                  onChange={(e) => handleLocationSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                />
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[20px]">search</span>
+              </div>
+              
+              {/* Location Suggestions Dropdown */}
+              {showLocationDropdown && locationSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                  {locationSuggestions.map((suggestion, index) => (
                     <button
-                      key={option.value}
+                      key={index}
                       onClick={() => {
-                        setActiveSort(option.value)
-                        setShowSortDropdown(false)
+                        setLocationSearch(suggestion)
+                        setShowLocationDropdown(false)
+                        setLocationSuggestions([])
                       }}
-                      className={`w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-muted/50 transition-colors ${
-                        activeSort === option.value ? "text-primary bg-primary/5" : "text-foreground"
-                      }`}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
                     >
-                      {option.label}
+                      <span className="material-symbols-outlined text-[18px] text-muted">location_on</span>
+                      {suggestion}
                     </button>
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Distance Filter Pills */}
+            <div className="flex items-center gap-2">
+              {distanceOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setActiveDistance(option.value)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeDistance === option.value
+                      ? "bg-navy text-white"
+                      : "bg-card border border-border text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
 
             {/* View Toggle */}
@@ -285,7 +296,12 @@ export default function CategoryServicesPage() {
             <p className="text-lg font-medium text-foreground">No services found</p>
             <p className="text-sm text-muted mt-1">Try adjusting your filters or check back later</p>
             <button
-              onClick={() => setActivePrice("all")}
+              onClick={() => {
+                setLocationSearch("")
+                setActiveDistance("all")
+                setLocationSuggestions([])
+                setShowLocationDropdown(false)
+              }}
               className="mt-4 px-6 py-2 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
             >
               Clear Filters
@@ -326,7 +342,12 @@ export default function CategoryServicesPage() {
             <span className="material-symbols-outlined text-5xl text-muted mb-3">inventory_2</span>
             <p className="text-base font-medium text-foreground">No services found</p>
             <button
-              onClick={() => setActivePrice("all")}
+              onClick={() => {
+                setLocationSearch("")
+                setActiveDistance("all")
+                setLocationSuggestions([])
+                setShowLocationDropdown(false)
+              }}
               className="mt-3 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium"
             >
               Clear Filters
