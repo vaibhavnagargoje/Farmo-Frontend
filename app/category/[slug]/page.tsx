@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, Fragment } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
-import { API_ENDPOINTS, type Service, type Category } from "@/lib/api"
+import { type Service, type Category } from "@/lib/api"
 
 // Distance Options
 const distanceOptions = [
@@ -41,8 +41,8 @@ export default function CategoryServicesPage() {
       setError(null)
 
       try {
-        // Fetch categories to get current category info
-        const catRes = await fetch(API_ENDPOINTS.CATEGORIES)
+        // Fetch categories via Next.js proxy (avoids CORS)
+        const catRes = await fetch("/api/services/categories")
         if (catRes.ok) {
           const catData = await catRes.json()
           const categories = catData.results || catData || []
@@ -50,8 +50,8 @@ export default function CategoryServicesPage() {
           setCategory(currentCat || null)
         }
 
-        // Fetch services for this category
-        const servicesRes = await fetch(`${API_ENDPOINTS.SERVICES}?category=${slug}`)
+        // Fetch services for this category via Next.js proxy
+        const servicesRes = await fetch(`/api/services?category=${slug}`)
         if (servicesRes.ok) {
           const servicesData = await servicesRes.json()
           setServices(servicesData.results || servicesData || [])
@@ -77,9 +77,9 @@ export default function CategoryServicesPage() {
     if (value.length > 2) {
       // Mock suggestions - in real implementation, this would call an API
       const mockSuggestions = [
-        "Surat", "Bardoli", "Navsari", "Valsad", "Ankleshwar", 
+        "Surat", "Bardoli", "Navsari", "Valsad", "Ankleshwar",
         "Bharuch", "Vyara", "Mandvi", "Kamrej", "Olpad"
-      ].filter(location => 
+      ].filter(location =>
         location.toLowerCase().includes(value.toLowerCase())
       ).slice(0, 5)
       setLocationSuggestions(mockSuggestions)
@@ -144,7 +144,7 @@ export default function CategoryServicesPage() {
               />
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[20px]">search</span>
             </div>
-            
+
             {/* Location Suggestions Dropdown */}
             {showLocationDropdown && locationSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
@@ -165,18 +165,17 @@ export default function CategoryServicesPage() {
               </div>
             )}
           </div>
-          
+
           {/* Distance Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             {distanceOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setActiveDistance(option.value)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap active:scale-95 transition-all ${
-                  activeDistance === option.value
-                    ? "bg-navy text-white"
-                    : "bg-card border border-border text-foreground"
-                }`}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap active:scale-95 transition-all ${activeDistance === option.value
+                  ? "bg-navy text-white"
+                  : "bg-card border border-border text-foreground"
+                  }`}
               >
                 {option.label}
               </button>
@@ -198,7 +197,7 @@ export default function CategoryServicesPage() {
             <h1 className="text-2xl font-bold text-foreground">{categoryName}</h1>
             <p className="text-sm text-muted mt-1">{filteredServices.length} services available</p>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Location Search */}
             <div className="relative min-w-[300px]">
@@ -212,7 +211,7 @@ export default function CategoryServicesPage() {
                 />
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[20px]">search</span>
               </div>
-              
+
               {/* Location Suggestions Dropdown */}
               {showLocationDropdown && locationSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
@@ -240,11 +239,10 @@ export default function CategoryServicesPage() {
                 <button
                   key={option.value}
                   onClick={() => setActiveDistance(option.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeDistance === option.value
-                      ? "bg-navy text-white"
-                      : "bg-card border border-border text-foreground hover:bg-muted/50"
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeDistance === option.value
+                    ? "bg-navy text-white"
+                    : "bg-card border border-border text-foreground hover:bg-muted/50"
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -255,17 +253,15 @@ export default function CategoryServicesPage() {
             <div className="flex border border-border rounded-xl overflow-hidden">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`size-10 flex items-center justify-center transition-colors ${
-                  viewMode === "grid" ? "bg-navy text-white" : "bg-card text-muted hover:text-foreground"
-                }`}
+                className={`size-10 flex items-center justify-center transition-colors ${viewMode === "grid" ? "bg-navy text-white" : "bg-card text-muted hover:text-foreground"
+                  }`}
               >
                 <span className="material-symbols-outlined text-[20px]">grid_view</span>
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`size-10 flex items-center justify-center transition-colors ${
-                  viewMode === "list" ? "bg-navy text-white" : "bg-card text-muted hover:text-foreground"
-                }`}
+                className={`size-10 flex items-center justify-center transition-colors ${viewMode === "list" ? "bg-navy text-white" : "bg-card text-muted hover:text-foreground"
+                  }`}
               >
                 <span className="material-symbols-outlined text-[20px]">view_list</span>
               </button>
@@ -373,7 +369,7 @@ export default function CategoryServicesPage() {
 // Service Card Component
 function ServiceCard({ service, viewMode }: { service: Service; viewMode: "grid" | "list" }) {
   const priceUnit = service.price_unit === "HOUR" ? "/hr" : service.price_unit === "DAY" ? "/day" : ""
-  
+
   if (viewMode === "list") {
     return (
       <Link

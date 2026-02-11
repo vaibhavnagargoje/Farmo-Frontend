@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 const menuItems = [
   {
@@ -113,10 +113,10 @@ export default function ProfilePage() {
       }
 
       const data = await response.json()
-      
+
       // Refresh context
       await refreshUser()
-      
+
       // Update local partner state if returned
       if (data.partner) {
         setPartner(data.partner)
@@ -218,7 +218,7 @@ export default function ProfilePage() {
                 className="w-full h-full object-cover rounded-full border-2 border-white/20"
               />
             </div>
-            <button 
+            <button
               onClick={() => setIsEditOpen(true)}
               className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-white hover:text-primary transition-colors duration-200 border-2 border-navy flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -245,7 +245,7 @@ export default function ProfilePage() {
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="hidden md:block p-3 bg-white/20 rounded-xl">
-                    <span className="material-symbols-outlined text-[32px] text-white">agriculture</span>
+                  <span className="material-symbols-outlined text-[32px] text-white">agriculture</span>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold leading-tight">Earn with your Tractor</h2>
@@ -279,7 +279,7 @@ export default function ProfilePage() {
                         className="w-full h-full object-cover rounded-full border-2 border-navy/20"
                       />
                     </div>
-                    <button 
+                    <button
                       onClick={() => setIsEditOpen(true)}
                       className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
                       <span className="material-symbols-outlined text-[18px]">edit</span>

@@ -17,6 +17,8 @@ const authRoutes = ["/auth"]
 const publicRoutes = [
   "/",
   "/search",
+  "/categories",
+  "/category",
   "/api",
 ]
 
