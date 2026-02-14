@@ -8,7 +8,7 @@ import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import { BottomNav } from "@/components/bottom-nav"
 import { useAuth } from "@/contexts/auth-context"
-import { API_ENDPOINTS, type Service } from "@/lib/api"
+import { type Service } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 export default function NewBookingPage() {
@@ -46,7 +46,7 @@ export default function NewBookingPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const res = await fetch(API_ENDPOINTS.SERVICE_DETAIL(Number(serviceId)))
+        const res = await fetch(`/api/services/${serviceId}`)
         if (res.ok) {
           const data = await res.json()
           setService(data)

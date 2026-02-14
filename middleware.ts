@@ -8,6 +8,7 @@ const protectedRoutes = [
   "/bookings",
   "/booking",
   "/partner",
+  "/category",
 ]
 
 // Define auth routes (should redirect to home if logged in)
@@ -18,7 +19,6 @@ const publicRoutes = [
   "/",
   "/search",
   "/categories",
-  "/category",
   "/api",
 ]
 
