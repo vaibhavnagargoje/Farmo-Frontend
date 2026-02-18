@@ -7,22 +7,10 @@ import { useParams, useRouter } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
+import GoogleMapPicker, { type SelectedLocation, type ServiceMarker } from "@/components/GoogleMapPicker"
 import { type Service, type Category } from "@/lib/api"
 
 // ── Constants ──
-const DUMMY_LOCATIONS = [
-  { name: "Surat", area: "Gujarat", lat: 21.1702, lng: 72.8311 },
-  { name: "Bardoli", area: "Surat District", lat: 21.1167, lng: 73.1167 },
-  { name: "Navsari", area: "Gujarat", lat: 20.9467, lng: 72.952 },
-  { name: "Valsad", area: "Gujarat", lat: 20.5992, lng: 72.9342 },
-  { name: "Ankleshwar", area: "Bharuch District", lat: 21.6264, lng: 73.0153 },
-  { name: "Bharuch", area: "Gujarat", lat: 21.6942, lng: 72.9571 },
-  { name: "Vyara", area: "Tapi District", lat: 21.1122, lng: 73.3953 },
-  { name: "Mandvi", area: "Surat District", lat: 21.2575, lng: 73.3025 },
-  { name: "Kamrej", area: "Surat District", lat: 21.2694, lng: 72.9583 },
-  { name: "Olpad", area: "Surat District", lat: 21.3389, lng: 72.7517 },
-]
-
 const DISTANCE_OPTIONS = [
   { value: "all", label: "All Areas" },
   { value: "5", label: "5 km" },
@@ -43,11 +31,7 @@ export default function CategoryServicesPage() {
   const [error, setError] = useState<string | null>(null)
 
   // ── Location ──
-  const [locationQuery, setLocationQuery] = useState("")
-  const [selectedLocation, setSelectedLocation] = useState<(typeof DUMMY_LOCATIONS)[0] | null>(null)
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
-  const [mapPinPosition, setMapPinPosition] = useState({ x: 50, y: 50 })
-  const [isLocating, setIsLocating] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null)
 
   // ── Filters ──
   const [activeDistance, setActiveDistance] = useState("all")
@@ -70,21 +54,39 @@ export default function CategoryServicesPage() {
   const sliderStartX = useRef(0)
   const sliderWidth = useRef(0)
 
-  // ── Fetch data ──
+  // ── Fetch category data once ──
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
-      setError(null)
+    const fetchCategory = async () => {
       try {
-        const [catRes, servicesRes] = await Promise.all([
-          fetch("/api/services/categories"),
-          fetch(`/api/services?category=${slug}`),
-        ])
+        const catRes = await fetch("/api/services/categories")
         if (catRes.ok) {
           const catData = await catRes.json()
           const categories = catData.results || catData || []
           setCategory(categories.find((c: Category) => c.slug === slug) || null)
         }
+      } catch {
+        // Category fetch optional
+      }
+    }
+    if (slug) fetchCategory()
+  }, [slug])
+
+  // ── Fetch services when location or distance changes ──
+  useEffect(() => {
+    const fetchServices = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const params = new URLSearchParams()
+        params.set("category", slug)
+        if (selectedLocation) {
+          params.set("lat", selectedLocation.lat.toString())
+          params.set("lng", selectedLocation.lng.toString())
+          if (activeDistance !== "all") {
+            params.set("distance", activeDistance)
+          }
+        }
+        const servicesRes = await fetch(`/api/services?${params.toString()}`)
         if (servicesRes.ok) {
           const servicesData = await servicesRes.json()
           setServices(servicesData.results || servicesData || [])
@@ -97,8 +99,8 @@ export default function CategoryServicesPage() {
         setIsLoading(false)
       }
     }
-    if (slug) fetchData()
-  }, [slug])
+    if (slug) fetchServices()
+  }, [slug, selectedLocation, activeDistance])
 
   // ── Close filter dropdown on outside click ──
   useEffect(() => {
@@ -111,37 +113,25 @@ export default function CategoryServicesPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [showFilters])
 
-  // ── Location helpers ──
-  const filteredLocations =
-    locationQuery.length > 1
-      ? DUMMY_LOCATIONS.filter(
-          (l) =>
-            l.name.toLowerCase().includes(locationQuery.toLowerCase()) ||
-            l.area.toLowerCase().includes(locationQuery.toLowerCase())
-        )
-      : []
-
-  const selectLocation = useCallback((loc: (typeof DUMMY_LOCATIONS)[0]) => {
-    setSelectedLocation(loc)
-    setLocationQuery(`${loc.name}, ${loc.area}`)
-    setShowLocationDropdown(false)
-    setMapPinPosition({ x: 30 + Math.random() * 40, y: 30 + Math.random() * 40 })
+  // ── Location handler ──
+  const handleLocationSelect = useCallback((location: SelectedLocation) => {
+    setSelectedLocation(location)
   }, [])
 
-  const handleUseCurrentLocation = useCallback(() => {
-    setIsLocating(true)
-    setTimeout(() => {
-      const loc = DUMMY_LOCATIONS[0]
-      setSelectedLocation(loc)
-      setLocationQuery(`${loc.name}, ${loc.area}`)
-      setMapPinPosition({ x: 48, y: 45 })
-      setIsLocating(false)
-    }, 1500)
-  }, [])
+  // ── Build service markers for the map ──
+  const serviceMarkers: ServiceMarker[] = services
+    .filter((s) => s.location_lat && s.location_lng)
+    .map((s) => ({
+      id: s.id,
+      lat: parseFloat(s.location_lat!),
+      lng: parseFloat(s.location_lng!),
+      title: s.title,
+      partnerName: s.partner_name,
+    }))
 
   // ── Computed ──
   const categoryName = category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-  const availableProviders = Math.max(services.filter((s) => s.is_available).length, 3)
+  const availableProviders = services.filter((s) => s.is_available).length
   const avgPrice =
     services.length > 0
       ? Math.round(services.reduce((sum, s) => sum + parseFloat(s.price || "0"), 0) / services.length)
@@ -212,6 +202,11 @@ export default function CategoryServicesPage() {
     setBookingId("")
   }
 
+  // ── Short address for display ──
+  const shortAddress = selectedLocation
+    ? selectedLocation.address.split(",").slice(0, 2).join(",").trim()
+    : ""
+
   return (
     <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       <DesktopHeader variant="farmer" />
@@ -232,7 +227,7 @@ export default function CategoryServicesPage() {
               <h1 className="text-base lg:text-lg font-bold text-foreground truncate">{categoryName}</h1>
               <p className="text-[11px] lg:text-xs text-muted-foreground">
                 {selectedLocation
-                  ? `Near ${selectedLocation.name} · ${availableProviders} providers`
+                  ? `Near ${shortAddress} · ${availableProviders} providers`
                   : "Find nearby providers instantly"}
               </p>
             </div>
@@ -248,64 +243,26 @@ export default function CategoryServicesPage() {
             )}
           </div>
 
-          {/* ─── LOCATION BAR + FILTER ─── */}
+          {/* ─── LOCATION DISPLAY + FILTER ─── */}
           <div className="px-4 lg:px-6 pb-3">
             <div className="flex items-center gap-2">
-              {/* Location search */}
-              <div className="relative flex-1">
-                <div className="flex items-center bg-card border border-border rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-                  <div className="flex items-center justify-center pl-3">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Enter your farm location..."
-                    value={locationQuery}
-                    onChange={(e) => {
-                      setLocationQuery(e.target.value)
-                      setShowLocationDropdown(true)
-                      if (!e.target.value) setSelectedLocation(null)
-                    }}
-                    onFocus={() => {
-                      if (locationQuery.length > 1) setShowLocationDropdown(true)
-                    }}
-                    className="flex-1 px-2.5 py-2.5 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                  />
+              {/* Location display */}
+              <div className="flex-1 flex items-center bg-card border border-border rounded-xl shadow-sm overflow-hidden px-3 py-2.5 gap-2">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedLocation ? "bg-green-400" : "bg-amber-400"}`} />
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${selectedLocation ? "bg-green-500" : "bg-amber-500"}`} />
+                </span>
+                <p className="text-sm text-foreground truncate flex-1">
+                  {selectedLocation ? shortAddress : "Click on map to set location..."}
+                </p>
+                {selectedLocation && (
                   <button
-                    onClick={handleUseCurrentLocation}
-                    disabled={isLocating}
-                    className="flex items-center gap-1.5 px-3 py-1.5 mr-1 text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50 shrink-0"
-                    title="Use current location"
+                    onClick={() => setSelectedLocation(null)}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                    title="Clear location"
                   >
-                    {isLocating ? (
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                    ) : (
-                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
-                    )}
-                    <span className="text-xs font-semibold hidden sm:inline">{isLocating ? "Locating..." : "Current"}</span>
+                    <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
-                </div>
-
-                {/* Location dropdown */}
-                {showLocationDropdown && filteredLocations.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-[240px] overflow-y-auto">
-                    {filteredLocations.map((loc, i) => (
-                      <button
-                        key={i}
-                        onClick={() => selectLocation(loc)}
-                        className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-muted/40 transition-colors text-left"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-muted-foreground" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{loc.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{loc.area}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
                 )}
               </div>
 
@@ -313,11 +270,10 @@ export default function CategoryServicesPage() {
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${
-                    activeDistance !== "all"
-                      ? "bg-navy text-white border-navy"
-                      : "bg-card text-foreground border-border hover:bg-muted/50"
-                  }`}
+                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${activeDistance !== "all"
+                    ? "bg-navy text-white border-navy"
+                    : "bg-card text-foreground border-border hover:bg-muted/50"
+                    }`}
                   title="Filters"
                 >
                   <span className="material-symbols-outlined text-[20px]">tune</span>
@@ -336,11 +292,10 @@ export default function CategoryServicesPage() {
                           setActiveDistance(option.value)
                           setShowFilters(false)
                         }}
-                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${
-                          activeDistance === option.value
-                            ? "bg-navy/5 text-navy font-semibold"
-                            : "text-foreground hover:bg-muted/40"
-                        }`}
+                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${activeDistance === option.value
+                          ? "bg-navy/5 text-navy font-semibold"
+                          : "text-foreground hover:bg-muted/40"
+                          }`}
                       >
                         <span>{option.label}</span>
                         {activeDistance === option.value && (
@@ -372,171 +327,97 @@ export default function CategoryServicesPage() {
       {/* ─── MAIN CONTENT ─── */}
       <div className="flex-1 flex flex-col lg:flex-row max-w-6xl mx-auto w-full">
         <div className="flex-1 flex flex-col">
-          {/* ── Map ── */}
-          <div className="px-4 lg:px-6 pt-3 pb-2 lg:pb-3">
-            <div className="relative w-full aspect-[16/9] lg:aspect-[16/8] bg-[#e8f4e8] dark:bg-[#1a2e1a] rounded-2xl overflow-hidden border border-border shadow-sm">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px)`,
-                backgroundSize: "40px 40px",
-              }} />
-              <div className="absolute top-1/3 left-0 right-0 h-[2px] bg-amber-400/30" />
-              <div className="absolute top-0 bottom-0 left-1/2 w-[2px] bg-amber-400/30" />
-              <div className="absolute top-2/3 left-0 right-0 h-[3px] bg-amber-300/20 rotate-[5deg]" />
-
-              <div className="absolute top-[10%] left-[5%] w-24 h-16 bg-green-300/20 dark:bg-green-800/20 rounded-lg" />
-              <div className="absolute top-[55%] right-[10%] w-32 h-20 bg-green-400/15 dark:bg-green-700/20 rounded-lg" />
-              <div className="absolute bottom-[15%] left-[20%] w-20 h-14 bg-green-300/18 dark:bg-green-800/15 rounded-lg" />
-              <div className="absolute top-[20%] right-[25%] w-28 h-12 bg-green-200/20 dark:bg-green-900/20 rounded-lg" />
-              <div className="absolute bottom-[10%] right-[5%] w-16 h-10 bg-blue-300/20 dark:bg-blue-800/20 rounded-full" />
-
-              {selectedLocation && (
-                <>
-                  <div className="absolute top-[25%] left-[30%]">
-                    <div className="w-3.5 h-3.5 bg-navy rounded-full animate-pulse shadow-lg border-2 border-white" />
-                  </div>
-                  <div className="absolute top-[60%] left-[55%]">
-                    <div className="w-3.5 h-3.5 bg-navy rounded-full animate-pulse shadow-lg border-2 border-white" />
-                  </div>
-                  <div className="absolute top-[40%] right-[20%]">
-                    <div className="w-3.5 h-3.5 bg-navy rounded-full animate-pulse shadow-lg border-2 border-white" />
-                  </div>
-                  <div className="absolute top-[70%] left-[25%]">
-                    <div className="w-3 h-3 bg-navy/60 rounded-full animate-pulse shadow-lg border-2 border-white/60" />
-                  </div>
-                </>
-              )}
-
-              {selectedLocation ? (
-                <div
-                  className="absolute z-10 -translate-x-1/2 -translate-y-full transition-all duration-500"
-                  style={{ left: `${mapPinPosition.x}%`, top: `${mapPinPosition.y}%` }}
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="bg-primary text-white text-[10px] font-bold px-2.5 py-1 rounded-lg mb-1 shadow-lg whitespace-nowrap">
-                      {selectedLocation.name}
-                    </div>
-                    <span className="material-symbols-outlined text-primary text-[36px] drop-shadow-lg" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                    <div className="w-2 h-2 bg-primary/30 rounded-full -mt-1 animate-ping" />
-                  </div>
-                </div>
-              ) : (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/10 dark:bg-black/30 backdrop-blur-[6px] rounded-2xl">
-                  <div className="flex flex-col items-center gap-2 px-6 text-center">
-                    <div className="size-14 rounded-full bg-card/90 border border-border shadow-lg flex items-center justify-center">
-                      <span className="material-symbols-outlined text-primary text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>pin_drop</span>
-                    </div>
-                    <h3 className="text-sm sm:text-base font-bold text-foreground">Set Your Location</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-[220px] leading-relaxed">
-                      Set your location to see service prices, nearby providers & estimated arrival time
-                    </p>
-                    <button
-                      onClick={handleUseCurrentLocation}
-                      disabled={isLocating}
-                      className="mt-1 inline-flex items-center gap-2 px-4 py-2 bg-navy text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-navy/90 transition-colors disabled:opacity-50 shadow-lg"
-                    >
-                      <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
-                      {isLocating ? "Locating..." : "Use Current Location"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/40 font-medium">FARMO Maps</div>
-              <div className="absolute top-3 right-3 flex flex-col gap-1">
-                <button className="size-8 bg-card/90 backdrop-blur border border-border rounded-lg flex items-center justify-center shadow-sm hover:bg-card transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                </button>
-                <button className="size-8 bg-card/90 backdrop-blur border border-border rounded-lg flex items-center justify-center shadow-sm hover:bg-card transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">remove</span>
-                </button>
-              </div>
-            </div>
+          {/* ── Google Map ── */}
+          <div className="px-4 lg:px-6 pt-3 pb-4 lg:pb-3">
+            <GoogleMapPicker
+              onLocationSelect={handleLocationSelect}
+              selectedLocation={selectedLocation}
+              serviceMarkers={serviceMarkers}
+              className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/1]"
+            />
           </div>
 
           {/* ── Stats + Swipe to Book ── */}
           {selectedLocation && !isBookingConfirmed && (
-            <div className="px-4 lg:px-6 pb-4 space-y-2 lg:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="grid grid-cols-3 gap-1.5 lg:gap-2">
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2 lg:p-3 text-center">
-                  <div className="flex items-center justify-center text-green-600 mb-0.5 lg:mb-1">
-                    <span className="material-symbols-outlined text-[18px] lg:text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-                  </div>
-                  <p className="text-base lg:text-xl font-bold text-foreground">{availableProviders}</p>
-                  <p className="text-[9px] lg:text-xs text-muted-foreground">Available</p>
-                </div>
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2 lg:p-3 text-center">
-                  <div className="flex items-center justify-center text-navy mb-0.5 lg:mb-1">
-                    <span className="material-symbols-outlined text-[18px] lg:text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>currency_rupee</span>
-                  </div>
-                  <p className="text-base lg:text-xl font-bold text-foreground">₹{avgPrice}</p>
-                  <p className="text-[9px] lg:text-xs text-muted-foreground">Est. Price</p>
-                </div>
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2 lg:p-3 text-center">
-                  <div className="flex items-center justify-center text-amber-500 mb-0.5 lg:mb-1">
-                    <span className="material-symbols-outlined text-[18px] lg:text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
-                  </div>
-                  <p className="text-base lg:text-xl font-bold text-foreground">{estimatedArrival}m</p>
-                  <p className="text-[9px] lg:text-xs text-muted-foreground">ETA</p>
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-3 lg:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 lg:gap-3">
-                    <div className="size-9 lg:size-10 rounded-xl bg-navy/10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-navy text-[20px] lg:text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>agriculture</span>
+            <div className="px-3 sm:px-4 lg:px-6 pb-3 lg:pb-4 space-y-2 lg:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="grid grid-cols-3 gap-2 lg:gap-3">
+                {/* Nearby Providers */}
+                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3">
+                  <p className="text-xl lg:text-2xl font-bold text-foreground text-center">{availableProviders}</p>
+                  <p className="text-[10px] lg:text-xs text-muted-foreground text-center">Providers</p>
+                  {services.length > 0 && (
+                    <div className="flex items-center justify-center -space-x-1.5 mt-2">
+                      {services.slice(0, 3).map((s) => (
+                        <div key={s.id} className="size-6 lg:size-7 rounded-full bg-muted/50 overflow-hidden relative border-2 border-card shrink-0">
+                          <Image src={s.thumbnail || "/placeholder.svg"} alt={s.title} fill className="object-cover" />
+                        </div>
+                      ))}
+                      {services.length > 3 && (
+                        <div className="size-6 lg:size-7 rounded-full bg-muted flex items-center justify-center border-2 border-card text-[8px] lg:text-[9px] font-bold text-muted-foreground shrink-0">
+                          +{services.length - 3}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground">{categoryName}</h3>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <span className="material-symbols-outlined text-[13px]">location_on</span>
-                          {selectedLocation.name}
-                        </span>
-                        <span>·</span>
-                        <span className="text-navy font-bold text-sm">₹{avgPrice}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] lg:text-xs font-bold px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-lg flex items-center gap-0.5 lg:gap-1">
-                    <span className="material-symbols-outlined text-[12px] lg:text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    QUICK BOOK
-                  </div>
-                </div>
-              </div>
-
-              <div
-                ref={sliderRef}
-                className="relative h-14 lg:h-16 bg-navy rounded-2xl overflow-hidden select-none touch-none shadow-lg"
-              >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
-                    Swipe to Book Instantly →
-                  </p>
-                </div>
-                <div
-                  className="absolute inset-y-0 left-0 bg-green-500/20 rounded-2xl transition-[width] duration-75"
-                  style={{ width: `${sliderProgress * 100}%` }}
-                />
-                <div
-                  className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[14px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
-                  style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
-                  onTouchStart={onSliderTouchStart}
-                  onTouchMove={onSliderTouchMove}
-                  onTouchEnd={onSliderTouchEnd}
-                  onMouseDown={onSliderMouseDown}
-                >
-                  {sliderProgress > 0.85 ? (
-                    <span className="material-symbols-outlined text-green-600 text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-navy text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>double_arrow</span>
+                  )}
+                  {services.length === 0 && (
+                    <p className="text-[9px] text-muted-foreground text-center mt-1">None nearby</p>
                   )}
                 </div>
+
+                {/* Price */}
+                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3">
+                  <p className="text-xl lg:text-2xl font-bold text-foreground text-center">₹{avgPrice}</p>
+                  <p className="text-[10px] lg:text-xs text-muted-foreground text-center">Est. Price</p>
+                  <p className="text-[9px] lg:text-[10px] text-muted-foreground text-center mt-1.5">+ ₹0 platform fee</p>
+                  <p className="text-[7px] lg:text-[8px] text-muted-foreground text-center mt-0.5">*May vary</p>
+                </div>
+
+                {/* ETA */}
+                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3 text-center">
+                  <p className="text-xl lg:text-2xl font-bold text-foreground">{estimatedArrival}m</p>
+                  <p className="text-[10px] lg:text-xs text-muted-foreground">Arrival</p>
+                </div>
               </div>
+
+              {availableProviders > 0 ? (
+                <div
+                  ref={sliderRef}
+                  className="relative h-14 lg:h-16 bg-navy rounded-2xl overflow-hidden select-none touch-none shadow-lg"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
+                      Swipe to Book Instantly →
+                    </p>
+                  </div>
+                  <div
+                    className="absolute inset-y-0 left-0 bg-green-500/20 rounded-2xl transition-[width] duration-75"
+                    style={{ width: `${sliderProgress * 100}%` }}
+                  />
+                  <div
+                    className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[14px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
+                    style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
+                    onTouchStart={onSliderTouchStart}
+                    onTouchMove={onSliderTouchMove}
+                    onTouchEnd={onSliderTouchEnd}
+                    onMouseDown={onSliderMouseDown}
+                  >
+                    {sliderProgress > 0.85 ? (
+                      <span className="material-symbols-outlined text-green-600 text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-navy text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>double_arrow</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative h-14 lg:h-16 bg-muted/60 border border-border rounded-2xl flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
+                  <p className="text-sm font-medium text-muted-foreground">No providers available in this area</p>
+                </div>
+              )}
             </div>
           )}
 
-         
+
           {isLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
@@ -547,7 +428,7 @@ export default function CategoryServicesPage() {
           )}
 
           {/* ─── ADVANCED OPTIONS (desktop only) ─── */}
-          {!isLoading && (
+          {!isLoading && selectedLocation && (
             <div className="hidden lg:block px-4 lg:px-6 py-3">
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
@@ -624,49 +505,10 @@ export default function CategoryServicesPage() {
           )}
         </div>
 
-        {/* ── Mobile Price & Providers (below stats, visible only on mobile) ── */}
-        {selectedLocation && !isBookingConfirmed && (
-          <div className="lg:hidden px-4 pb-3 space-y-2">
-            {/* Mobile Price Breakup */}
-            <div className="bg-card border border-border rounded-xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price Breakup</h4>
-                <span className="text-[10px] text-muted-foreground">*May vary</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-4 text-sm">
-                  <div><span className="text-muted-foreground text-xs">Base </span><span className="font-semibold">₹{avgPrice}</span></div>
-                  <span className="text-muted-foreground">+</span>
-                  <div><span className="text-muted-foreground text-xs">Fee </span><span className="font-semibold">₹0</span></div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground">Total</p>
-                  <p className="text-base font-bold text-navy">₹{avgPrice}</p>
-                </div>
-              </div>
-            </div>
 
-            {/* Mobile Nearby Providers */}
-            {services.length > 0 && (
-              <div className="bg-card border border-border rounded-xl p-3">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Nearby Providers</h4>
-                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-                  {services.slice(0, 5).map((s) => (
-                    <div key={s.id} className="flex flex-col items-center gap-1.5 shrink-0 w-16">
-                      <div className="size-11 rounded-full bg-muted/50 overflow-hidden relative border-2 border-green-400">
-                        <Image src={s.thumbnail || "/placeholder.svg"} alt={s.title} fill className="object-cover" />
-                      </div>
-                      <p className="text-[10px] font-medium text-foreground text-center line-clamp-1 w-full">{s.partner_name || "Provider"}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Mobile Advanced Options (after price/providers) ── */}
-        {!isLoading && (
+        {!isLoading && selectedLocation && (
           <div className="lg:hidden px-4 pb-3">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -742,44 +584,7 @@ export default function CategoryServicesPage() {
           </div>
         )}
 
-        {/* ── Desktop sidebar ── */}
-        <div className="hidden lg:flex flex-col w-[380px] border-l border-border px-6 py-4 gap-4">
-          {selectedLocation && (
-            <>
-              <div className="bg-card border border-border rounded-2xl p-4">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Nearby Providers</h4>
-                {services.slice(0, 4).map((s, i) => (
-                  <div key={s.id} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}>
-                    <div className="size-10 rounded-xl bg-muted/50 overflow-hidden relative shrink-0">
-                      <Image src={s.thumbnail || "/placeholder.svg"} alt={s.title} fill className="object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{s.partner_name || "Provider"}</p>
-                      <p className="text-[11px] text-muted-foreground">{s.title}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-green-600 font-medium shrink-0">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                      </span>
-                      Online
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-card border border-border rounded-2xl p-4">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Price Breakup</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Base fare</span><span className="font-medium">₹{avgPrice}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Platform fee</span><span className="font-medium">₹0</span></div>
-                  <div className="h-px bg-border my-1" />
-                  <div className="flex justify-between font-bold"><span>Estimated Total</span><span className="text-navy">₹{avgPrice}</span></div>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-2">*Final price may vary based on actual usage</p>
-              </div>
-            </>
-          )}
-        </div>
+
       </div>
 
       {/* ─── CONFIRMATION POPUP ─── */}
@@ -801,7 +606,7 @@ export default function CategoryServicesPage() {
               </div>
               <div className="space-y-3">
                 <ConfirmDetail icon="agriculture" iconClass="text-primary" label="Service Type" value={categoryName} />
-                <ConfirmDetail icon="location_on" iconClass="text-primary" label="Your Location" value={`${selectedLocation?.name}, ${selectedLocation?.area}`} />
+                <ConfirmDetail icon="location_on" iconClass="text-primary" label="Your Location" value={shortAddress || "Not set"} />
                 <ConfirmDetail icon="currency_rupee" iconClass="text-primary" label="Pay after service" value={`₹${avgPrice} (estimated)`} />
                 <ConfirmDetail icon="schedule" iconClass="text-amber-500" label="Estimated arrival" value={`~${estimatedArrival} minutes`} />
               </div>
