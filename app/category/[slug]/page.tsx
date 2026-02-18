@@ -53,6 +53,32 @@ export default function CategoryServicesPage() {
   const [isDragging, setIsDragging] = useState(false)
   const sliderStartX = useRef(0)
   const sliderWidth = useRef(0)
+  const [locationLoaded, setLocationLoaded] = useState(false)
+
+  // ── Fetch saved location from profile on mount ──
+  useEffect(() => {
+    const fetchSavedLocation = async () => {
+      try {
+        const res = await fetch("/api/auth/location")
+        if (res.ok) {
+          const data = await res.json()
+          const profile = data.profile
+          if (profile?.default_lat && profile?.default_lng) {
+            setSelectedLocation({
+              lat: parseFloat(profile.default_lat),
+              lng: parseFloat(profile.default_lng),
+              address: profile.default_address || "Saved location",
+            })
+          }
+        }
+      } catch {
+        // Not logged in or fetch failed — user can pick manually
+      } finally {
+        setLocationLoaded(true)
+      }
+    }
+    fetchSavedLocation()
+  }, [])
 
   // ── Fetch category data once ──
   useEffect(() => {
@@ -116,6 +142,16 @@ export default function CategoryServicesPage() {
   // ── Location handler ──
   const handleLocationSelect = useCallback((location: SelectedLocation) => {
     setSelectedLocation(location)
+    // Sync to backend profile (fire-and-forget)
+    fetch("/api/auth/location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latitude: location.lat,
+        longitude: location.lng,
+        address: location.address,
+      }),
+    }).catch(() => { /* ignore if not logged in */ })
   }, [])
 
   // ── Build service markers for the map ──
