@@ -50,11 +50,11 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             </div>
           </div>
 
-         
+
           {/* Right Section */}
           <div className="flex items-center gap-4">
-             {/* Search Bar */}
-             <div className="w-[280px]">
+            {/* Search Bar */}
+            <div className="w-[280px]">
               <div className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">
                 <div className="pl-3 pr-2 text-muted-foreground group-focus-within:text-primary transition-colors">
                   <span className="material-symbols-outlined text-[20px]">search</span>
@@ -64,8 +64,8 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                   placeholder="Search for tractors..."
                   className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70 h-full w-full"
                 />
-                 <button className="mr-1 p-1.5 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-                   <span className="material-symbols-outlined text-[18px]">tune</span>
+                <button className="mr-1 p-1.5 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-[18px]">tune</span>
                 </button>
               </div>
             </div>
@@ -74,10 +74,10 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
 
             {/* Profile or Login */}
             {isLoading ? (
-               <div className="h-9 w-24 bg-muted animate-pulse rounded-full" />
+              <div className="h-9 w-24 bg-muted animate-pulse rounded-full" />
             ) : isAuthenticated ? (
               <Link
-                href={variant === "partner" ? "/partner/profile" : "/profile"}
+                href="/profile"
                 className="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
               >
                 <Avatar className="size-8 border-2 border-primary/20">
@@ -85,20 +85,20 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                     {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 <div className="flex flex-col items-start gap-0.5">
-                    <span className="text-sm font-semibold leading-none">
-                        {user?.first_name || "User"}
-                    </span>
-                   
+                  <span className="text-sm font-semibold leading-none">
+                    {user?.first_name || "User"}
+                  </span>
+
                 </div>
               </Link>
             ) : (
-                <Button asChild variant="default" className="rounded-full px-6">
-                    <Link href="/auth">
-                        Login
-                    </Link>
-                </Button>
+              <Button asChild variant="default" className="rounded-full px-6">
+                <Link href="/auth">
+                  Login
+                </Link>
+              </Button>
             )}
           </div>
         </div>
