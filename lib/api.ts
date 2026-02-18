@@ -7,30 +7,36 @@ export const API_ENDPOINTS = {
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
   UPDATE_LOCATION: `${API_BASE_URL}/users/profile/`,
-  
+
   // Partners
+  PARTNER_STATUS: `${API_BASE_URL}/partners/status/`,
   PARTNER_REGISTER: `${API_BASE_URL}/partners/register/`,
   PARTNER_PROFILE: `${API_BASE_URL}/partners/profile/`,
   PARTNER_DASHBOARD: `${API_BASE_URL}/partners/dashboard/`,
   PARTNER_PUBLIC: (id: number) => `${API_BASE_URL}/partners/${id}/`,
-  
+
   // Services
   CATEGORIES: `${API_BASE_URL}/services/categories/`,
   SERVICES: `${API_BASE_URL}/services/`,
   SERVICE_DETAIL: (id: number) => `${API_BASE_URL}/services/${id}/`,
   MY_SERVICES: `${API_BASE_URL}/services/my/`,
   MY_SERVICE_DETAIL: (id: number) => `${API_BASE_URL}/services/my/${id}/`,
-  
+
   // Bookings - Customer
   CUSTOMER_BOOKINGS: `${API_BASE_URL}/bookings/`,
   CUSTOMER_BOOKING_DETAIL: (id: string) => `${API_BASE_URL}/bookings/${id}/`,
   CUSTOMER_BOOKING_CANCEL: (id: string) => `${API_BASE_URL}/bookings/${id}/cancel/`,
-  
+
   // Bookings - Provider
   PROVIDER_BOOKINGS: `${API_BASE_URL}/bookings/provider/list/`,
   PROVIDER_BOOKING_DETAIL: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/`,
   PROVIDER_BOOKING_ACTION: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/action/`,
   PROVIDER_BOOKING_CANCEL: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/cancel/`,
+
+  // Bookings - Provider Instant
+  PROVIDER_INSTANT_REQUESTS: `${API_BASE_URL}/bookings/provider/instant/`,
+  PROVIDER_INSTANT_ACCEPT: (id: string) => `${API_BASE_URL}/bookings/provider/instant/${id}/accept/`,
+  PROVIDER_INSTANT_DECLINE: (id: string) => `${API_BASE_URL}/bookings/provider/instant/${id}/decline/`,
 } as const
 
 // Types for API responses

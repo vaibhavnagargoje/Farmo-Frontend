@@ -56,34 +56,34 @@ export async function GET() {
       }
     }
 
-    // Fetch user profile from Django
-    const response = await fetchWithAuth(API_ENDPOINTS.PARTNER_PROFILE, token)
+    // 1. Fetch user profile from USER_PROFILE endpoint (always works for logged-in users)
+    const userResponse = await fetchWithAuth(API_ENDPOINTS.USER_PROFILE, token)
+    let userData = null
 
-    if (!response.ok) {
-      // If partner profile doesn't exist, just return basic user info from cookie
-      if (response.status === 404) {
-        const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
-        if (userCookie) {
-          return NextResponse.json({
-            user: JSON.parse(userCookie),
-            partner: null,
-          })
-        }
+    if (userResponse.ok) {
+      userData = await userResponse.json()
+    } else {
+      // Fallback to user cookie if user profile endpoint fails
+      const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
+      if (userCookie) {
+        userData = { user: JSON.parse(userCookie), profile: null }
       }
-
-      const error = await response.json()
-      return NextResponse.json(
-        { message: error.detail || "Failed to fetch profile" },
-        { status: response.status }
-      )
     }
 
-    const partnerData = await response.json()
-    const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
-    const user = userCookie ? JSON.parse(userCookie) : null
+    // 2. Try to fetch partner profile (may not exist)
+    let partnerData = null
+    try {
+      const partnerResponse = await fetchWithAuth(API_ENDPOINTS.PARTNER_PROFILE, token)
+      if (partnerResponse.ok) {
+        partnerData = await partnerResponse.json()
+      }
+    } catch {
+      // Partner profile doesn't exist — that's fine
+    }
 
     return NextResponse.json({
-      user,
+      user: userData?.user || null,
+      profile: userData?.profile || null,
       partner: partnerData,
     })
   } catch (error) {
@@ -153,14 +153,14 @@ export async function PATCH(request: NextRequest) {
       if (address) userUpdatePayload.village = address // Update CustomerProfile default_address as well
 
       await fetchWithAuth(API_ENDPOINTS.USER_PROFILE, token, {
-        method: "POST", 
+        method: "POST",
         body: JSON.stringify(userUpdatePayload)
       })
     }
 
     // 2. Update Partner Profile (Address/City) if exists
     let partnerData = null
-    
+
     // We attempt to update partner profile if address or other partner fields are present
     const partnerPayload: any = { ...otherData }
     if (address) partnerPayload.base_city = address
@@ -170,7 +170,7 @@ export async function PATCH(request: NextRequest) {
         method: "PATCH",
         body: JSON.stringify(partnerPayload),
       })
-      
+
       if (partnerResponse.ok) {
         partnerData = await partnerResponse.json()
       }
@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
     if (user && (first_name || last_name)) {
       if (first_name) user.first_name = first_name
       if (last_name) user.last_name = last_name
-      
+
       cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), {
         httpOnly: false, // Ensure client side can read it if needed
         secure: process.env.NODE_ENV === "production",
@@ -192,10 +192,10 @@ export async function PATCH(request: NextRequest) {
         maxAge: 7 * 24 * 60 * 60, // 7 days
       })
     }
-    
+
     // If no partner data fetched yet (but we didn't fail), try to fetch it to return consistent response
     // Or just return what we have.
-    
+
     return NextResponse.json({
       message: "Profile updated successfully",
       user,

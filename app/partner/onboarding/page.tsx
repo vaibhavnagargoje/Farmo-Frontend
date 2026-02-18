@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DesktopHeader } from "@/components/desktop-header"
@@ -34,6 +34,12 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Loading and partner status states
+  const [isLoading, setIsLoading] = useState(true)
+  const [isPartner, setIsPartner] = useState(false)
+  const [partnerData, setPartnerData] = useState<any>(null)
+  const [nameReadOnly, setNameReadOnly] = useState(false)
+
   // Step 1: Personal Info
   const [personalInfo, setPersonalInfo] = useState<PersonalInfoData>({
     firstName: "",
@@ -66,6 +72,52 @@ export default function OnboardingPage() {
     serviceRadius: 15,
     images: [],
   })
+
+  // Check partner status on mount
+  useEffect(() => {
+    async function checkPartnerStatus() {
+      try {
+        const res = await fetch("/api/partner/onboarding")
+        if (!res.ok) {
+          // Not authenticated — redirect to login
+          if (res.status === 401) {
+            router.push("/auth/login")
+            return
+          }
+          setIsLoading(false)
+          return
+        }
+
+        const data = await res.json()
+
+        if (data.is_partner) {
+          // User is already a partner
+          setIsPartner(true)
+          setPartnerData(data.partner)
+        } else {
+          // User is not a partner — pre-fill name if available
+          const user = data.user
+          if (user) {
+            const hasName = user.first_name || user.last_name
+            setPersonalInfo((prev) => ({
+              ...prev,
+              firstName: user.first_name || "",
+              lastName: user.last_name || "",
+            }))
+            if (hasName) {
+              setNameReadOnly(true)
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking partner status:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkPartnerStatus()
+  }, [router])
 
   // Validation for each step
   const validateStep = useCallback(
@@ -151,7 +203,12 @@ export default function OnboardingPage() {
 
       if (!partnerRes.ok) {
         const err = await partnerRes.json()
-        throw new Error(err.message || "Failed to register as partner")
+        console.error("Partner registration error details:", err)
+        // Django validation errors come as { field: ["error msg"] } or { error: "msg" }
+        const errorMsg = err.message || err.error || err.detail
+          || (err.errors ? JSON.stringify(err.errors) : null)
+          || "Failed to register as partner"
+        throw new Error(errorMsg)
       }
 
       // Step 3: Create the first service with images
@@ -220,6 +277,99 @@ export default function OnboardingPage() {
     return "pending"
   }
 
+  // --- Loading State ---
+  if (isLoading) {
+    return (
+      <div className="bg-background font-sans min-h-screen flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-muted font-medium">Checking your account...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Already a Partner ---
+  if (isPartner) {
+    return (
+      <div className="bg-background font-sans min-h-screen flex flex-col">
+        <DesktopHeader variant="partner" />
+        <MobileHeader />
+
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full flex flex-col items-center gap-6 text-center">
+            {/* Success Icon */}
+            <div className="size-28 rounded-full bg-success/10 flex items-center justify-center">
+              <div className="size-20 rounded-full bg-success/20 flex items-center justify-center">
+                <span
+                  className="material-symbols-outlined text-success text-5xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  verified
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold text-navy lg:text-3xl">
+                You&apos;re Already a Partner!
+              </h1>
+              <p className="text-muted text-sm mt-2 leading-relaxed">
+                You are registered as <strong className="text-foreground">{partnerData?.business_name || "a partner"}</strong>.
+                Manage your services, view bookings, and track earnings from your dashboard.
+              </p>
+            </div>
+
+            {/* Partner Info Card */}
+            {partnerData && (
+              <div className="w-full bg-card rounded-2xl border border-border p-5">
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted">Business</span>
+                    <span className="text-sm font-semibold text-foreground">{partnerData.business_name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted">Type</span>
+                    <span className="text-sm font-semibold text-foreground capitalize">{partnerData.partner_type?.toLowerCase()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted">Verified</span>
+                    <span className={`text-sm font-semibold ${partnerData.is_verified ? "text-success" : "text-primary"}`}>
+                      {partnerData.is_verified ? "✓ Verified" : "Pending"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted">Rating</span>
+                    <span className="text-sm font-semibold text-foreground">⭐ {partnerData.rating}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="w-full flex flex-col gap-3">
+              <Link
+                href="/partner"
+                className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+              >
+                <span className="material-symbols-outlined">dashboard</span>
+                <span>Go to Dashboard</span>
+              </Link>
+              <Link
+                href="/"
+                className="w-full h-12 bg-card border border-border hover:bg-muted/10 text-foreground rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">home</span>
+                <span>Back to Home</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Onboarding Flow ---
   return (
     <div className="bg-background font-sans min-h-screen flex flex-col relative">
       {/* Error Toast */}
@@ -375,6 +525,7 @@ export default function OnboardingPage() {
                 data={personalInfo}
                 onChange={setPersonalInfo}
                 errors={errors}
+                nameReadOnly={nameReadOnly}
               />
             )}
             {currentStep === 2 && (
@@ -453,6 +604,7 @@ export default function OnboardingPage() {
               data={personalInfo}
               onChange={setPersonalInfo}
               errors={errors}
+              nameReadOnly={nameReadOnly}
             />
           )}
           {currentStep === 2 && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,14 +40,12 @@ interface ListServicesStepProps {
     defaultLng?: number | null
 }
 
-const categories = [
-    { value: "agriculture-machinery", label: "Agriculture Machinery", icon: "agriculture" },
-    { value: "construction-labor", label: "Construction Labor", icon: "construction" },
-    { value: "goods-transport", label: "Goods Transport", icon: "local_shipping" },
-    { value: "harvesting", label: "Harvesting Services", icon: "grass" },
-    { value: "irrigation", label: "Irrigation Services", icon: "water_drop" },
-    { value: "pest-control", label: "Pest Control", icon: "bug_report" },
-]
+interface CategoryOption {
+    id: number
+    name: string
+    slug: string
+    icon: string | null
+}
 
 const priceUnits = [
     { value: "HOUR", label: "Per Hour" },
@@ -66,6 +64,28 @@ export function ListServicesStep({
 }: ListServicesStepProps) {
     const imageInputRef = useRef<HTMLInputElement>(null)
     const [isFetchingLocation, setIsFetchingLocation] = useState(false)
+    const [categories, setCategories] = useState<CategoryOption[]>([])
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
+
+    // Fetch categories from backend on mount
+    useEffect(() => {
+        async function fetchCategories() {
+            try {
+                const res = await fetch("/api/services/categories")
+                if (res.ok) {
+                    const data = await res.json()
+                    // Handle both array response and paginated response
+                    const categoryList = Array.isArray(data) ? data : (data.results || [])
+                    setCategories(categoryList)
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories:", error)
+            } finally {
+                setIsCategoriesLoading(false)
+            }
+        }
+        fetchCategories()
+    }, [])
 
     // Pre-fill location from Step 1 if not already set
     const hasLocation = data.locationLat !== null && data.locationLng !== null
@@ -150,16 +170,17 @@ export function ListServicesStep({
                         <SelectValue placeholder="Choose a category" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border rounded-xl">
-                        {categories.map((cat) => (
-                            <SelectItem key={cat.value} value={cat.value} className="rounded-lg">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-lg text-primary">
-                                        {cat.icon}
-                                    </span>
-                                    <span>{cat.label}</span>
-                                </div>
-                            </SelectItem>
-                        ))}
+                        {isCategoriesLoading ? (
+                            <div className="p-3 text-sm text-muted text-center">Loading categories...</div>
+                        ) : categories.length === 0 ? (
+                            <div className="p-3 text-sm text-muted text-center">No categories available</div>
+                        ) : (
+                            categories.map((cat) => (
+                                <SelectItem key={cat.id} value={String(cat.id)} className="rounded-lg">
+                                    {cat.name}
+                                </SelectItem>
+                            ))
+                        )}
                     </SelectContent>
                 </Select>
                 {errors.category && (

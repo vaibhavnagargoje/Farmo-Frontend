@@ -1,79 +1,213 @@
-import Image from "next/image"
+"use client"
+
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
-
 import { Switch } from "@/components/ui/switch"
 
-const upcomingSchedule = [
-  {
-    id: "1",
-    title: "Rotavator Work",
-    icon: "agriculture",
-    iconBg: "bg-blue-50",
-    iconColor: "text-navy",
-    date: "Tomorrow",
-    time: "9:00 AM",
-    area: "2 Acres",
-  },
-  {
-    id: "2",
-    title: "Crop Transport",
-    icon: "local_shipping",
-    iconBg: "bg-orange-50",
-    iconColor: "text-primary",
-    date: "Fri, 12 Oct",
-    time: "2:00 PM",
-    area: null,
-  },
-]
+// Types matching backend serializer
+interface BookingItem {
+  id: number
+  booking_id: string
+  booking_type: "INSTANT" | "SCHEDULED"
+  status: string
+  service_title: string
+  category_name: string | null
+  provider_name: string | null
+  customer_phone: string
+  scheduled_date: string | null
+  scheduled_time: string | null
+  total_amount: string
+  expires_at: string | null
+  created_at: string
+}
 
-const recentEarnings = [
-  { id: "1", job: "Ploughing", farmer: "Suresh Sharma", amount: 2400, date: "Today" },
-  { id: "2", job: "Rotavator Work", farmer: "Amit Singh", amount: 1800, date: "Yesterday" },
-  { id: "3", job: "Harvesting", farmer: "Rajesh Kumar", amount: 3500, date: "2 days ago" },
-]
+interface InstantRequestItem {
+  id: number
+  provider: number
+  provider_name: string
+  status: string
+  distance_km: string | null
+  notified_at: string
+  booking: {
+    booking_id: string
+    booking_type: string
+    status: string
+    category_name: string | null
+    customer: { first_name: string; last_name: string; phone_number: string }
+    address: string
+    total_amount: string
+    quantity: number
+    unit_price: string
+    created_at: string
+  }
+}
+
+interface DashboardStats {
+  total_bookings: number
+  active_bookings: number
+  completed_bookings: number
+  total_earnings: number
+}
 
 export default function PartnerDashboard() {
+  const [instantRequests, setInstantRequests] = useState<InstantRequestItem[]>([])
+  const [pendingBookings, setPendingBookings] = useState<BookingItem[]>([])
+  const [confirmedBookings, setConfirmedBookings] = useState<BookingItem[]>([])
+  const [isOnline, setIsOnline] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [partnerName, setPartnerName] = useState("Partner")
+  const [stats, setStats] = useState<DashboardStats>({
+    total_bookings: 0, active_bookings: 0, completed_bookings: 0, total_earnings: 0,
+  })
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      // Fetch all data in parallel
+      const [instantRes, pendingRes, confirmedRes, profileRes] = await Promise.all([
+        fetch("/api/partner/bookings/instant"),
+        fetch("/api/partner/bookings?status=PENDING"),
+        fetch("/api/partner/bookings?status=CONFIRMED"),
+        fetch("/api/partner/onboarding"), // Uses the status endpoint which returns user data
+      ])
+
+      if (instantRes.ok) {
+        const data = await instantRes.json()
+        setInstantRequests(Array.isArray(data) ? data : data.results || [])
+      }
+
+      if (pendingRes.ok) {
+        const data = await pendingRes.json()
+        setPendingBookings(Array.isArray(data) ? data : data.results || [])
+      }
+
+      if (confirmedRes.ok) {
+        const data = await confirmedRes.json()
+        setConfirmedBookings(Array.isArray(data) ? data : data.results || [])
+      }
+
+      if (profileRes.ok) {
+        const data = await profileRes.json()
+        if (data.user) {
+          const name = [data.user.first_name, data.user.last_name].filter(Boolean).join(" ")
+          setPartnerName(name || "Partner")
+        }
+        if (data.partner) {
+          setIsOnline(data.partner.is_available !== false)
+        }
+      }
+    } catch (error) {
+      console.error("Dashboard fetch error:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+    // Poll for new requests every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000)
+    return () => clearInterval(interval)
+  }, [fetchDashboardData])
+
+  const handleToggleOnline = async (checked: boolean) => {
+    setIsOnline(checked)
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_available: checked }),
+      })
+    } catch (error) {
+      console.error("Toggle error:", error)
+      setIsOnline(!checked) // revert
+    }
+  }
+
+  const handleBookingAction = async (
+    bookingId: string,
+    action: "accept" | "reject",
+    type: "instant" | "scheduled"
+  ) => {
+    setActionLoading(bookingId)
+    try {
+      const res = await fetch(`/api/partner/bookings/${bookingId}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          type,
+          rejection_reason: action === "reject" ? "Not available right now" : undefined,
+        }),
+      })
+
+      if (res.ok) {
+        // Refresh data
+        fetchDashboardData()
+      }
+    } catch (error) {
+      console.error("Booking action error:", error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+  }
+
+  const formatAmount = (amount: string | number) => {
+    return `₹${Number(amount).toLocaleString("en-IN")}`
+  }
+
+  const totalActiveRequests = instantRequests.length + pendingBookings.length
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-x-hidden bg-background min-h-screen">
-      {/* Desktop Header */}
       <DesktopHeader variant="partner" />
       <MobileHeader />
 
       {/* Mobile Header */}
       <header className="bg-navy pt-14 pb-6 px-5 sticky top-0 z-30 rounded-b-[2rem] shadow-lg lg:hidden">
         <div className="flex items-center justify-between">
-          {/* User Profile & Status */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="size-12 rounded-full border-2 border-white/30 overflow-hidden">
-                <Image
-                  src="/indian-tractor-driver-man-portrait.jpg"
-                  alt="Partner profile"
-                  width={48}
-                  height={48}
-                  className="object-cover"
-                />
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-white/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-xl">person</span>
               </div>
-              <div className="absolute bottom-0 right-0 size-3.5 bg-success border-2 border-navy rounded-full"></div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch 
-                defaultChecked 
-                className="scale-125 data-[state=checked]:bg-success data-[state=unchecked]:bg-muted"
-              />
-            </div>
-          </div>
-
-          {/* Wallet Balance */}
-          <div className="flex flex-col items-end">
-            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
-              <span className="text-white text-lg font-bold tracking-wide">₹4,500</span>
+              <div>
+                <p className="text-white font-bold text-sm">{partnerName}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Switch
+                    checked={isOnline}
+                    onCheckedChange={handleToggleOnline}
+                    className="scale-90 data-[state=checked]:bg-success data-[state=unchecked]:bg-muted"
+                  />
+                  <span className={`text-xs font-semibold ${isOnline ? "text-green-300" : "text-white/50"}`}>
+                    {isOnline ? "Online" : "Offline"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+          <Link
+            href="/partner/services"
+            className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-primary text-lg">construction</span>
+            <span className="text-white text-sm font-semibold">My Services</span>
+          </Link>
         </div>
       </header>
 
@@ -84,40 +218,37 @@ export default function PartnerDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="size-16 rounded-full border-2 border-navy/20 overflow-hidden">
-                    <Image
-                      src="/indian-tractor-driver-man-portrait.jpg"
-                      alt="Partner profile"
-                      width={64}
-                      height={64}
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="absolute bottom-0 right-0 size-4 bg-success border-2 border-card rounded-full"></div>
+                <div className="size-14 rounded-full bg-navy/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-navy text-2xl">person</span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Welcome back, Partner!</h2>
-                  <p className="text-muted">Ready to accept jobs</p>
+                  <h2 className="text-xl font-bold text-foreground">Welcome back, {partnerName}!</h2>
+                  <p className="text-muted">{isOnline ? "Ready to accept jobs" : "Currently offline"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 pl-6 border-l border-border">
                 <span className="text-sm font-medium text-muted">Status:</span>
-                <Switch 
-                  defaultChecked 
+                <Switch
+                  checked={isOnline}
+                  onCheckedChange={handleToggleOnline}
                   className="scale-125 data-[state=checked]:bg-success data-[state=unchecked]:bg-muted"
                 />
-                <span className="text-sm font-semibold text-success">Online</span>
+                <span className={`text-sm font-semibold ${isOnline ? "text-success" : "text-muted"}`}>
+                  {isOnline ? "Online" : "Offline"}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="bg-navy/5 rounded-xl px-6 py-3 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary text-2xl">account_balance_wallet</span>
+              <Link
+                href="/partner/services"
+                className="bg-navy/5 hover:bg-navy/10 transition-colors rounded-xl px-6 py-3 flex items-center gap-3"
+              >
+                <span className="material-symbols-outlined text-primary text-2xl">construction</span>
                 <div>
-                  <p className="text-xs text-muted">Wallet Balance</p>
-                  <p className="text-xl font-bold text-navy">₹4,500</p>
+                  <p className="text-xs text-muted">Services</p>
+                  <p className="text-base font-bold text-navy">Manage</p>
                 </div>
-              </div>
+              </Link>
               <Link
                 href="/partner/earnings"
                 className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
@@ -129,296 +260,407 @@ export default function PartnerDashboard() {
         </div>
 
         <div className="grid grid-cols-3 gap-8">
-          {/* Main Content - Incoming Request */}
-          <div className="col-span-2">
-            <div className="w-full relative">
-              <div className="absolute -top-3 left-6 z-20 bg-navy text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg border border-white/20">
-                Incoming Request
-              </div>
-
-              <div className="bg-card rounded-2xl shadow-lg overflow-hidden flex flex-col relative z-10 border border-border">
-                <div className="flex">
-                  {/* Map Preview */}
-                  <div className="w-1/2 h-80 relative bg-muted/20 group">
-                    <Image
-                      src="/satellite-farm-field-map-view-punjab-india.jpg"
-                      alt="Farm location map"
-                      fill
-                      className="object-cover opacity-90"
+          {/* Main Content */}
+          <div className="col-span-2 flex flex-col gap-6">
+            {/* Instant Requests */}
+            {instantRequests.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-primary animate-pulse">bolt</span>
+                  <h3 className="text-lg font-bold text-foreground">Instant Requests</h3>
+                  <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {instantRequests.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {instantRequests.map((req) => (
+                    <InstantRequestCard
+                      key={req.id}
+                      request={req}
+                      onAction={handleBookingAction}
+                      actionLoading={actionLoading}
+                      formatDate={formatDate}
+                      formatAmount={formatAmount}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20"></div>
-
-                    <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-white">
-                      <span className="material-symbols-outlined text-primary">location_on</span>
-                      <span className="text-sm font-bold drop-shadow-md">2.4 km away</span>
-                    </div>
-
-                    <button className="absolute top-4 right-4 size-10 bg-card rounded-full flex items-center justify-center shadow-md text-navy hover:bg-muted/10 transition-colors">
-                      <span className="material-symbols-outlined">open_in_full</span>
-                    </button>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="w-1/2 p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-navy text-2xl font-extrabold leading-tight">Ploughing</h3>
-                        <p className="text-muted font-bold text-lg mt-1">4 Acres</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-primary text-2xl font-black tracking-tight">₹3,200</p>
-                        <p className="text-xs text-muted font-medium">Fixed Price</p>
-                      </div>
-                    </div>
-
-                    <hr className="border-dashed border-border mb-4" />
-
-                    {/* Farmer Info */}
-                    <div className="flex items-center gap-3 mb-6 bg-background p-3 rounded-xl border border-border">
-                      <div className="size-11 rounded-full overflow-hidden border-2 border-card shadow-sm">
-                        <Image
-                          src="/indian-farmer-portrait.png"
-                          alt="Farmer"
-                          width={44}
-                          height={44}
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-navy font-bold text-base">Ramesh Kumar</p>
-                        <div className="flex items-center gap-1">
-                          <span
-                            className="material-symbols-outlined text-sm text-yellow-500"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
-                          >
-                            star
-                          </span>
-                          <span className="text-sm font-bold text-foreground">4.8</span>
-                          <span className="text-xs text-muted font-medium">• 12 Jobs</span>
-                        </div>
-                      </div>
-                      <button className="size-10 rounded-full bg-card border border-border text-navy flex items-center justify-center shadow-sm hover:bg-muted/10 transition-colors">
-                        <span className="material-symbols-outlined">call</span>
-                      </button>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                      <button className="flex-1 h-12 rounded-xl border-2 border-border text-muted font-bold flex items-center justify-center hover:bg-muted/10 transition-all">
-                        Reject
-                      </button>
-                      <Link
-                        href="/partner/job/active"
-                        className="flex-[1.5] h-12 rounded-xl bg-primary text-white font-bold flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all"
-                      >
-                        ACCEPT JOB
-                      </Link>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Pending Bookings */}
+            {pendingBookings.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-amber-500">schedule</span>
+                  <h3 className="text-lg font-bold text-foreground">Pending Bookings</h3>
+                  <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {pendingBookings.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {pendingBookings.map((booking) => (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      onAction={handleBookingAction}
+                      actionLoading={actionLoading}
+                      formatDate={formatDate}
+                      formatAmount={formatAmount}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Confirmed/Upcoming */}
+            {confirmedBookings.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-success">check_circle</span>
+                  <h3 className="text-lg font-bold text-foreground">Upcoming Jobs</h3>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {confirmedBookings.map((booking) => (
+                    <div key={booking.id} className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4">
+                      <div className="size-12 rounded-xl bg-green-50 text-success flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-2xl">work</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-foreground font-bold truncate">{booking.service_title}</h4>
+                        <p className="text-xs text-muted mt-0.5">
+                          {booking.scheduled_date || formatDate(booking.created_at)}
+                          {booking.scheduled_time && ` • ${booking.scheduled_time}`}
+                        </p>
+                      </div>
+                      <p className="text-primary font-bold">{formatAmount(booking.total_amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && totalActiveRequests === 0 && confirmedBookings.length === 0 && (
+              <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                <span className="material-symbols-outlined text-6xl text-muted/30 mb-4">inbox</span>
+                <h3 className="text-lg font-bold text-foreground mb-2">No Active Requests</h3>
+                <p className="text-muted text-sm max-w-md mx-auto">
+                  {isOnline
+                    ? "You'll receive bookings here when customers request your services. Stay online!"
+                    : "Go online to start receiving booking requests."}
+                </p>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="col-span-1 flex flex-col gap-6">
             {/* Quick Stats */}
             <div className="bg-card rounded-2xl border border-border p-6">
-              <h3 className="font-bold text-lg text-foreground mb-4">Today's Stats</h3>
+              <h3 className="font-bold text-lg text-foreground mb-4">Quick Stats</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-background rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">3</p>
-                  <p className="text-xs text-muted">Jobs Completed</p>
+                  <p className="text-2xl font-bold text-primary">{totalActiveRequests}</p>
+                  <p className="text-xs text-muted">Active Requests</p>
                 </div>
                 <div className="bg-background rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-primary">₹5,400</p>
-                  <p className="text-xs text-muted">Earned Today</p>
+                  <p className="text-2xl font-bold text-success">{confirmedBookings.length}</p>
+                  <p className="text-xs text-muted">Upcoming Jobs</p>
                 </div>
               </div>
             </div>
 
-            {/* Recent Earnings */}
+            {/* Quick Actions */}
             <div className="bg-card rounded-2xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg text-foreground">Recent Earnings</h3>
-                <Link href="/partner/earnings" className="text-primary text-sm font-semibold">See All</Link>
-              </div>
+              <h3 className="font-bold text-lg text-foreground mb-4">Quick Actions</h3>
               <div className="flex flex-col gap-3">
-                {recentEarnings.map((earning) => (
-                  <div key={earning.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-medium text-foreground text-sm">{earning.job}</p>
-                      <p className="text-xs text-muted">{earning.farmer}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-success text-sm">+₹{earning.amount}</p>
-                      <p className="text-xs text-muted">{earning.date}</p>
-                    </div>
+                <Link
+                  href="/partner/services"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:bg-muted/10 transition-colors"
+                >
+                  <div className="size-10 rounded-xl bg-blue-50 text-navy flex items-center justify-center">
+                    <span className="material-symbols-outlined">construction</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Upcoming Schedule */}
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg text-foreground">Upcoming</h3>
-                <button className="text-primary text-sm font-semibold">See All</button>
-              </div>
-              <div className="flex flex-col gap-3">
-                {upcomingSchedule.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border"
-                  >
-                    <div
-                      className={`size-10 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center shrink-0`}
-                    >
-                      <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-foreground font-semibold truncate text-sm">{item.title}</h4>
-                      <p className="text-xs text-muted">{item.date} • {item.time}</p>
-                    </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground text-sm">Manage Services</p>
+                    <p className="text-xs text-muted">Add, edit, or remove services</p>
                   </div>
-                ))}
+                  <span className="material-symbols-outlined text-muted/50">chevron_right</span>
+                </Link>
+                <Link
+                  href="/partner/earnings"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:bg-muted/10 transition-colors"
+                >
+                  <div className="size-10 rounded-xl bg-green-50 text-success flex items-center justify-center">
+                    <span className="material-symbols-outlined">account_balance_wallet</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground text-sm">Earnings</p>
+                    <p className="text-xs text-muted">View payment history</p>
+                  </div>
+                  <span className="material-symbols-outlined text-muted/50">chevron_right</span>
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Main Content */}
+      {/* ===== MOBILE ===== */}
       <main className="flex-1 px-4 py-6 flex flex-col gap-6 pb-28 lg:hidden">
-        {/* Incoming Request Card */}
-        <div className="w-full relative">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-navy text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg border border-white/20">
-            Incoming Request
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
+        )}
 
-          <div className="bg-card rounded-[2rem] shadow-lg overflow-hidden flex flex-col relative z-10">
-            {/* Map Preview */}
-            <div className="h-48 w-full relative bg-muted/20 group">
-              <Image
-                src="/satellite-farm-field-map-view-punjab-india.jpg"
-                alt="Farm location map"
-                fill
-                className="object-cover opacity-90"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-
-              <div className="absolute bottom-3 left-4 flex items-center gap-1.5 text-white">
-                <span className="material-symbols-outlined text-primary">location_on</span>
-                <span className="text-sm font-bold drop-shadow-md">2.4 km away</span>
-              </div>
-
-              <button className="absolute top-3 right-3 size-10 bg-card rounded-full flex items-center justify-center shadow-md text-navy active:scale-95 transition-transform">
-                <span className="material-symbols-outlined">open_in_full</span>
-              </button>
+        {/* Instant Requests (Mobile) */}
+        {instantRequests.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 px-1 mb-3">
+              <span className="material-symbols-outlined text-primary animate-pulse">bolt</span>
+              <h3 className="text-navy text-lg font-bold">Instant Requests</h3>
+              <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                {instantRequests.length}
+              </span>
             </div>
-
-            {/* Card Body */}
-            <div className="p-5 pt-4">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-navy text-2xl font-extrabold leading-tight">Ploughing</h3>
-                  <p className="text-muted font-bold text-lg mt-1">4 Acres</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-primary text-2xl font-black tracking-tight">₹3,200</p>
-                  <p className="text-xs text-muted font-medium">Fixed Price</p>
-                </div>
-              </div>
-
-              <hr className="border-dashed border-border mb-4" />
-
-              {/* Farmer Info */}
-              <div className="flex items-center gap-3 mb-6 bg-background p-3 rounded-xl border border-border">
-                <div className="size-11 rounded-full overflow-hidden border-2 border-card shadow-sm">
-                  <Image
-                    src="/indian-farmer-portrait.png"
-                    alt="Farmer"
-                    width={44}
-                    height={44}
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-navy font-bold text-base">Ramesh Kumar</p>
-                  <div className="flex items-center gap-1">
-                    <span
-                      className="material-symbols-outlined text-sm text-yellow-500"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      star
-                    </span>
-                    <span className="text-sm font-bold text-foreground">4.8</span>
-                    <span className="text-xs text-muted font-medium">• 12 Jobs</span>
-                  </div>
-                </div>
-                <button className="size-10 rounded-full bg-card border border-border text-navy flex items-center justify-center shadow-sm active:scale-90 transition-transform">
-                  <span className="material-symbols-outlined">call</span>
-                </button>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 h-14">
-                <button className="flex-1 rounded-full border-2 border-border text-muted font-bold text-lg flex items-center justify-center hover:bg-muted/10 active:scale-95 transition-all">
-                  Reject
-                </button>
-                <Link
-                  href="/partner/job/active"
-                  className="flex-[1.5] rounded-full bg-primary text-white font-bold text-lg flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 active:scale-95 transition-all"
-                >
-                  ACCEPT JOB
-                </Link>
-              </div>
+            <div className="flex flex-col gap-4">
+              {instantRequests.map((req) => (
+                <InstantRequestCard
+                  key={req.id}
+                  request={req}
+                  onAction={handleBookingAction}
+                  actionLoading={actionLoading}
+                  formatDate={formatDate}
+                  formatAmount={formatAmount}
+                  mobile
+                />
+              ))}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Upcoming Schedule */}
-        <div className="mt-2">
-          <div className="flex items-center justify-between px-2 mb-3">
-            <h3 className="text-navy text-xl font-bold">Upcoming Schedule</h3>
-            <button className="text-primary text-sm font-bold">See All</button>
+        {/* Pending Bookings (Mobile) */}
+        {pendingBookings.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 px-1 mb-3">
+              <span className="material-symbols-outlined text-amber-500">schedule</span>
+              <h3 className="text-navy text-lg font-bold">Pending Bookings</h3>
+            </div>
+            <div className="flex flex-col gap-3">
+              {pendingBookings.map((booking) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onAction={handleBookingAction}
+                  actionLoading={actionLoading}
+                  formatDate={formatDate}
+                  formatAmount={formatAmount}
+                  mobile
+                />
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="flex flex-col gap-3">
-            {upcomingSchedule.map((item, index) => (
-              <div
-                key={item.id}
-                className={`bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-4 active:scale-[0.98] transition-transform ${index > 0 ? "opacity-80" : ""}`}
-              >
-                <div
-                  className={`size-14 rounded-2xl ${item.iconBg} ${item.iconColor} flex items-center justify-center shrink-0`}
-                >
-                  <span className="material-symbols-outlined text-3xl">{item.icon}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-foreground text-lg font-bold truncate">{item.title}</h4>
-                  <div className="flex items-center gap-2 text-muted text-sm font-medium mt-0.5">
-                    <span className="bg-background px-1.5 py-0.5 rounded text-xs font-semibold text-foreground">
-                      {item.date}
-                    </span>
-                    <span>•</span>
-                    <span>{item.time}</span>
-                    {item.area && (
-                      <>
-                        <span>•</span>
-                        <span>{item.area}</span>
-                      </>
-                    )}
+        {/* Confirmed Jobs (Mobile) */}
+        {confirmedBookings.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 px-1 mb-3">
+              <span className="material-symbols-outlined text-success">check_circle</span>
+              <h3 className="text-navy text-lg font-bold">Upcoming Jobs</h3>
+            </div>
+            <div className="flex flex-col gap-3">
+              {confirmedBookings.map((booking) => (
+                <div key={booking.id} className="bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-4">
+                  <div className="size-12 rounded-xl bg-green-50 text-success flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">work</span>
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-foreground font-bold truncate">{booking.service_title}</h4>
+                    <p className="text-xs text-muted mt-0.5">
+                      {booking.scheduled_date || formatDate(booking.created_at)}
+                    </p>
+                  </div>
+                  <p className="text-primary font-bold text-sm">{formatAmount(booking.total_amount)}</p>
                 </div>
-                <span className="material-symbols-outlined text-muted/50">chevron_right</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Empty State (Mobile) */}
+        {!isLoading && totalActiveRequests === 0 && confirmedBookings.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="material-symbols-outlined text-6xl text-muted/30 mb-4">inbox</span>
+            <h3 className="text-lg font-bold text-foreground mb-2">No Active Requests</h3>
+            <p className="text-muted text-sm px-8">
+              {isOnline
+                ? "Stay online — bookings will appear here."
+                : "Go online to start receiving booking requests."}
+            </p>
+          </div>
+        )}
       </main>
 
       <BottomNav variant="partner" />
+    </div>
+  )
+}
+
+// ─── Sub-components ──────────────────────────────────────
+
+function InstantRequestCard({
+  request,
+  onAction,
+  actionLoading,
+  formatDate,
+  formatAmount,
+  mobile,
+}: {
+  request: InstantRequestItem
+  onAction: (id: string, action: "accept" | "reject", type: "instant" | "scheduled") => void
+  actionLoading: string | null
+  formatDate: (d: string) => string
+  formatAmount: (a: string | number) => string
+  mobile?: boolean
+}) {
+  const booking = request.booking
+  const isLoading = actionLoading === booking.booking_id
+  const customerName = booking.customer
+    ? `${booking.customer.first_name} ${booking.customer.last_name}`.trim()
+    : "Customer"
+
+  return (
+    <div className={`bg-card ${mobile ? "rounded-[1.5rem]" : "rounded-2xl"} shadow-lg overflow-hidden border-2 border-primary/20 relative`}>
+      {/* Urgency Banner */}
+      <div className="bg-primary/10 px-4 py-2 flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary text-sm animate-pulse">bolt</span>
+        <span className="text-primary text-xs font-bold uppercase tracking-wider">Instant Request</span>
+        <span className="ml-auto text-xs text-muted">{formatDate(request.notified_at)}</span>
+        {request.distance_km && (
+          <span className="bg-card text-foreground text-xs font-bold px-2 py-0.5 rounded-full border border-border">
+            {request.distance_km} km
+          </span>
+        )}
+      </div>
+
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="text-navy text-xl font-extrabold">{booking.category_name || "Service"}</h3>
+            <p className="text-muted text-sm mt-0.5">{booking.address}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-primary text-xl font-black">{formatAmount(booking.total_amount)}</p>
+            <p className="text-xs text-muted">Qty: {booking.quantity}</p>
+          </div>
+        </div>
+
+        {/* Customer Info */}
+        <div className="flex items-center gap-3 mb-4 bg-background p-3 rounded-xl border border-border">
+          <div className="size-10 rounded-full bg-navy/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-navy">person</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-navy font-bold text-sm">{customerName}</p>
+            <p className="text-xs text-muted">{booking.customer?.phone_number}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            disabled={isLoading}
+            onClick={() => onAction(booking.booking_id, "reject", "instant")}
+            className="flex-1 h-12 rounded-xl border-2 border-border text-muted font-bold flex items-center justify-center hover:bg-muted/10 transition-all disabled:opacity-50"
+          >
+            Decline
+          </button>
+          <button
+            disabled={isLoading}
+            onClick={() => onAction(booking.booking_id, "accept", "instant")}
+            className="flex-[1.5] h-12 rounded-xl bg-primary text-white font-bold flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all disabled:opacity-50"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              "ACCEPT"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BookingCard({
+  booking,
+  onAction,
+  actionLoading,
+  formatDate,
+  formatAmount,
+  mobile,
+}: {
+  booking: BookingItem
+  onAction: (id: string, action: "accept" | "reject", type: "instant" | "scheduled") => void
+  actionLoading: string | null
+  formatDate: (d: string) => string
+  formatAmount: (a: string | number) => string
+  mobile?: boolean
+}) {
+  const isLoading = actionLoading === booking.booking_id
+
+  return (
+    <div className={`bg-card p-4 ${mobile ? "rounded-2xl shadow-sm" : "rounded-2xl"} border border-border`}>
+      <div className="flex items-start gap-4">
+        <div className="size-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-2xl">
+            {booking.booking_type === "INSTANT" ? "bolt" : "calendar_month"}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h4 className="text-foreground font-bold truncate">{booking.service_title}</h4>
+              <p className="text-xs text-muted mt-0.5">
+                {booking.scheduled_date || formatDate(booking.created_at)}
+                {booking.scheduled_time && ` • ${booking.scheduled_time}`}
+              </p>
+            </div>
+            <p className="text-primary font-bold shrink-0">{formatAmount(booking.total_amount)}</p>
+          </div>
+
+          {booking.status === "PENDING" && (
+            <div className="flex gap-2 mt-3">
+              <button
+                disabled={isLoading}
+                onClick={() => onAction(booking.booking_id, "reject", "scheduled")}
+                className="flex-1 h-9 rounded-lg border border-border text-muted text-sm font-semibold hover:bg-muted/10 transition-all disabled:opacity-50"
+              >
+                Reject
+              </button>
+              <button
+                disabled={isLoading}
+                onClick={() => onAction(booking.booking_id, "accept", "scheduled")}
+                className="flex-1 h-9 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                ) : (
+                  "Accept"
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

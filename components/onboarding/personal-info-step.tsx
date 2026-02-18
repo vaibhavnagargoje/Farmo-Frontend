@@ -16,9 +16,10 @@ interface PersonalInfoStepProps {
     data: PersonalInfoData
     onChange: (data: PersonalInfoData) => void
     errors: Record<string, string>
+    nameReadOnly?: boolean
 }
 
-export function PersonalInfoStep({ data, onChange, errors }: PersonalInfoStepProps) {
+export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false }: PersonalInfoStepProps) {
     const [isFetchingLocation, setIsFetchingLocation] = useState(false)
     const [locationError, setLocationError] = useState("")
 
@@ -67,15 +68,17 @@ export function PersonalInfoStep({ data, onChange, errors }: PersonalInfoStepPro
             {/* Name Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                    <Label htmlFor="firstName" className="text-sm font-semibold text-foreground">
+                    <Label htmlFor="firstName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         First Name <span className="text-destructive">*</span>
+                        {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
                     </Label>
                     <Input
                         id="firstName"
                         placeholder="e.g. Rajesh"
                         value={data.firstName}
                         onChange={(e) => handleChange("firstName", e.target.value)}
-                        className={`h-12 rounded-xl bg-card border ${errors.firstName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
+                        disabled={nameReadOnly}
+                        className={`h-12 rounded-xl border ${nameReadOnly ? "bg-muted/10 text-muted cursor-not-allowed" : "bg-card"} ${errors.firstName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
                     />
                     {errors.firstName && (
                         <p className="text-xs text-destructive font-medium flex items-center gap-1">
@@ -86,15 +89,17 @@ export function PersonalInfoStep({ data, onChange, errors }: PersonalInfoStepPro
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <Label htmlFor="lastName" className="text-sm font-semibold text-foreground">
+                    <Label htmlFor="lastName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         Last Name <span className="text-destructive">*</span>
+                        {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
                     </Label>
                     <Input
                         id="lastName"
                         placeholder="e.g. Kumar"
                         value={data.lastName}
                         onChange={(e) => handleChange("lastName", e.target.value)}
-                        className={`h-12 rounded-xl bg-card border ${errors.lastName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
+                        disabled={nameReadOnly}
+                        className={`h-12 rounded-xl border ${nameReadOnly ? "bg-muted/10 text-muted cursor-not-allowed" : "bg-card"} ${errors.lastName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
                     />
                     {errors.lastName && (
                         <p className="text-xs text-destructive font-medium flex items-center gap-1">
