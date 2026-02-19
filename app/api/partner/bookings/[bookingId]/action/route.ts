@@ -4,7 +4,6 @@ import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
 import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
 
 // POST - Take action on a booking (accept/reject/start/complete)
-// Also handles instant booking accept/decline
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ bookingId: string }> }
@@ -19,25 +18,13 @@ export async function POST(
 
         const { bookingId } = await params
         const body = await request.json()
-        const { action, otp, rejection_reason, type } = body
+        const { action, otp, rejection_reason } = body
 
-        let url: string
-        let payload: Record<string, string> = {}
-
-        if (type === "instant") {
-            // Instant booking accept/decline
-            if (action === "accept") {
-                url = API_ENDPOINTS.PROVIDER_INSTANT_ACCEPT(bookingId)
-            } else {
-                url = API_ENDPOINTS.PROVIDER_INSTANT_DECLINE(bookingId)
-            }
-        } else {
-            // Regular booking action
-            url = API_ENDPOINTS.PROVIDER_BOOKING_ACTION(bookingId)
-            payload = { action }
-            if (otp) payload.otp = otp
-            if (rejection_reason) payload.rejection_reason = rejection_reason
-        }
+        // Regular booking action
+        const url = API_ENDPOINTS.PROVIDER_BOOKING_ACTION(bookingId)
+        const payload: Record<string, string> = { action }
+        if (otp) payload.otp = otp
+        if (rejection_reason) payload.rejection_reason = rejection_reason
 
         const response = await fetchWithAuth(url, token, {
             method: "POST",

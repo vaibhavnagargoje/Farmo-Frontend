@@ -15,7 +15,9 @@ import { cn } from "@/lib/utils"
 interface BookingDetail {
   id: number
   booking_id: string
-  status: "PENDING" | "CONFIRMED" | "REJECTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  booking_type: "SCHEDULED"
+  order_number: string | null
+  status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
   payment_status: "PENDING" | "PAID" | "REFUNDED"
   service: {
     id: number
@@ -45,6 +47,9 @@ interface BookingDetail {
   quantity: number
   unit_price: string
   total_amount: string
+  broadcast_count: number
+  current_broadcast_radius: number | null
+  assigned_at: string | null
   note?: string
   cancellation_reason?: string
   created_at: string
@@ -54,8 +59,10 @@ interface BookingDetail {
 // Status config
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
   PENDING: { label: "Pending Confirmation", color: "text-yellow-600", bgColor: "bg-yellow-100", icon: "schedule" },
+  SEARCHING: { label: "Searching Providers", color: "text-blue-600", bgColor: "bg-blue-100", icon: "travel_explore" },
   CONFIRMED: { label: "Confirmed", color: "text-primary", bgColor: "bg-primary/10", icon: "check_circle" },
   REJECTED: { label: "Rejected", color: "text-destructive", bgColor: "bg-destructive/10", icon: "cancel" },
+  EXPIRED: { label: "Expired", color: "text-orange-600", bgColor: "bg-orange-100", icon: "timer_off" },
   IN_PROGRESS: { label: "In Progress", color: "text-blue-600", bgColor: "bg-blue-100", icon: "sync" },
   COMPLETED: { label: "Completed", color: "text-success", bgColor: "bg-success/10", icon: "task_alt" },
   CANCELLED: { label: "Cancelled", color: "text-muted", bgColor: "bg-muted", icon: "block" },
@@ -116,7 +123,7 @@ export default function BookingDetailsPage() {
     yesterday.setDate(yesterday.getDate() - 1)
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
-    
+
     let dateDisplay = ""
     if (date.toDateString() === today.toDateString()) {
       dateDisplay = "Today"
@@ -125,14 +132,14 @@ export default function BookingDetailsPage() {
     } else if (date.toDateString() === tomorrow.toDateString()) {
       dateDisplay = "Tomorrow"
     } else {
-      dateDisplay = date.toLocaleDateString("en-IN", { 
-        weekday: "short", 
-        day: "numeric", 
-        month: "short", 
-        year: "numeric" 
+      dateDisplay = date.toLocaleDateString("en-IN", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric"
       })
     }
-    
+
     if (timeStr) {
       const [hours, minutes] = timeStr.split(":")
       const hour = parseInt(hours)
@@ -140,7 +147,7 @@ export default function BookingDetailsPage() {
       const hour12 = hour % 12 || 12
       dateDisplay += `, ${hour12}:${minutes} ${ampm}`
     }
-    
+
     return dateDisplay
   }
 
@@ -205,7 +212,7 @@ export default function BookingDetailsPage() {
           </Link>
           <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground">Booking Details</h1>
-            <p className="text-xs text-muted">#{booking.booking_id}</p>
+            <p className="text-xs text-muted">{booking.order_number || `#${booking.booking_id}`}</p>
           </div>
           <div className={cn("px-3 py-1 rounded-full text-xs font-bold", status.bgColor, status.color)}>
             {status.label}
@@ -224,7 +231,11 @@ export default function BookingDetailsPage() {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">Booking #{booking.booking_id}</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                {booking.order_number
+                  ? `Order ${booking.order_number}`
+                  : `Booking #${booking.booking_id}`}
+              </h1>
               <span className={cn("px-3 py-1 rounded-full text-sm font-bold", status.bgColor, status.color)}>
                 {status.label}
               </span>
@@ -269,6 +280,7 @@ export default function BookingDetailsPage() {
             {/* Booking Details */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
               <h3 className="font-bold text-lg text-foreground mb-4">Booking Details</h3>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between items-center py-3 px-4 bg-background rounded-xl">
                   <span className="text-muted">Scheduled</span>
@@ -343,7 +355,7 @@ export default function BookingDetailsPage() {
                   </div>
                 </div>
                 {booking.provider.user_phone && (
-                  <a 
+                  <a
                     href={`tel:${booking.provider.user_phone}`}
                     className="w-full h-11 rounded-xl bg-success/10 text-success flex items-center justify-center gap-2 font-medium hover:bg-success/20 transition-colors"
                   >
@@ -383,10 +395,13 @@ export default function BookingDetailsPage() {
         <div className={cn("rounded-xl p-4 flex items-center gap-3", status.bgColor)}>
           <span className={cn("material-symbols-outlined text-2xl", status.color)}>{status.icon}</span>
           <div>
-            <p className={cn("font-bold", status.color)}>{status.label}</p>
+            <p className={cn("font-bold", status.color)}>
+              {status.label}
+            </p>
             <p className="text-xs text-muted">Updated {formatDate(booking.updated_at)}</p>
           </div>
         </div>
+
 
         {/* Service Card */}
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
@@ -470,7 +485,7 @@ export default function BookingDetailsPage() {
               </div>
             </div>
             {booking.provider.user_phone && (
-              <a 
+              <a
                 href={`tel:${booking.provider.user_phone}`}
                 className="size-12 rounded-full bg-success/10 text-success flex items-center justify-center"
               >
@@ -482,7 +497,7 @@ export default function BookingDetailsPage() {
       </main>
 
       <BottomNav variant="farmer" />
-      
+
       {showOTP && booking.start_job_otp && (
         <OTPModal code={booking.start_job_otp} isOpen={showOTP} onDismiss={() => setShowOTP(false)} />
       )}

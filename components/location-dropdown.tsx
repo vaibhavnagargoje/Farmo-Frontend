@@ -45,8 +45,10 @@ export function LocationDropdown({ className, variant = "mobile" }: LocationDrop
 
       if (response.ok) {
         const data = await response.json()
-        if (data.profile?.default_address) {
-          setAddress(data.profile.default_address)
+        if (data.has_location && data.location?.address) {
+          // Shorten address for display (first 2 parts)
+          const short = data.location.address.split(",").slice(0, 2).join(",").trim()
+          setAddress(short || data.location.address)
           setLocationStatus("success")
         }
       }
@@ -105,17 +107,68 @@ export function LocationDropdown({ className, variant = "mobile" }: LocationDrop
             </div>
 
             {/* Current Location Display */}
-            <div className="     rounded-lg p-3 mb-3">
+            <div className="bg-muted/30 rounded-lg p-3 mb-3">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-0.5">Current</p>
                   <p className="text-sm font-medium text-foreground truncate">{address}</p>
                 </div>
+                {locationStatus === "success" && (
+                  <span className="material-symbols-outlined text-green-500 text-[16px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                )}
               </div>
             </div>
 
-            {/* Placeholder Content */}
-            
+            {/* Detect current location */}
+            <button
+              onClick={async () => {
+                setLocationStatus("syncing")
+                if ("geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                      const { latitude, longitude } = position.coords
+                      let detectedAddress = "Current location"
+                      try {
+                        const geocodeRes = await fetch(
+                          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+                        )
+                        if (geocodeRes.ok) {
+                          const geocodeData = await geocodeRes.json()
+                          if (geocodeData.results?.[0]?.formatted_address) {
+                            detectedAddress = geocodeData.results[0].formatted_address
+                          }
+                        }
+                      } catch { /* ignore geocode errors */ }
+
+                      // Save to profile
+                      try {
+                        await fetch("/api/auth/location", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ latitude, longitude, address: detectedAddress }),
+                        })
+                      } catch { /* ignore save errors */ }
+
+                      const short = detectedAddress.split(",").slice(0, 2).join(",").trim()
+                      setAddress(short || detectedAddress)
+                      setLocationStatus("success")
+                      setIsOpen(false)
+                    },
+                    () => {
+                      setLocationStatus("error")
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                  )
+                } else {
+                  setLocationStatus("error")
+                }
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
+              {locationStatus === "syncing" ? "Detecting..." : "Use Current Location"}
+            </button>
           </div>
         </div>
       )}

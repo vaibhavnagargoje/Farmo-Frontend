@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 interface BookingItem {
   id: number
   booking_id: string
-  booking_type: "INSTANT" | "SCHEDULED"
+  booking_type: "SCHEDULED"
   status: string
   service_title: string
   category_name: string | null
@@ -22,29 +22,7 @@ interface BookingItem {
   created_at: string
 }
 
-interface InstantRequestItem {
-  id: number
-  provider: number
-  provider_name: string
-  status: string
-  distance_km: string | null
-  notified_at: string
-  booking: {
-    booking_id: string
-    booking_type: string
-    status: string
-    category_name: string | null
-    customer: { first_name: string; last_name: string; phone_number: string }
-    address: string
-    total_amount: string
-    quantity: number
-    unit_price: string
-    created_at: string
-  }
-}
-
 export default function PartnerDashboard() {
-  const [instantRequests, setInstantRequests] = useState<InstantRequestItem[]>([])
   const [pendingBookings, setPendingBookings] = useState<BookingItem[]>([])
   const [confirmedBookings, setConfirmedBookings] = useState<BookingItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -52,16 +30,10 @@ export default function PartnerDashboard() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [instantRes, pendingRes, confirmedRes] = await Promise.all([
-        fetch("/api/partner/bookings/instant"),
+      const [pendingRes, confirmedRes] = await Promise.all([
         fetch("/api/partner/bookings?status=PENDING"),
         fetch("/api/partner/bookings?status=CONFIRMED"),
       ])
-
-      if (instantRes.ok) {
-        const data = await instantRes.json()
-        setInstantRequests(Array.isArray(data) ? data : data.results || [])
-      }
 
       if (pendingRes.ok) {
         const data = await pendingRes.json()
@@ -87,8 +59,7 @@ export default function PartnerDashboard() {
 
   const handleBookingAction = async (
     bookingId: string,
-    action: "accept" | "reject",
-    type: "instant" | "scheduled"
+    action: "accept" | "reject"
   ) => {
     setActionLoading(bookingId)
     try {
@@ -97,7 +68,6 @@ export default function PartnerDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          type,
           rejection_reason: action === "reject" ? "Not available right now" : undefined,
         }),
       })
@@ -128,7 +98,7 @@ export default function PartnerDashboard() {
     return `₹${Number(amount).toLocaleString("en-IN")}`
   }
 
-  const totalActiveRequests = instantRequests.length + pendingBookings.length
+  const totalActiveRequests = pendingBookings.length
 
   return (
     <PartnerLayout pageTitle="Dashboard">
@@ -142,31 +112,6 @@ export default function PartnerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* ─── Main Content ─── */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* Instant Requests */}
-            {instantRequests.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-primary animate-pulse">bolt</span>
-                  <h3 className="text-lg font-bold text-foreground">Instant Requests</h3>
-                  <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {instantRequests.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-4">
-                  {instantRequests.map((req) => (
-                    <InstantRequestCard
-                      key={req.id}
-                      request={req}
-                      onAction={handleBookingAction}
-                      actionLoading={actionLoading}
-                      formatDate={formatDate}
-                      formatAmount={formatAmount}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Pending Bookings */}
             {pendingBookings.length > 0 && (
               <div>
@@ -306,88 +251,6 @@ export default function PartnerDashboard() {
 
 // ─── Sub-components ──────────────────────────────────────
 
-function InstantRequestCard({
-  request,
-  onAction,
-  actionLoading,
-  formatDate,
-  formatAmount,
-}: {
-  request: InstantRequestItem
-  onAction: (id: string, action: "accept" | "reject", type: "instant" | "scheduled") => void
-  actionLoading: string | null
-  formatDate: (d: string) => string
-  formatAmount: (a: string | number) => string
-}) {
-  const booking = request.booking
-  const isLoading = actionLoading === booking.booking_id
-  const customerName = booking.customer
-    ? `${booking.customer.first_name} ${booking.customer.last_name}`.trim()
-    : "Customer"
-
-  return (
-    <div className="bg-card rounded-2xl shadow-lg overflow-hidden border-2 border-primary/20 relative">
-      {/* Urgency Banner */}
-      <div className="bg-primary/10 px-4 py-2 flex items-center gap-2">
-        <span className="material-symbols-outlined text-primary text-sm animate-pulse">bolt</span>
-        <span className="text-primary text-xs font-bold uppercase tracking-wider">Instant Request</span>
-        <span className="ml-auto text-xs text-muted">{formatDate(request.notified_at)}</span>
-        {request.distance_km && (
-          <span className="bg-card text-foreground text-xs font-bold px-2 py-0.5 rounded-full border border-border">
-            {request.distance_km} km
-          </span>
-        )}
-      </div>
-
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="text-navy text-xl font-extrabold">{booking.category_name || "Service"}</h3>
-            <p className="text-muted text-sm mt-0.5">{booking.address}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-primary text-xl font-black">{formatAmount(booking.total_amount)}</p>
-            <p className="text-xs text-muted">Qty: {booking.quantity}</p>
-          </div>
-        </div>
-
-        {/* Customer Info */}
-        <div className="flex items-center gap-3 mb-4 bg-background p-3 rounded-xl border border-border">
-          <div className="size-10 rounded-full bg-navy/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-navy">person</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-navy font-bold text-sm">{customerName}</p>
-            <p className="text-xs text-muted">{booking.customer?.phone_number}</p>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            disabled={isLoading}
-            onClick={() => onAction(booking.booking_id, "reject", "instant")}
-            className="flex-1 h-12 rounded-xl border-2 border-border text-muted font-bold flex items-center justify-center hover:bg-muted/10 transition-all disabled:opacity-50"
-          >
-            Decline
-          </button>
-          <button
-            disabled={isLoading}
-            onClick={() => onAction(booking.booking_id, "accept", "instant")}
-            className="flex-[1.5] h-12 rounded-xl bg-primary text-white font-bold flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              "ACCEPT"
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function BookingCard({
   booking,
   onAction,
@@ -396,7 +259,7 @@ function BookingCard({
   formatAmount,
 }: {
   booking: BookingItem
-  onAction: (id: string, action: "accept" | "reject", type: "instant" | "scheduled") => void
+  onAction: (id: string, action: "accept" | "reject") => void
   actionLoading: string | null
   formatDate: (d: string) => string
   formatAmount: (a: string | number) => string
@@ -407,9 +270,7 @@ function BookingCard({
     <div className="bg-card p-4 rounded-2xl border border-border">
       <div className="flex items-start gap-4">
         <div className="size-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-2xl">
-            {booking.booking_type === "INSTANT" ? "bolt" : "calendar_month"}
-          </span>
+          <span className="material-symbols-outlined text-2xl">calendar_month</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
@@ -427,14 +288,14 @@ function BookingCard({
             <div className="flex gap-2 mt-3">
               <button
                 disabled={isLoading}
-                onClick={() => onAction(booking.booking_id, "reject", "scheduled")}
+                onClick={() => onAction(booking.booking_id, "reject")}
                 className="flex-1 h-9 rounded-lg border border-border text-muted text-sm font-semibold hover:bg-muted/10 transition-all disabled:opacity-50"
               >
                 Reject
               </button>
               <button
                 disabled={isLoading}
-                onClick={() => onAction(booking.booking_id, "accept", "scheduled")}
+                onClick={() => onAction(booking.booking_id, "accept")}
                 className="flex-1 h-9 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all disabled:opacity-50"
               >
                 {isLoading ? (

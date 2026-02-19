@@ -6,7 +6,7 @@ export const API_ENDPOINTS = {
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
-  UPDATE_LOCATION: `${API_BASE_URL}/users/profile/`,
+  USER_LOCATION: `${API_BASE_URL}/users/location/`,
 
   // Partners
   PARTNER_STATUS: `${API_BASE_URL}/partners/status/`,
@@ -33,10 +33,7 @@ export const API_ENDPOINTS = {
   PROVIDER_BOOKING_ACTION: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/action/`,
   PROVIDER_BOOKING_CANCEL: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/cancel/`,
 
-  // Bookings - Provider Instant
-  PROVIDER_INSTANT_REQUESTS: `${API_BASE_URL}/bookings/provider/instant/`,
-  PROVIDER_INSTANT_ACCEPT: (id: string) => `${API_BASE_URL}/bookings/provider/instant/${id}/accept/`,
-  PROVIDER_INSTANT_DECLINE: (id: string) => `${API_BASE_URL}/bookings/provider/instant/${id}/decline/`,
+
 } as const
 
 // Types for API responses
@@ -138,25 +135,39 @@ export interface Service {
 export interface Booking {
   id: string
   booking_id: string
+  booking_type: "SCHEDULED"
+  order_number: string | null
   service: Service
   provider: PartnerProfile
   customer?: User
-  status: "PENDING" | "ACCEPTED" | "REJECTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
-  payment_status: "PENDING" | "PAID" | "REFUNDED"
+  status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  payment_status: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
+  category_name?: string | null
   scheduled_date: string
   scheduled_time: string
+  expires_at?: string | null
+  broadcast_count: number
+  current_broadcast_radius?: string | null
+  assigned_at?: string | null
   quantity: number
+  unit_price: string
   total_amount: string
-  location_address: string
-  location_lat?: string
-  location_lng?: string
-  customer_notes?: string
-  provider_notes?: string
+  address: string
+  lat?: string
+  lng?: string
+  note?: string
   cancellation_reason?: string
   cancelled_by?: User
+
+  work_started_at?: string
+  work_completed_at?: string
+  start_job_otp?: string
+  end_job_otp?: string
   created_at: string
   updated_at: string
 }
+
+
 
 export interface ApiError {
   message: string

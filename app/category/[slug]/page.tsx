@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
@@ -21,7 +21,6 @@ const DISTANCE_OPTIONS = [
 
 export default function CategoryServicesPage() {
   const params = useParams()
-  const router = useRouter()
   const slug = params.slug as string
 
   // ── Data ──
@@ -32,20 +31,16 @@ export default function CategoryServicesPage() {
 
   // ── Location ──
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null)
+  const [locationLoaded, setLocationLoaded] = useState(false)
+  const [locationStatus, setLocationStatus] = useState<"checking" | "fetching_gps" | "ready" | "no_location">("checking")
 
   // ── Filters ──
   const [activeDistance, setActiveDistance] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
-  // ── Booking ──
-  const [showConfirmPopup, setShowConfirmPopup] = useState(false)
-  const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
-  const [bookingId, setBookingId] = useState("")
-
-  // ── Advanced (browse & schedule providers) ──
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  // ── Coming Soon popup (replaces instant booking) ──
+  const [showComingSoon, setShowComingSoon] = useState(false)
 
   // ── Swipe slider ──
   const sliderRef = useRef<HTMLDivElement>(null)
@@ -53,31 +48,88 @@ export default function CategoryServicesPage() {
   const [isDragging, setIsDragging] = useState(false)
   const sliderStartX = useRef(0)
   const sliderWidth = useRef(0)
-  const [locationLoaded, setLocationLoaded] = useState(false)
 
-  // ── Fetch saved location from profile on mount ──
+  // ── Build providers page URL (no more location params) ──
+  const getProvidersUrl = useCallback(() => {
+    return `/category/${slug}/providers`
+  }, [slug])
+
+  // ── Fetch saved location from profile, fallback to GPS ──
   useEffect(() => {
-    const fetchSavedLocation = async () => {
+    const initLocation = async () => {
+      setLocationStatus("checking")
+
       try {
+        // Step 1: Check if user profile has saved coordinates
         const res = await fetch("/api/auth/location")
         if (res.ok) {
           const data = await res.json()
-          const profile = data.profile
-          if (profile?.default_lat && profile?.default_lng) {
+          if (data.has_location && data.location) {
+            // User already has a saved location — use it directly
             setSelectedLocation({
-              lat: parseFloat(profile.default_lat),
-              lng: parseFloat(profile.default_lng),
-              address: profile.default_address || "Saved location",
+              lat: parseFloat(data.location.latitude),
+              lng: parseFloat(data.location.longitude),
+              address: data.location.address || "Saved location",
             })
+            setLocationLoaded(true)
+            setLocationStatus("ready")
+            return
           }
         }
       } catch {
-        // Not logged in or fetch failed — user can pick manually
-      } finally {
+        // Not logged in or fetch failed — continue to GPS
+      }
+
+      // Step 2: No saved location — auto-detect via GPS
+      if ("geolocation" in navigator) {
+        setLocationStatus("fetching_gps")
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords
+            let address = "Current location"
+
+            // Try reverse geocoding for a readable address
+            try {
+              const geocodeRes = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+              )
+              if (geocodeRes.ok) {
+                const geocodeData = await geocodeRes.json()
+                if (geocodeData.results?.[0]?.formatted_address) {
+                  address = geocodeData.results[0].formatted_address
+                }
+              }
+            } catch {
+              // Geocode failed — use fallback address
+            }
+
+            const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
+            setSelectedLocation(loc)
+            setLocationLoaded(true)
+            setLocationStatus("ready")
+
+            // Save to profile (fire-and-forget)
+            fetch("/api/auth/location", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ latitude, longitude, address }),
+            }).catch(() => { /* ignore if not logged in */ })
+          },
+          () => {
+            // GPS denied or failed — let user pick manually on map
+            setLocationLoaded(true)
+            setLocationStatus("no_location")
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        )
+      } else {
+        // No geolocation API available
         setLocationLoaded(true)
+        setLocationStatus("no_location")
       }
     }
-    fetchSavedLocation()
+
+    initLocation()
   }, [])
 
   // ── Fetch category data once ──
@@ -139,9 +191,10 @@ export default function CategoryServicesPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [showFilters])
 
-  // ── Location handler ──
+  // ── Location handler (when user picks on map) ──
   const handleLocationSelect = useCallback((location: SelectedLocation) => {
     setSelectedLocation(location)
+    setLocationStatus("ready")
     // Sync to backend profile (fire-and-forget)
     fetch("/api/auth/location", {
       method: "POST",
@@ -171,8 +224,7 @@ export default function CategoryServicesPage() {
   const avgPrice =
     services.length > 0
       ? Math.round(services.reduce((sum, s) => sum + parseFloat(s.price || "0"), 0) / services.length)
-      : 500
-  const estimatedArrival = Math.floor(Math.random() * 15) + 5
+      : 0
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
 
   // ── Slider handlers ──
@@ -193,7 +245,8 @@ export default function CategoryServicesPage() {
     setIsDragging(false)
     if (sliderProgress > 0.85) {
       setSliderProgress(1)
-      triggerBooking()
+      setShowComingSoon(true)
+      setTimeout(() => setSliderProgress(0), 300)
     } else {
       setSliderProgress(0)
     }
@@ -215,7 +268,8 @@ export default function CategoryServicesPage() {
       document.removeEventListener("mouseup", onMouseUp)
       setSliderProgress((prev) => {
         if (prev > 0.85) {
-          triggerBooking()
+          setShowComingSoon(true)
+          setTimeout(() => setSliderProgress(0), 300)
           return 1
         }
         return 0
@@ -223,19 +277,6 @@ export default function CategoryServicesPage() {
     }
     document.addEventListener("mousemove", onMouseMove)
     document.addEventListener("mouseup", onMouseUp)
-  }
-
-  const triggerBooking = () => {
-    setBookingId("FB-" + Date.now().toString(36).toUpperCase())
-    setShowConfirmPopup(true)
-    setIsBookingConfirmed(true)
-  }
-
-  const resetBooking = () => {
-    setSliderProgress(0)
-    setShowConfirmPopup(false)
-    setIsBookingConfirmed(false)
-    setBookingId("")
   }
 
   // ── Short address for display ──
@@ -262,21 +303,12 @@ export default function CategoryServicesPage() {
             <div className="flex-1 min-w-0">
               <h1 className="text-base lg:text-lg font-bold text-foreground truncate">{categoryName}</h1>
               <p className="text-[11px] lg:text-xs text-muted-foreground">
-                {selectedLocation
-                  ? `Near ${shortAddress} · ${availableProviders} providers`
-                  : "Find nearby providers instantly"}
+                {locationStatus === "checking" && "Checking saved location..."}
+                {locationStatus === "fetching_gps" && "Detecting your location..."}
+                {locationStatus === "ready" && selectedLocation && `Near ${shortAddress} · ${availableProviders} providers`}
+                {locationStatus === "no_location" && "Find nearby providers"}
               </p>
             </div>
-            {showAdvanced && (
-              <button
-                onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                className="size-9 rounded-full bg-card border border-border flex items-center justify-center text-foreground shadow-sm active:scale-95 transition-transform lg:hidden"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {viewMode === "grid" ? "view_list" : "grid_view"}
-                </span>
-              </button>
-            )}
           </div>
 
           {/* ─── LOCATION DISPLAY + FILTER ─── */}
@@ -289,11 +321,13 @@ export default function CategoryServicesPage() {
                   <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${selectedLocation ? "bg-green-500" : "bg-amber-500"}`} />
                 </span>
                 <p className="text-sm text-foreground truncate flex-1">
-                  {selectedLocation ? shortAddress : "Click on map to set location..."}
+                  {locationStatus === "checking" && "Checking profile location..."}
+                  {locationStatus === "fetching_gps" && "Detecting GPS location..."}
+                  {selectedLocation ? shortAddress : (locationStatus === "no_location" ? "Click on map to set location..." : "")}
                 </p>
                 {selectedLocation && (
                   <button
-                    onClick={() => setSelectedLocation(null)}
+                    onClick={() => { setSelectedLocation(null); setLocationStatus("no_location") }}
                     className="text-muted-foreground hover:text-foreground shrink-0"
                     title="Clear location"
                   >
@@ -362,63 +396,78 @@ export default function CategoryServicesPage() {
 
       {/* ─── MAIN CONTENT ─── */}
       <div className="flex-1 flex flex-col lg:flex-row max-w-6xl mx-auto w-full">
-        <div className="flex-1 flex flex-col">
-          {/* ── Google Map ── */}
+
+        {/* ── LEFT / TOP: Google Map ── */}
+        <div className="lg:flex-1 lg:sticky lg:top-[120px] lg:self-start">
           <div className="px-4 lg:px-6 pt-3 pb-4 lg:pb-3">
             <GoogleMapPicker
               onLocationSelect={handleLocationSelect}
               selectedLocation={selectedLocation}
               serviceMarkers={serviceMarkers}
-              className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/1]"
+              className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-auto lg:h-[calc(100vh-180px)]"
             />
           </div>
+        </div>
+
+        {/* ── RIGHT / BOTTOM: Booking Panel ── */}
+        <div className="lg:w-[420px] xl:w-[460px] lg:border-l lg:border-border/50 flex flex-col">
 
           {/* ── Stats + Swipe to Book ── */}
-          {selectedLocation && !isBookingConfirmed && (
-            <div className="px-3 sm:px-4 lg:px-6 pb-3 lg:pb-4 space-y-2 lg:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="grid grid-cols-3 gap-2 lg:gap-3">
+          {selectedLocation && (
+            <div className="px-4 lg:px-6 pb-3 lg:pt-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+
+              {/* ── Providers + Price Row ── */}
+              <div className="grid grid-cols-2 gap-2.5">
                 {/* Nearby Providers */}
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3">
-                  <p className="text-xl lg:text-2xl font-bold text-foreground text-center">{availableProviders}</p>
-                  <p className="text-[10px] lg:text-xs text-muted-foreground text-center">Providers</p>
+                <div className="bg-card border border-border rounded-2xl p-3.5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${availableProviders > 0 ? "bg-green-400" : "bg-red-400"}`} />
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${availableProviders > 0 ? "bg-green-500" : "bg-red-500"}`} />
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground">Nearby</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground leading-none">{availableProviders}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Providers</p>
                   {services.length > 0 && (
-                    <div className="flex items-center justify-center -space-x-1.5 mt-2">
-                      {services.slice(0, 3).map((s) => (
-                        <div key={s.id} className="size-6 lg:size-7 rounded-full bg-muted/50 overflow-hidden relative border-2 border-card shrink-0">
-                          <Image src={s.thumbnail || "/placeholder.svg"} alt={s.title} fill className="object-cover" />
+                    <div className="flex items-center -space-x-2 mt-2.5">
+                      {services.slice(0, 5).map((s) => (
+                        <div key={s.id} className="size-7 rounded-full bg-muted/50 overflow-hidden relative border-2 border-card shrink-0">
+                          <Image src={s.thumbnail || "/placeholder.svg"} alt="" fill className="object-cover" />
                         </div>
                       ))}
-                      {services.length > 3 && (
-                        <div className="size-6 lg:size-7 rounded-full bg-muted flex items-center justify-center border-2 border-card text-[8px] lg:text-[9px] font-bold text-muted-foreground shrink-0">
-                          +{services.length - 3}
+                      {services.length > 5 && (
+                        <div className="size-7 rounded-full bg-muted flex items-center justify-center border-2 border-card text-[9px] font-bold text-muted-foreground shrink-0">
+                          +{services.length - 5}
                         </div>
                       )}
                     </div>
                   )}
-                  {services.length === 0 && (
-                    <p className="text-[9px] text-muted-foreground text-center mt-1">None nearby</p>
-                  )}
                 </div>
 
-                {/* Price */}
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3">
-                  <p className="text-xl lg:text-2xl font-bold text-foreground text-center">₹{avgPrice}</p>
-                  <p className="text-[10px] lg:text-xs text-muted-foreground text-center">Est. Price</p>
-                  <p className="text-[9px] lg:text-[10px] text-muted-foreground text-center mt-1.5">+ ₹0 platform fee</p>
-                  <p className="text-[7px] lg:text-[8px] text-muted-foreground text-center mt-0.5">*May vary</p>
-                </div>
-
-                {/* ETA */}
-                <div className="bg-card border border-border rounded-xl lg:rounded-2xl p-2.5 lg:p-3 text-center">
-                  <p className="text-xl lg:text-2xl font-bold text-foreground">{estimatedArrival}m</p>
-                  <p className="text-[10px] lg:text-xs text-muted-foreground">Arrival</p>
+                {/* Fixed Price */}
+                <div className="bg-gradient-to-br from-navy/5 to-navy/10 border border-navy/15 rounded-2xl p-3.5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="material-symbols-outlined text-navy text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                    <span className="text-[11px] font-medium text-navy">Fixed Price</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground leading-none">₹{avgPrice || "—"}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">No negotiation</p>
+                  <p className="text-[9px] text-navy/60 mt-1.5">Pay after service · ₹0 fee</p>
                 </div>
               </div>
 
+              {/* Location snapshot */}
+              <div className="bg-card border border-border rounded-xl px-3.5 py-2.5 flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-primary text-[18px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                <p className="text-[13px] text-muted-foreground truncate flex-1">{selectedLocation.address}</p>
+              </div>
+
+              {/* Swipe to Book slider — shows Coming Soon */}
               {availableProviders > 0 ? (
                 <div
                   ref={sliderRef}
-                  className="relative h-14 lg:h-16 bg-navy rounded-2xl overflow-hidden select-none touch-none shadow-lg"
+                  className="relative h-14 lg:h-16 rounded-2xl overflow-hidden select-none touch-none shadow-lg bg-navy"
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
@@ -445,16 +494,46 @@ export default function CategoryServicesPage() {
                   </div>
                 </div>
               ) : (
-                <div className="relative h-14 lg:h-16 bg-muted/60 border border-border rounded-2xl flex items-center justify-center gap-2">
+                <div className="relative h-14 bg-muted/60 border border-border rounded-2xl flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
                   <p className="text-sm font-medium text-muted-foreground">No providers available in this area</p>
                 </div>
               )}
+
+              {/* ─── BROWSE PROVIDERS BUTTON ─── */}
+              <Link
+                href={getProvidersUrl()}
+                className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 bg-card border-2 border-navy/15 rounded-2xl text-sm font-semibold text-foreground hover:bg-navy/5 hover:border-navy/30 active:scale-[0.98] transition-all group"
+              >
+                <span className="material-symbols-outlined text-[20px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
+                <span>Browse & Schedule Providers</span>
+                <span className="material-symbols-outlined text-[16px] text-muted-foreground group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+              </Link>
             </div>
           )}
 
+          {/* Prompt to set location — only if GPS also failed */}
+          {!selectedLocation && locationStatus === "no_location" && !isLoading && (
+            <div className="px-4 lg:px-6 py-8 text-center">
+              <span className="material-symbols-outlined text-4xl text-muted-foreground mb-2">pin_drop</span>
+              <p className="text-base font-medium text-foreground">Set your location</p>
+              <p className="text-sm text-muted-foreground mt-1">Click on the map to drop a pin at your location</p>
+            </div>
+          )}
 
-          {isLoading && (
+          {/* Location detection in progress */}
+          {!selectedLocation && (locationStatus === "checking" || locationStatus === "fetching_gps") && (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                <p className="text-sm text-muted-foreground">
+                  {locationStatus === "checking" ? "Checking your saved location..." : "Detecting your GPS location..."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isLoading && selectedLocation && (
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
@@ -462,203 +541,62 @@ export default function CategoryServicesPage() {
               </div>
             </div>
           )}
-
-          {/* ─── ADVANCED OPTIONS (desktop only) ─── */}
-          {!isLoading && selectedLocation && (
-            <div className="hidden lg:block px-4 lg:px-6 py-3">
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
-              >
-                <span className="material-symbols-outlined text-[18px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {showAdvanced ? "expand_less" : "tune"}
-                </span>
-                {showAdvanced ? "Hide Advanced Options" : "Advanced Options"}
-                {!showAdvanced && (
-                  <span className="text-[11px] text-muted-foreground font-normal ml-1">Browse & schedule specific providers</span>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* ─── ADVANCED SECTION (desktop only) ─── */}
-          {showAdvanced && (
-            <div className="hidden lg:block animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 lg:px-6 pb-2 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-foreground">Browse Providers</h2>
-                  <p className="text-[11px] text-muted-foreground">
-                    {services.length} services available{activeDistance !== "all" && ` · Within ${activeDistanceLabel}`}
-                  </p>
-                </div>
-                <div className="hidden lg:flex border border-border rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`size-8 flex items-center justify-center transition-colors ${viewMode === "grid" ? "bg-navy text-white" : "bg-card text-muted-foreground"}`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`size-8 flex items-center justify-center transition-colors ${viewMode === "list" ? "bg-navy text-white" : "bg-card text-muted-foreground"}`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">view_list</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-4 lg:px-6 pb-6">
-                {error && (
-                  <div className="text-center py-12">
-                    <span className="material-symbols-outlined text-5xl text-muted-foreground mb-3">cloud_off</span>
-                    <p className="text-base font-medium text-foreground">{error}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
-                  </div>
-                )}
-
-                {!error && services.length === 0 && (
-                  <div className="text-center py-12">
-                    <span className="material-symbols-outlined text-5xl text-muted-foreground mb-3">inventory_2</span>
-                    <p className="text-base font-medium text-foreground">No services found</p>
-                    <button
-                      onClick={() => setActiveDistance("all")}
-                      className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
-                )}
-
-                {!error && services.length > 0 && (
-                  <div className={viewMode === "grid" ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4" : "flex flex-col gap-3 lg:gap-4"}>
-                    {services.map((service) => (
-                      <ServiceCard key={service.id} service={service} viewMode={viewMode} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
-
-
-
-        {/* ── Mobile Advanced Options (after price/providers) ── */}
-        {!isLoading && selectedLocation && (
-          <div className="lg:hidden px-4 pb-3">
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
-            >
-              <span className="material-symbols-outlined text-[18px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {showAdvanced ? "expand_less" : "tune"}
-              </span>
-              {showAdvanced ? "Hide Advanced Options" : "Advanced Options"}
-              {!showAdvanced && (
-                <span className="text-[11px] text-muted-foreground font-normal ml-1">Browse & schedule</span>
-              )}
-            </button>
-
-            {/* ─── ADVANCED SECTION (mobile) ─── */}
-            {showAdvanced && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-200 mt-3">
-                <div className="pb-2 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold text-foreground">Browse Providers</h2>
-                    <p className="text-[11px] text-muted-foreground">
-                      {services.length} services available{activeDistance !== "all" && ` · Within ${activeDistanceLabel}`}
-                    </p>
-                  </div>
-                  <div className="flex border border-border rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`size-8 flex items-center justify-center transition-colors ${viewMode === "grid" ? "bg-navy text-white" : "bg-card text-muted-foreground"}`}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`size-8 flex items-center justify-center transition-colors ${viewMode === "list" ? "bg-navy text-white" : "bg-card text-muted-foreground"}`}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">view_list</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pb-6">
-                  {error && (
-                    <div className="text-center py-12">
-                      <span className="material-symbols-outlined text-5xl text-muted-foreground mb-3">cloud_off</span>
-                      <p className="text-base font-medium text-foreground">{error}</p>
-                      <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
-                    </div>
-                  )}
-
-                  {!error && services.length === 0 && (
-                    <div className="text-center py-12">
-                      <span className="material-symbols-outlined text-5xl text-muted-foreground mb-3">inventory_2</span>
-                      <p className="text-base font-medium text-foreground">No services found</p>
-                      <button
-                        onClick={() => setActiveDistance("all")}
-                        className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-                      >
-                        Clear Filters
-                      </button>
-                    </div>
-                  )}
-
-                  {!error && services.length > 0 && (
-                    <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
-                      {services.map((service) => (
-                        <ServiceCard key={service.id} service={service} viewMode={viewMode} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-
       </div>
 
-      {/* ─── CONFIRMATION POPUP ─── */}
-      {showConfirmPopup && (
+      {/* ─── COMING SOON POPUP ─── */}
+      {showComingSoon && (
         <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirmPopup(false)} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowComingSoon(false)} />
           <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
-            <div className="bg-gradient-to-br from-green-500 to-green-600 px-6 py-8 text-center text-white">
+
+            {/* Header */}
+            <div className="bg-gradient-to-br from-navy to-navy/90 px-6 py-8 text-center text-white">
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Booking Confirmed!</h2>
-              <p className="text-sm text-white/80">Finding nearest provider for you...</p>
+              <h2 className="text-xl font-bold mb-1">Coming Soon!</h2>
+              <p className="text-sm text-white/80">Instant booking is under development</p>
             </div>
+
             <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between bg-muted/30 rounded-xl px-4 py-3">
-                <span className="text-xs text-muted-foreground">Booking ID</span>
-                <span className="text-sm font-bold text-foreground font-mono">{bookingId}</span>
-              </div>
-              <div className="space-y-3">
-                <ConfirmDetail icon="agriculture" iconClass="text-primary" label="Service Type" value={categoryName} />
-                <ConfirmDetail icon="location_on" iconClass="text-primary" label="Your Location" value={shortAddress || "Not set"} />
-                <ConfirmDetail icon="currency_rupee" iconClass="text-primary" label="Pay after service" value={`₹${avgPrice} (estimated)`} />
-                <ConfirmDetail icon="schedule" iconClass="text-amber-500" label="Estimated arrival" value={`~${estimatedArrival} minutes`} />
-              </div>
-              <div className="bg-navy/5 border border-navy/10 rounded-xl p-4 flex items-center gap-3">
-                <div className="animate-spin h-5 w-5 border-2 border-navy border-t-transparent rounded-full shrink-0" />
+              {/* Info */}
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
                 <div>
-                  <p className="text-sm font-semibold text-navy">Searching for providers...</p>
-                  <p className="text-[11px] text-muted-foreground">You&apos;ll be notified when a provider accepts</p>
+                  <p className="text-sm font-semibold text-foreground">Instant Booking Feature</p>
+                  <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
+                    We&apos;re working hard to bring you instant equipment booking. Soon you&apos;ll be able to
+                    book nearby providers with just a swipe!
+                  </p>
                 </div>
               </div>
+
+              {/* Alternative */}
+              <div className="bg-muted/30 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-navy text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Browse & Schedule</p>
+                  <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
+                    You can browse available providers and schedule a booking at your preferred date and time.
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <button onClick={() => { setShowConfirmPopup(false); router.push("/bookings") }} className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm">
-                  View My Bookings
-                </button>
-                <button onClick={resetBooking} className="py-3 px-4 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm">
-                  Done
+                <Link
+                  href={getProvidersUrl()}
+                  onClick={() => setShowComingSoon(false)}
+                  className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm text-center"
+                >
+                  Browse Providers
+                </Link>
+                <button
+                  onClick={() => setShowComingSoon(false)}
+                  className="py-3 px-4 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
+                >
+                  Close
                 </button>
               </div>
             </div>
@@ -668,102 +606,5 @@ export default function CategoryServicesPage() {
 
       <BottomNav variant="farmer" />
     </div>
-  )
-}
-
-// ─── Confirmation Detail Row ───
-function ConfirmDetail({ icon, iconClass, label, value }: { icon: string; iconClass: string; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className={`material-symbols-outlined ${iconClass} text-[20px]`} style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-      <div>
-        <p className="text-sm font-medium text-foreground">{value}</p>
-        <p className="text-[11px] text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  )
-}
-
-// ─── Service Card ───
-function ServiceCard({ service, viewMode = "grid" }: { service: Service; viewMode?: "grid" | "list" }) {
-  const priceUnit = service.price_unit === "HOUR" ? "/hr" : service.price_unit === "DAY" ? "/day" : ""
-
-  if (viewMode === "list") {
-    return (
-      <Link
-        href={`/booking/new/${service.id}`}
-        className="bg-card rounded-2xl shadow-sm border border-border/50 overflow-hidden group hover:shadow-lg transition-all flex gap-0"
-      >
-        <div className="relative w-28 sm:w-36 lg:w-44 shrink-0 overflow-hidden">
-          <Image src={service.thumbnail || "/placeholder.svg"} alt={service.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-          {!service.is_available && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-white text-[10px] font-bold">Unavailable</span>
-            </div>
-          )}
-        </div>
-        <div className="flex-1 p-3 lg:p-4 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-foreground text-sm lg:text-base line-clamp-1 group-hover:text-primary transition-colors">{service.title}</h3>
-              {service.partner_rating && parseFloat(service.partner_rating) > 0 && (
-                <div className="flex items-center gap-0.5 bg-success/10 px-1.5 py-0.5 rounded text-[11px] font-bold text-success shrink-0">
-                  <span>{parseFloat(service.partner_rating).toFixed(1)}</span>
-                  <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground line-clamp-1">{service.partner_name || "Service Provider"}</p>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-1">
-              <span className="text-base lg:text-lg font-bold text-navy">₹{service.price}</span>
-              <span className="text-[10px] text-muted-foreground">{priceUnit}</span>
-            </div>
-            <div className="flex items-center gap-1 text-primary">
-              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-              <span className="text-xs font-semibold">Schedule</span>
-              <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    )
-  }
-
-  return (
-    <Link
-      href={`/booking/new/${service.id}`}
-      className="bg-card rounded-2xl p-3 lg:p-4 shadow-sm border border-border/50 flex flex-col gap-3 group hover:shadow-lg transition-shadow"
-    >
-      <div className="relative w-full aspect-[4/3] bg-muted/20 rounded-xl overflow-hidden">
-        <Image src={service.thumbnail || "/placeholder.svg"} alt={service.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-        <div className="absolute top-2 right-2 bg-card/95 backdrop-blur shadow-sm px-2 py-1 rounded-lg flex items-center gap-0.5 z-10 border border-border">
-          <span className="text-navy font-bold text-sm">₹{service.price}</span>
-          <span className="text-muted-foreground text-[10px]">{priceUnit}</span>
-        </div>
-        {!service.is_available && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="text-white text-xs font-bold px-2 py-1 bg-black/50 rounded">Unavailable</span>
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-1">
-        <h3 className="font-bold text-foreground text-sm lg:text-base line-clamp-1 group-hover:text-primary transition-colors">{service.title}</h3>
-        <p className="text-xs text-muted-foreground line-clamp-1">{service.partner_name || "Service Provider"}</p>
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-1 text-primary">
-            <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-            <span className="text-[11px] font-semibold">Schedule</span>
-          </div>
-          {service.partner_rating && parseFloat(service.partner_rating) > 0 && (
-            <div className="flex items-center gap-0.5 text-xs font-bold text-success">
-              <span>{parseFloat(service.partner_rating).toFixed(1)}</span>
-              <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
   )
 }

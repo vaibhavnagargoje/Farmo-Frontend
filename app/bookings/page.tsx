@@ -11,21 +11,29 @@ import { cn } from "@/lib/utils"
 interface BookingItem {
   id: number
   booking_id: string
-  status: "PENDING" | "CONFIRMED" | "REJECTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  booking_type: "SCHEDULED"
+  order_number: string | null
+  status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
   payment_status: "PENDING" | "PAID" | "REFUNDED"
   service_title: string
+  category_name: string | null
   provider_name: string
   scheduled_date: string
   scheduled_time: string
   total_amount: string
+  broadcast_count: number
+  assigned_at: string | null
+  expires_at: string | null
   created_at: string
 }
 
 // Status config for display
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   PENDING: { label: "Pending", color: "text-yellow-600", bgColor: "bg-yellow-100" },
+  SEARCHING: { label: "Searching", color: "text-blue-600", bgColor: "bg-blue-100" },
   CONFIRMED: { label: "Confirmed", color: "text-primary", bgColor: "bg-primary/10" },
   REJECTED: { label: "Rejected", color: "text-destructive", bgColor: "bg-destructive/10" },
+  EXPIRED: { label: "Expired", color: "text-orange-600", bgColor: "bg-orange-100" },
   IN_PROGRESS: { label: "In Progress", color: "text-blue-600", bgColor: "bg-blue-100" },
   COMPLETED: { label: "Completed", color: "text-success", bgColor: "bg-success/10" },
   CANCELLED: { label: "Cancelled", color: "text-muted", bgColor: "bg-muted" },
@@ -53,13 +61,13 @@ export default function BookingsPage() {
   const newBookingId = searchParams.get("booking_id")
 
   // Fetch bookings
-  const fetchBookings = async (status?: string) => {
+  const fetchBookings = async (tab?: string) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const url = status && status !== "all"
-        ? `/api/booking/list?status=${status}`
+      const url = tab && tab !== "all"
+        ? `/api/booking/list?status=${tab}`
         : "/api/booking/list"
 
       const res = await fetch(url, {
@@ -70,7 +78,7 @@ export default function BookingsPage() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        setBookings(data.bookings || [])
+        setBookings(data.bookings || data.results || [])
       } else if (res.status === 401) {
         setError("Please login to view your bookings")
         setBookings([])
@@ -225,17 +233,23 @@ export default function BookingsPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-foreground lg:text-lg line-clamp-1">
-                      {booking.service_title}
-                    </h3>
-                    <p className="text-sm text-muted mt-0.5">{booking.provider_name}</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-foreground lg:text-lg line-clamp-1">
+                        {booking.service_title}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted mt-0.5">
+                      {booking.provider_name}
+                    </p>
                   </div>
-                  <span className={cn(
-                    "px-2 py-1 rounded text-[10px] font-bold uppercase shrink-0",
-                    status.bgColor, status.color
-                  )}>
-                    {status.label}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className={cn(
+                      "px-2 py-1 rounded text-[10px] font-bold uppercase",
+                      status.bgColor, status.color
+                    )}>
+                      {status.label}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Details */}
@@ -249,7 +263,9 @@ export default function BookingsPage() {
 
                 {/* Footer */}
                 <div className="pt-3 border-t border-border flex items-center justify-between">
-                  <span className="text-xs text-muted">#{booking.booking_id}</span>
+                  <span className="text-xs text-muted">
+                    {booking.order_number ? booking.order_number : `#${booking.booking_id}`}
+                  </span>
                   <div className="flex items-center gap-1 text-primary text-sm font-medium">
                     <span>View Details</span>
                     <span className="material-symbols-outlined text-[16px]">chevron_right</span>
