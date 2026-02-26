@@ -61,7 +61,7 @@ export default function CategoryServicesPage() {
 
       try {
         // Step 1: Check if user profile has saved coordinates
-        const res = await fetch("/api/auth/location")
+        const res = await fetch("/api/auth/location", { credentials: "include" })
         if (res.ok) {
           const data = await res.json()
           if (data.has_location && data.location) {
@@ -108,10 +108,11 @@ export default function CategoryServicesPage() {
             setLocationLoaded(true)
             setLocationStatus("ready")
 
-            // Save to profile (fire-and-forget)
+            // Save to profile
             fetch("/api/auth/location", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify({ latitude, longitude, address }),
             }).catch(() => { /* ignore if not logged in */ })
           },
@@ -120,7 +121,7 @@ export default function CategoryServicesPage() {
             setLocationLoaded(true)
             setLocationStatus("no_location")
           },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         )
       } else {
         // No geolocation API available
@@ -160,7 +161,9 @@ export default function CategoryServicesPage() {
         if (selectedLocation) {
           params.set("lat", selectedLocation.lat.toString())
           params.set("lng", selectedLocation.lng.toString())
-          if (activeDistance !== "all") {
+          if (activeDistance === "all") {
+            params.set("distance", "0")
+          } else {
             params.set("distance", activeDistance)
           }
         }
@@ -195,10 +198,11 @@ export default function CategoryServicesPage() {
   const handleLocationSelect = useCallback((location: SelectedLocation) => {
     setSelectedLocation(location)
     setLocationStatus("ready")
-    // Sync to backend profile (fire-and-forget)
+    // Sync to backend profile
     fetch("/api/auth/location", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         latitude: location.lat,
         longitude: location.lng,

@@ -30,7 +30,7 @@ interface GoogleMapPickerProps {
 // ── Default center: Surat, Gujarat ──
 const DEFAULT_CENTER = { lat: 21.1702, lng: 72.8311 }
 const DEFAULT_ZOOM = 11
-const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
 // ── Inner Map Component (has access to map instance) ──
 function MapContent({
@@ -118,7 +118,7 @@ function MapContent({
                 alert("Unable to get your location. Please allow location access or pick on the map.")
                 setIsLocating(false)
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         )
     }, [map, onLocationSelect, reverseGeocode])
 

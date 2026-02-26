@@ -57,7 +57,7 @@ export default function ProvidersPage() {
     useEffect(() => {
         const fetchSavedLocation = async () => {
             try {
-                const res = await fetch("/api/auth/location")
+                const res = await fetch("/api/auth/location", { credentials: "include" })
                 if (res.ok) {
                     const data = await res.json()
                     if (data.has_location && data.location) {
@@ -105,7 +105,9 @@ export default function ProvidersPage() {
                 if (lat && lng) {
                     qp.set("lat", lat)
                     qp.set("lng", lng)
-                    if (activeDistance !== "all") {
+                    if (activeDistance === "all") {
+                        qp.set("distance", "0")
+                    } else {
                         qp.set("distance", activeDistance)
                     }
                 }

@@ -6,7 +6,13 @@ export const API_ENDPOINTS = {
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
-  USER_LOCATION: `${API_BASE_URL}/users/location/`,
+
+  // Location (moved to locations app)
+  USER_LOCATION: `${API_BASE_URL}/locations/user-location/`,
+  STATES: `${API_BASE_URL}/locations/states/`,
+  DISTRICTS: `${API_BASE_URL}/locations/districts/`,
+  TAHSILS: `${API_BASE_URL}/locations/tahsils/`,
+  VILLAGES: `${API_BASE_URL}/locations/villages/`,
 
   // Partners
   PARTNER_STATUS: `${API_BASE_URL}/partners/status/`,
@@ -49,9 +55,13 @@ export interface User {
 
 export interface CustomerProfile {
   full_name: string
-  default_address: string | null
-  default_lat: string | null
-  default_lng: string | null
+  user_address: string | null
+  latitude: string | null
+  longitude: string | null
+  state: number | null
+  district: number | null
+  tahsil: number | null
+  village: number | null
 }
 
 export interface AuthTokens {
