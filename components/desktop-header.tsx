@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
-import { LocationDropdown } from "@/components/location-dropdown"
+
 import { useAuth } from "@/contexts/auth-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -46,7 +46,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               <Link href={variant === "partner" ? "/partner" : "/"} className="text-xl font-bold text-navy leading-none tracking-tight">
                 Farmo
               </Link>
-              <LocationDropdown variant="desktop" />
+              <span className="text-xs text-muted-foreground leading-none mt-0.5">India</span>
             </div>
           </div>
 

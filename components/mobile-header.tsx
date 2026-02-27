@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { LocationDropdown } from "@/components/location-dropdown"
 
 interface MobileHeaderProps {
   className?: string
@@ -35,7 +34,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                </Link>
                <div className="flex flex-col justify-center">
                    <Link href="/" className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</Link>
-                   <LocationDropdown variant="mobile" />
+                   <span className="text-xs text-muted-foreground leading-none mt-0.5">India</span>
                </div>
             </div>
         </div>

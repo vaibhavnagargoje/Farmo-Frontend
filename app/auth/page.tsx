@@ -17,7 +17,7 @@ interface LocationOption {
 export default function AuthPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { sendOtp, login, refreshUser, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { sendOtp, login, logout, refreshUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
 
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode] = useState("+91")
@@ -47,11 +47,15 @@ export default function AuthPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && isAuthenticated && step !== "register") {
-      const redirect = searchParams.get("redirect") || "/"
-      router.push(redirect)
+    if (!authLoading && isAuthenticated) {
+      if (user && !user.first_name) {
+        setStep("register")
+      } else if (step !== "register") {
+        const redirect = searchParams.get("redirect") || "/"
+        router.push(redirect)
+      }
     }
-  }, [isAuthenticated, authLoading, router, searchParams, step])
+  }, [isAuthenticated, authLoading, router, searchParams, step, user])
 
   // Load states when reaching register step
   useEffect(() => {
@@ -224,7 +228,14 @@ export default function AuthPage() {
         <div className="relative px-5 pt-12 pb-8 flex flex-col items-center text-center">
           {step !== "phone" && (
             <button
-              onClick={() => { setError(null); setStep(step === "register" ? "otp" : "phone") }}
+              onClick={() => { 
+                setError(null); 
+                if (step === "register" && isAuthenticated) {
+                  logout();
+                } else {
+                  setStep(step === "register" ? "otp" : "phone");
+                }
+              }}
               aria-label="Go back"
               className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/20 active:scale-95 transition-all"
             >

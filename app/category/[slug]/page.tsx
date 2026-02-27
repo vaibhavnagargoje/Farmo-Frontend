@@ -8,6 +8,8 @@ import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import GoogleMapPicker, { type SelectedLocation, type ServiceMarker } from "@/components/GoogleMapPicker"
+import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
+import { APIProvider } from "@vis.gl/react-google-maps"
 import { type Service, type Category } from "@/lib/api"
 
 // ── Constants ──
@@ -34,12 +36,15 @@ export default function CategoryServicesPage() {
   const [locationLoaded, setLocationLoaded] = useState(false)
   const [locationStatus, setLocationStatus] = useState<"checking" | "fetching_gps" | "ready" | "no_location">("checking")
 
+  // ── Search ──
+  const [searchQuery, setSearchQuery] = useState("")
+
   // ── Filters ──
   const [activeDistance, setActiveDistance] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
-  // ── Coming Soon popup (replaces instant booking) ──
+  // ── Coming Soon popup ──
   const [showComingSoon, setShowComingSoon] = useState(false)
 
   // ── Swipe slider ──
@@ -49,7 +54,7 @@ export default function CategoryServicesPage() {
   const sliderStartX = useRef(0)
   const sliderWidth = useRef(0)
 
-  // ── Build providers page URL (no more location params) ──
+  // ── Build providers page URL ──
   const getProvidersUrl = useCallback(() => {
     return `/category/${slug}/providers`
   }, [slug])
@@ -60,27 +65,27 @@ export default function CategoryServicesPage() {
       setLocationStatus("checking")
 
       try {
-        // Step 1: Check if user profile has saved coordinates
-        const res = await fetch("/api/auth/location", { credentials: "include" })
+        // NOTE: /api/auth/location route does not exist yet — wire up later
+        const res = await fetch("/api/auth/location")
         if (res.ok) {
           const data = await res.json()
           if (data.has_location && data.location) {
-            // User already has a saved location — use it directly
             setSelectedLocation({
               lat: parseFloat(data.location.latitude),
               lng: parseFloat(data.location.longitude),
               address: data.location.address || "Saved location",
             })
+            setSearchQuery(data.location.address || "Saved location")
             setLocationLoaded(true)
             setLocationStatus("ready")
             return
           }
         }
       } catch {
-        // Not logged in or fetch failed — continue to GPS
+        // Not logged in or fetch failed
       }
 
-      // Step 2: No saved location — auto-detect via GPS
+      // No saved location — auto-detect via GPS
       if ("geolocation" in navigator) {
         setLocationStatus("fetching_gps")
         navigator.geolocation.getCurrentPosition(
@@ -88,7 +93,6 @@ export default function CategoryServicesPage() {
             const { latitude, longitude } = position.coords
             let address = "Current location"
 
-            // Try reverse geocoding for a readable address
             try {
               const geocodeRes = await fetch(
                 `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
@@ -100,31 +104,28 @@ export default function CategoryServicesPage() {
                 }
               }
             } catch {
-              // Geocode failed — use fallback address
+              // Geocode failed
             }
 
             const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
             setSelectedLocation(loc)
+            setSearchQuery(address)
             setLocationLoaded(true)
             setLocationStatus("ready")
 
-            // Save to profile
             fetch("/api/auth/location", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              credentials: "include",
               body: JSON.stringify({ latitude, longitude, address }),
-            }).catch(() => { /* ignore if not logged in */ })
+            }).catch(() => {})
           },
           () => {
-            // GPS denied or failed — let user pick manually on map
             setLocationLoaded(true)
             setLocationStatus("no_location")
           },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         )
       } else {
-        // No geolocation API available
         setLocationLoaded(true)
         setLocationStatus("no_location")
       }
@@ -161,9 +162,7 @@ export default function CategoryServicesPage() {
         if (selectedLocation) {
           params.set("lat", selectedLocation.lat.toString())
           params.set("lng", selectedLocation.lng.toString())
-          if (activeDistance === "all") {
-            params.set("distance", "0")
-          } else {
+          if (activeDistance !== "all") {
             params.set("distance", activeDistance)
           }
         }
@@ -197,18 +196,50 @@ export default function CategoryServicesPage() {
   // ── Location handler (when user picks on map) ──
   const handleLocationSelect = useCallback((location: SelectedLocation) => {
     setSelectedLocation(location)
+    setSearchQuery(location.address)
     setLocationStatus("ready")
-    // Sync to backend profile
     fetch("/api/auth/location", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({
         latitude: location.lat,
         longitude: location.lng,
         address: location.address,
       }),
-    }).catch(() => { /* ignore if not logged in */ })
+    }).catch(() => {})
+  }, [])
+
+  // ── Handle "get my location" button ──
+  const handleGetCurrentLocation = useCallback(() => {
+    if (!("geolocation" in navigator)) return
+    setLocationStatus("fetching_gps")
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+        let address = "Current location"
+        try {
+          const geocodeRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          )
+          if (geocodeRes.ok) {
+            const geocodeData = await geocodeRes.json()
+            if (geocodeData.results?.[0]?.formatted_address) {
+              address = geocodeData.results[0].formatted_address
+            }
+          }
+        } catch {
+          // Geocode failed
+        }
+        const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
+        setSelectedLocation(loc)
+        setSearchQuery(address)
+        setLocationStatus("ready")
+      },
+      () => {
+        setLocationStatus("no_location")
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
   }, [])
 
   // ── Build service markers for the map ──
@@ -283,11 +314,6 @@ export default function CategoryServicesPage() {
     document.addEventListener("mouseup", onMouseUp)
   }
 
-  // ── Short address for display ──
-  const shortAddress = selectedLocation
-    ? selectedLocation.address.split(",").slice(0, 2).join(",").trim()
-    : ""
-
   return (
     <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       <DesktopHeader variant="farmer" />
@@ -307,47 +333,59 @@ export default function CategoryServicesPage() {
             <div className="flex-1 min-w-0">
               <h1 className="text-base lg:text-lg font-bold text-foreground truncate">{categoryName}</h1>
               <p className="text-[11px] lg:text-xs text-muted-foreground">
-                {locationStatus === "checking" && "Checking saved location..."}
-                {locationStatus === "fetching_gps" && "Detecting your location..."}
-                {locationStatus === "ready" && selectedLocation && `Near ${shortAddress} · ${availableProviders} providers`}
-                {locationStatus === "no_location" && "Find nearby providers"}
+                {availableProviders > 0
+                  ? `${availableProviders} providers Available`
+                  : "Find Available Providers"}
               </p>
             </div>
           </div>
 
-          {/* ─── LOCATION DISPLAY + FILTER ─── */}
+          {/* ─── SEARCH BAR + LOCATION BTN + FILTER ─── */}
           <div className="px-4 lg:px-6 pb-3">
             <div className="flex items-center gap-2">
-              {/* Location display */}
-              <div className="flex-1 flex items-center bg-card border border-border rounded-xl shadow-sm overflow-hidden px-3 py-2.5 gap-2">
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedLocation ? "bg-green-400" : "bg-amber-400"}`} />
-                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${selectedLocation ? "bg-green-500" : "bg-amber-500"}`} />
-                </span>
-                <p className="text-sm text-foreground truncate flex-1">
-                  {locationStatus === "checking" && "Checking profile location..."}
-                  {locationStatus === "fetching_gps" && "Detecting GPS location..."}
-                  {selectedLocation ? shortAddress : (locationStatus === "no_location" ? "Click on map to set location..." : "")}
-                </p>
-                {selectedLocation && (
-                  <button
-                    onClick={() => { setSelectedLocation(null); setLocationStatus("no_location") }}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                    title="Clear location"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                  </button>
+              {/* Search input with suggestions */}
+              <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+                <PlacesAutocomplete 
+                  defaultValue={searchQuery}
+                  onPlaceSelect={(place) => {
+                    setSearchQuery(place.address)
+                    const loc: SelectedLocation = {
+                      lat: place.lat,
+                      lng: place.lng,
+                      address: place.address,
+                    }
+                    setSelectedLocation(loc)
+                    setLocationStatus("ready")
+                  }} 
+                />
+              </APIProvider>
+
+              {/* Get Location button */}
+              <button
+                onClick={handleGetCurrentLocation}
+                className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${
+                  locationStatus === "fetching_gps"
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-card text-primary border-border hover:bg-primary/5"
+                }`}
+                title="Get current location"
+              >
+                {locationStatus === "fetching_gps" ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                ) : (
+                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
                 )}
-              </div>
+              </button>
 
               {/* Filter button */}
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${activeDistance !== "all"
-                    ? "bg-navy text-white border-navy"
-                    : "bg-card text-foreground border-border hover:bg-muted/50"
-                    }`}
+                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${
+                    activeDistance !== "all"
+                      ? "bg-navy text-white border-navy"
+                      : "bg-card text-foreground border-border hover:bg-muted/50"
+                  }`}
                   title="Filters"
                 >
                   <span className="material-symbols-outlined text-[20px]">tune</span>
@@ -366,10 +404,11 @@ export default function CategoryServicesPage() {
                           setActiveDistance(option.value)
                           setShowFilters(false)
                         }}
-                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${activeDistance === option.value
-                          ? "bg-navy/5 text-navy font-semibold"
-                          : "text-foreground hover:bg-muted/40"
-                          }`}
+                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${
+                          activeDistance === option.value
+                            ? "bg-navy/5 text-navy font-semibold"
+                            : "text-foreground hover:bg-muted/40"
+                        }`}
                       >
                         <span>{option.label}</span>
                         {activeDistance === option.value && (
@@ -401,15 +440,17 @@ export default function CategoryServicesPage() {
       {/* ─── MAIN CONTENT ─── */}
       <div className="flex-1 flex flex-col lg:flex-row max-w-6xl mx-auto w-full">
 
-        {/* ── LEFT / TOP: Google Map ── */}
+        {/* ── LEFT / TOP: Google Map (B&W / Grayscale) ── */}
         <div className="lg:flex-1 lg:sticky lg:top-[120px] lg:self-start">
           <div className="px-4 lg:px-6 pt-3 pb-4 lg:pb-3">
-            <GoogleMapPicker
-              onLocationSelect={handleLocationSelect}
-              selectedLocation={selectedLocation}
-              serviceMarkers={serviceMarkers}
-              className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-auto lg:h-[calc(100vh-180px)]"
-            />
+            <div >
+              <GoogleMapPicker
+                onLocationSelect={handleLocationSelect}
+                selectedLocation={selectedLocation}
+                serviceMarkers={serviceMarkers}
+                className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-auto lg:h-[calc(100vh-220px)]"
+              />
+            </div>
           </div>
         </div>
 
@@ -422,14 +463,14 @@ export default function CategoryServicesPage() {
 
               {/* ── Providers + Price Row ── */}
               <div className="grid grid-cols-2 gap-2.5">
-                {/* Nearby Providers */}
+                {/* Available Providers */}
                 <div className="bg-card border border-border rounded-2xl p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="relative flex h-2 w-2 shrink-0">
                       <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${availableProviders > 0 ? "bg-green-400" : "bg-red-400"}`} />
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${availableProviders > 0 ? "bg-green-500" : "bg-red-500"}`} />
                     </span>
-                    <span className="text-[11px] font-medium text-muted-foreground">Nearby</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">Available</span>
                   </div>
                   <p className="text-2xl font-bold text-foreground leading-none">{availableProviders}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">Providers</p>
@@ -455,19 +496,12 @@ export default function CategoryServicesPage() {
                     <span className="material-symbols-outlined text-navy text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
                     <span className="text-[11px] font-medium text-navy">Fixed Price</span>
                   </div>
-                  <p className="text-2xl font-bold text-foreground leading-none">₹{avgPrice || "—"}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">No negotiation</p>
-                  <p className="text-[9px] text-navy/60 mt-1.5">Pay after service · ₹0 fee</p>
+                  <p className="text-2xl font-bold text-foreground leading-none">{avgPrice || "\u2014"}</p>
+                  <p className="text-[9px] text-navy/60 mt-1.5">Pay after service fee</p>
                 </div>
               </div>
 
-              {/* Location snapshot */}
-              <div className="bg-card border border-border rounded-xl px-3.5 py-2.5 flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-primary text-[18px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                <p className="text-[13px] text-muted-foreground truncate flex-1">{selectedLocation.address}</p>
-              </div>
-
-              {/* Swipe to Book slider — shows Coming Soon */}
+              {/* Swipe to Book slider */}
               {availableProviders > 0 ? (
                 <div
                   ref={sliderRef}
@@ -475,7 +509,7 @@ export default function CategoryServicesPage() {
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
-                      Swipe to Book Instantly →
+                      Swipe to Book Instantly \u2192
                     </p>
                   </div>
                   <div
@@ -516,12 +550,12 @@ export default function CategoryServicesPage() {
             </div>
           )}
 
-          {/* Prompt to set location — only if GPS also failed */}
+          {/* Prompt to set location */}
           {!selectedLocation && locationStatus === "no_location" && !isLoading && (
             <div className="px-4 lg:px-6 py-8 text-center">
               <span className="material-symbols-outlined text-4xl text-muted-foreground mb-2">pin_drop</span>
               <p className="text-base font-medium text-foreground">Set your location</p>
-              <p className="text-sm text-muted-foreground mt-1">Click on the map to drop a pin at your location</p>
+              <p className="text-sm text-muted-foreground mt-1">Search above or click on the map to set your location</p>
             </div>
           )}
 
@@ -564,19 +598,17 @@ export default function CategoryServicesPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              {/* Info */}
               <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-start gap-3">
                 <span className="material-symbols-outlined text-primary text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Instant Booking Feature</p>
                   <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
                     We&apos;re working hard to bring you instant equipment booking. Soon you&apos;ll be able to
-                    book nearby providers with just a swipe!
+                    book Available providers with just a swipe!
                   </p>
                 </div>
               </div>
 
-              {/* Alternative */}
               <div className="bg-muted/30 rounded-xl p-4 flex items-start gap-3">
                 <span className="material-symbols-outlined text-navy text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
                 <div>
@@ -587,7 +619,6 @@ export default function CategoryServicesPage() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <Link
                   href={getProvidersUrl()}

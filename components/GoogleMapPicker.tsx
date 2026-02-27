@@ -118,7 +118,7 @@ function MapContent({
                 alert("Unable to get your location. Please allow location access or pick on the map.")
                 setIsLocating(false)
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         )
     }, [map, onLocationSelect, reverseGeocode])
 
