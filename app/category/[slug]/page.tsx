@@ -33,7 +33,6 @@ export default function CategoryServicesPage() {
 
   // ── Location ──
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null)
-  const [locationLoaded, setLocationLoaded] = useState(false)
   const [locationStatus, setLocationStatus] = useState<"checking" | "fetching_gps" | "ready" | "no_location">("checking")
 
   // ── Search ──
@@ -65,7 +64,6 @@ export default function CategoryServicesPage() {
       setLocationStatus("checking")
 
       try {
-        // NOTE: /api/auth/location route does not exist yet — wire up later
         const res = await fetch("/api/auth/location")
         if (res.ok) {
           const data = await res.json()
@@ -76,7 +74,6 @@ export default function CategoryServicesPage() {
               address: data.location.address || "Saved location",
             })
             setSearchQuery(data.location.address || "Saved location")
-            setLocationLoaded(true)
             setLocationStatus("ready")
             return
           }
@@ -110,7 +107,6 @@ export default function CategoryServicesPage() {
             const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
             setSelectedLocation(loc)
             setSearchQuery(address)
-            setLocationLoaded(true)
             setLocationStatus("ready")
 
             fetch("/api/auth/location", {
@@ -120,13 +116,11 @@ export default function CategoryServicesPage() {
             }).catch(() => {})
           },
           () => {
-            setLocationLoaded(true)
             setLocationStatus("no_location")
           },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         )
       } else {
-        setLocationLoaded(true)
         setLocationStatus("no_location")
       }
     }
