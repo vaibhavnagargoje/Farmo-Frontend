@@ -91,7 +91,6 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
     const displayName = user
         ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Farmer"
         : "Farmer"
-    const location = partner?.base_city || "India"
 
     // Loading state
     if (authLoading || isLoadingProfile) {
@@ -138,7 +137,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
                     </button>
                 </div>
                 <h2 className="text-base font-bold text-foreground">{displayName}</h2>
-                <p className="text-xs text-muted mt-0.5">{location}</p>
+                
             </div>
 
             {/* Navigation */}

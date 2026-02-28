@@ -92,7 +92,6 @@ export interface PartnerProfile {
   about: string
   is_verified: boolean
   is_kyc_submitted: boolean
-  base_city: string
   rating: string
   jobs_completed: number
   created_at: string

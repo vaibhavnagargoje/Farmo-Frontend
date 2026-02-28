@@ -503,7 +503,7 @@ export default function CategoryServicesPage() {
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
-                      Swipe to Book Instantly \u2192
+                      Swipe to Book Now
                     </p>
                   </div>
                   <div
@@ -538,7 +538,7 @@ export default function CategoryServicesPage() {
                 className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 bg-card border-2 border-navy/15 rounded-2xl text-sm font-semibold text-foreground hover:bg-navy/5 hover:border-navy/30 active:scale-[0.98] transition-all group"
               >
                 <span className="material-symbols-outlined text-[20px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
-                <span>Browse & Schedule Providers</span>
+                <span>Direct Providers</span>
                 <span className="material-symbols-outlined text-[16px] text-muted-foreground group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
               </Link>
             </div>

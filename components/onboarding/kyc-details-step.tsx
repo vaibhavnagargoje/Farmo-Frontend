@@ -12,7 +12,6 @@ export interface KYCDetailsData {
     aadharFrontPreview: string
     aadharBack: File | null
     aadharBackPreview: string
-    baseCity: string
 }
 
 interface KYCDetailsStepProps {
@@ -291,31 +290,6 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                     </p>
                 )}
                 <p className="text-[11px] text-muted">Accepted: JPG, PNG. Max size: 5MB each.</p>
-            </div>
-
-            {/* Base City */}
-            <div className="flex flex-col gap-2">
-                <Label htmlFor="baseCity" className="text-sm font-semibold text-foreground">
-                    Base City / Location <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xl">
-                        location_city
-                    </span>
-                    <Input
-                        id="baseCity"
-                        placeholder="e.g. Pune, Maharashtra"
-                        value={data.baseCity}
-                        onChange={(e) => onChange({ ...data, baseCity: e.target.value })}
-                        className={`h-12 rounded-xl bg-card border ${errors.baseCity ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 pl-10 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
-                    />
-                </div>
-                {errors.baseCity && (
-                    <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">error</span>
-                        {errors.baseCity}
-                    </p>
-                )}
             </div>
         </div>
     )

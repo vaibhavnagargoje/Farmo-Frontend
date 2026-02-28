@@ -32,9 +32,10 @@ export default function NewBookingPage() {
   const [scheduledTime, setScheduledTime] = useState("")
   const [note, setNote] = useState("")
 
-  // Location
-  const [locationStatus, setLocationStatus] = useState<"idle" | "fetching" | "success" | "error">("idle")
-  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null)
+  // Location from profile
+  const [profileAddress, setProfileAddress] = useState<string | null>(null)
+  const [profileLat, setProfileLat] = useState<number | null>(null)
+  const [profileLng, setProfileLng] = useState<number | null>(null)
 
   // Booking State
   const [isBooking, setIsBooking] = useState(false)
@@ -50,7 +51,6 @@ export default function NewBookingPage() {
         if (res.ok) {
           const data = await res.json()
           setService(data)
-          setQuantity(data.min_order_qty || 1)
         } else {
           setError("Service not found")
         }
@@ -67,18 +67,24 @@ export default function NewBookingPage() {
     }
   }, [serviceId])
 
-  // Load saved location from localStorage
+  // Fetch address from user profile
   useEffect(() => {
-    const savedLocation = localStorage.getItem("farmo_booking_location")
-    if (savedLocation) {
+    const fetchProfileAddress = async () => {
       try {
-        const parsed = JSON.parse(savedLocation)
-        setLocation(parsed)
-        setLocationStatus("success")
+        const res = await fetch("/api/profile", { credentials: "include" })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.profile?.user_address) {
+            setProfileAddress(data.profile.user_address)
+          }
+          if (data.profile?.latitude) setProfileLat(parseFloat(data.profile.latitude))
+          if (data.profile?.longitude) setProfileLng(parseFloat(data.profile.longitude))
+        }
       } catch {
-        // Invalid stored location
+        // Profile fetch failed — address will be empty
       }
     }
+    fetchProfileAddress()
   }, [])
 
   // Set default date/time to now
@@ -90,69 +96,12 @@ export default function NewBookingPage() {
     setScheduledTime(timeStr)
   }, [])
 
-  // Reverse geocode to get address
-  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`,
-        { headers: { "User-Agent": "Farmo App" } }
-      )
-      if (response.ok) {
-        const data = await response.json()
-        const parts = data.address
-        return (
-          parts?.village ||
-          parts?.town ||
-          parts?.city ||
-          parts?.suburb ||
-          data.display_name?.split(",").slice(0, 2).join(", ") ||
-          "Unknown Location"
-        )
-      }
-      return "Unknown Location"
-    } catch {
-      return "Unknown Location"
-    }
-  }
 
-  // Fetch current location
-  const handleGetLocation = async () => {
-    if (!navigator.geolocation) {
-      setLocationStatus("error")
-      return
-    }
-
-    setLocationStatus("fetching")
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords
-        const address = await reverseGeocode(latitude, longitude)
-        
-        const locationData = { lat: latitude, lng: longitude, address }
-        setLocation(locationData)
-        setLocationStatus("success")
-        
-        // Save to localStorage
-        localStorage.setItem("farmo_booking_location", JSON.stringify(locationData))
-      },
-      (err) => {
-        console.error("Geolocation error:", err)
-        setLocationStatus("error")
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
-  }
 
   // Handle booking submission
   const handleBookService = async () => {
     if (!isAuthenticated) {
       router.push(`/auth?redirect=/booking/new/${serviceId}`)
-      return
-    }
-
-    if (!location) {
-      setBookingError("Please set your location first")
       return
     }
 
@@ -166,9 +115,9 @@ export default function NewBookingPage() {
         service_id: service.id,
         scheduled_date: scheduledDate,
         scheduled_time: scheduledTime,
-        address: location.address,
-        lat: location.lat,
-        lng: location.lng,
+        address: profileAddress || "",
+        lat: profileLat || 0,
+        lng: profileLng || 0,
         quantity: quantity,
         note: note || undefined,
       }
@@ -371,70 +320,26 @@ export default function NewBookingPage() {
 
               {/* Quantity */}
               <div className="mb-4">
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Quantity ({service.price_unit === "HOUR" ? "Hours" : service.price_unit === "ACRE" ? "Acres" : "Units"})
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantity(Math.max(service.min_order_qty || 1, quantity - 1))}
-                    className="size-10 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80"
-                  >
-                    <span className="material-symbols-outlined">remove</span>
-                  </button>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(service.min_order_qty || 1, Number(e.target.value)))}
-                    className="w-20 h-10 text-center border border-border rounded-lg font-semibold"
-                  />
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="size-10 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80"
-                  >
-                    <span className="material-symbols-outlined">add</span>
-                  </button>
-                </div>
-                {service.min_order_qty && service.min_order_qty > 1 && (
-                  <p className="text-xs text-muted mt-1">Minimum: {service.min_order_qty}</p>
-                )}
+                <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full h-11 px-4 border border-border rounded-xl bg-background font-medium"
+                />
               </div>
 
               {/* Location */}
               <div className="mb-4">
                 <label className="text-sm font-medium text-foreground mb-2 block">Your Location</label>
-                <button
-                  onClick={handleGetLocation}
-                  disabled={locationStatus === "fetching"}
-                  className={cn(
-                    "w-full flex items-center justify-between p-3 rounded-xl border transition-all",
-                    location 
-                      ? "border-success/50 bg-success/5" 
-                      : "border-border bg-muted/30 hover:bg-muted/50"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "material-symbols-outlined text-xl",
-                      locationStatus === "fetching" && "animate-spin",
-                      location ? "text-success" : "text-muted"
-                    )}>
-                      {locationStatus === "fetching" ? "sync" : location ? "check_circle" : "my_location"}
-                    </span>
-                    <span className={cn("text-sm", location ? "text-foreground" : "text-muted")}>
-                      {locationStatus === "fetching" 
-                        ? "Getting location..." 
-                        : location 
-                          ? location.address 
-                          : "Tap to get current location"}
-                    </span>
-                  </div>
-                  {location && (
-                    <span className="text-xs text-success font-medium">✓ Set</span>
-                  )}
-                </button>
-                {locationStatus === "error" && (
-                  <p className="text-xs text-destructive mt-1">Failed to get location. Please enable GPS.</p>
-                )}
+                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
+                  <span className="material-symbols-outlined text-xl text-muted">location_on</span>
+                  <span className="text-sm text-foreground">
+                    {profileAddress || "No address on profile"}
+                  </span>
+                </div>
               </div>
 
               {/* Advanced Options Toggle */}
@@ -484,11 +389,11 @@ export default function NewBookingPage() {
               <div className="border-t border-border pt-4 mb-4">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-muted">₹{service.price} × {quantity}</span>
-                  <span className="text-foreground">₹{totalPrice.toFixed(2)}</span>
+                  <span className="text-foreground">₹{Math.round(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-foreground">Total</span>
-                  <span className="text-2xl font-bold text-primary">₹{totalPrice.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-primary">₹{Math.round(totalPrice)}</span>
                 </div>
               </div>
 
@@ -623,52 +528,26 @@ export default function NewBookingPage() {
 
             {/* Quantity */}
             <div>
-              <label className="text-sm text-muted mb-2 block">
-                Quantity ({service.price_unit === "HOUR" ? "Hours" : service.price_unit === "ACRE" ? "Acres" : "Units"})
-              </label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setQuantity(Math.max(service.min_order_qty || 1, quantity - 1))}
-                  className="size-10 rounded-lg bg-muted flex items-center justify-center"
-                >
-                  <span className="material-symbols-outlined">remove</span>
-                </button>
-                <span className="text-xl font-bold w-12 text-center">{quantity}</span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="size-10 rounded-lg bg-muted flex items-center justify-center"
-                >
-                  <span className="material-symbols-outlined">add</span>
-                </button>
-              </div>
+              <label className="text-sm text-muted mb-2 block">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full h-11 px-4 border border-border rounded-xl bg-background font-medium"
+              />
             </div>
 
             {/* Location */}
             <div>
               <label className="text-sm text-muted mb-2 block">Your Location</label>
-              <button
-                onClick={handleGetLocation}
-                disabled={locationStatus === "fetching"}
-                className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-xl border",
-                  location ? "border-success/50 bg-success/5" : "border-border"
-                )}
-              >
-                <span className={cn(
-                  "material-symbols-outlined text-xl",
-                  locationStatus === "fetching" && "animate-spin",
-                  location ? "text-success" : "text-primary"
-                )}>
-                  {locationStatus === "fetching" ? "sync" : location ? "check_circle" : "my_location"}
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30">
+                <span className="material-symbols-outlined text-xl text-muted">location_on</span>
+                <span className="text-sm text-foreground">
+                  {profileAddress || "No address on profile"}
                 </span>
-                <span className={cn("text-sm flex-1 text-left", location ? "text-foreground" : "text-primary")}>
-                  {locationStatus === "fetching" 
-                    ? "Getting location..." 
-                    : location 
-                      ? location.address 
-                      : "Get Current Location"}
-                </span>
-              </button>
+              </div>
             </div>
 
             {/* Advanced Toggle */}
@@ -723,7 +602,7 @@ export default function NewBookingPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-xs text-muted">Total Amount</p>
-            <p className="text-xl font-bold text-primary">₹{totalPrice.toFixed(2)}</p>
+            <p className="text-xl font-bold text-primary">₹{Math.round(totalPrice)}</p>
           </div>
           <div className="text-right text-xs text-muted">
             ₹{service.price} × {quantity}

@@ -11,7 +11,6 @@ import { type Service, type Category } from "@/lib/api"
 
 // ── Constants ──
 const DISTANCE_OPTIONS = [
-    { value: "all", label: "All Areas" },
     { value: "5", label: "5 km" },
     { value: "10", label: "10 km" },
     { value: "20", label: "20 km" },
@@ -42,7 +41,7 @@ export default function ProvidersPage() {
     const [locationLoaded, setLocationLoaded] = useState(false)
 
     // ── Filters ──
-    const [activeDistance, setActiveDistance] = useState("all")
+    const [activeDistance, setActiveDistance] = useState("5")
     const [sortBy, setSortBy] = useState("distance")
     const [showFilters, setShowFilters] = useState(false)
     const [showSortMenu, setShowSortMenu] = useState(false)
@@ -198,7 +197,7 @@ export default function ProvidersPage() {
                     </div>
 
                     {/* ─── FILTER BAR ─── */}
-                    <div className="px-4 lg:px-6 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <div className="px-4 lg:px-6 pb-3 flex items-center gap-2">
                         {/* Distance filter */}
                         <div className="relative shrink-0" ref={filterRef}>
                             <button

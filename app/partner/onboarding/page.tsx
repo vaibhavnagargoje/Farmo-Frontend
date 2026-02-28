@@ -57,7 +57,6 @@ export default function OnboardingPage() {
     aadharFrontPreview: "",
     aadharBack: null,
     aadharBackPreview: "",
-    baseCity: "",
   })
 
   // Step 3: List Services
@@ -142,8 +141,6 @@ export default function OnboardingPage() {
           newErrors.aadharFront = "Please upload Aadhar front side"
         if (!kycDetails.aadharBack)
           newErrors.aadharBack = "Please upload Aadhar back side"
-        if (!kycDetails.baseCity.trim())
-          newErrors.baseCity = "Base city is required"
       }
 
       if (step === 3) {
@@ -188,7 +185,6 @@ export default function OnboardingPage() {
       const partnerFormData = new FormData()
       partnerFormData.append("partner_type", kycDetails.partnerType)
       partnerFormData.append("business_name", kycDetails.businessName)
-      partnerFormData.append("base_city", kycDetails.baseCity)
       if (kycDetails.aadharFront) {
         partnerFormData.append("aadhar_card_front", kycDetails.aadharFront)
       }

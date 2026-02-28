@@ -163,7 +163,7 @@ export async function PATCH(request: NextRequest) {
 
     // We attempt to update partner profile if address or other partner fields are present
     const partnerPayload: any = { ...otherData }
-    if (address) partnerPayload.base_city = address
+
 
     if (Object.keys(partnerPayload).length > 0) {
       const partnerResponse = await fetchWithAuth(API_ENDPOINTS.PARTNER_PROFILE, token, {

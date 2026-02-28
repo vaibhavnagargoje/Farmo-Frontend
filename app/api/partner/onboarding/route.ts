@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         const djangoFormData = new FormData()
 
         // Text fields — forward all partner registration fields
-        const textFields = ["partner_type", "business_name", "base_city", "about"]
+        const textFields = ["partner_type", "business_name", "about"]
         for (const field of textFields) {
             const value = formData.get(field)
             if (value && typeof value === "string") {
