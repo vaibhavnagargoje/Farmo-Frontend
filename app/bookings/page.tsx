@@ -67,8 +67,8 @@ export default function BookingsPage() {
 
     try {
       const url = tab && tab !== "all"
-        ? `/api/booking/list?status=${tab}`
-        : "/api/booking/list"
+        ? `/api/bookings/list?status=${tab}`
+        : "/api/bookings/list"
 
       const res = await fetch(url, {
         method: "GET",
@@ -224,7 +224,7 @@ export default function BookingsPage() {
             return (
               <Link
                 key={booking.id}
-                href={`/booking/${booking.booking_id}`}
+                href={`/bookings/${booking.booking_id}`}
                 className={cn(
                   "bg-card rounded-2xl p-4 lg:p-5 shadow-sm border border-border flex flex-col gap-4 active:scale-[0.99] hover:shadow-lg transition-all",
                   isNewBooking && booking.booking_id === newBookingId && "ring-2 ring-success"

@@ -318,7 +318,7 @@ export default function CategoryServicesPage() {
     setBookingStatus("creating")
     setBookingError(null)
     try {
-      const res = await fetch("/api/booking/instant", {
+      const res = await fetch("/api/bookings/instant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

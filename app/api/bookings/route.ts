@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth"
 
 /**
- * POST /api/booking
+ * POST /api/bookings
  * Create a new booking
  * 
  * Body: {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Handle Django validation errors
       let errorMessage = "Failed to create booking"
-      
+
       if (data.detail) {
         errorMessage = data.detail
       } else if (data.service_id) {

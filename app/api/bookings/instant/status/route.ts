@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { API_ENDPOINTS } from "@/lib/api"
+import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
 import {
   AUTH_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
@@ -8,22 +8,18 @@ import {
 } from "@/lib/auth"
 
 /**
- * POST /api/booking/[bookingId]/cancel
- * Cancel a booking by booking_id
+ * GET /api/bookings/instant/status?booking_id=FB-XXXXXXXX
+ * Poll instant booking status
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ bookingId: string }> }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const { bookingId } = await params
     const cookieStore = await cookies()
     const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
     const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value
 
     if (!accessToken) {
       return NextResponse.json(
-        { message: "Please login to cancel a booking" },
+        { message: "Please login to check booking status" },
         { status: 401 }
       )
     }
@@ -44,7 +40,6 @@ export async function POST(
       if (refreshResponse.ok) {
         const data = await refreshResponse.json()
         token = data.access
-
         cookieStore.set(AUTH_COOKIE_NAME, token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
@@ -60,19 +55,19 @@ export async function POST(
       }
     }
 
-    const body = await request.json()
+    const { searchParams } = new URL(request.url)
+    const bookingId = searchParams.get("booking_id")
 
-    // Call Django cancel endpoint
-    const response = await fetch(
-      API_ENDPOINTS.CUSTOMER_BOOKING_CANCEL(bookingId),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason: body.reason || "Cancelled by customer" }),
-      }
+    if (!bookingId) {
+      return NextResponse.json(
+        { message: "Booking ID is required" },
+        { status: 400 }
+      )
+    }
+
+    const response = await fetchWithAuth(
+      API_ENDPOINTS.INSTANT_BOOKING_STATUS(bookingId),
+      token,
     )
 
     const data = await response.json()
@@ -80,16 +75,16 @@ export async function POST(
     if (response.ok) {
       return NextResponse.json({
         success: true,
-        message: data.message || "Booking cancelled successfully",
+        ...data,
       })
     } else {
       return NextResponse.json(
-        { message: data.detail || data.reason?.[0] || "Failed to cancel booking" },
+        { message: data.detail || "Failed to fetch booking status" },
         { status: response.status }
       )
     }
   } catch (error) {
-    console.error("Cancel booking error:", error)
+    console.error("Instant booking status error:", error)
     return NextResponse.json(
       { message: "Something went wrong. Please try again." },
       { status: 500 }

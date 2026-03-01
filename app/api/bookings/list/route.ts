@@ -8,8 +8,8 @@ import {
 } from "@/lib/auth"
 
 /**
- * GET /api/booking/instant/status?booking_id=FB-XXXXXXXX
- * Poll instant booking status
+ * GET /api/bookings/list
+ * Fetch all bookings for the logged-in customer
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     if (!accessToken) {
       return NextResponse.json(
-        { message: "Please login to check booking status" },
+        { message: "Please login to view bookings" },
         { status: 401 }
       )
     }
@@ -40,12 +40,14 @@ export async function GET(request: NextRequest) {
       if (refreshResponse.ok) {
         const data = await refreshResponse.json()
         token = data.access
+
+        // Update the access token cookie
         cookieStore.set(AUTH_COOKIE_NAME, token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
-          maxAge: 60 * 60,
+          maxAge: 60 * 60, // 1 hour
         })
       } else {
         return NextResponse.json(
@@ -55,36 +57,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get query params for filtering
     const { searchParams } = new URL(request.url)
-    const bookingId = searchParams.get("booking_id")
+    const status = searchParams.get("status")
 
-    if (!bookingId) {
-      return NextResponse.json(
-        { message: "Booking ID is required" },
-        { status: 400 }
-      )
+    // Build URL with optional status filter
+    let url = API_ENDPOINTS.CUSTOMER_BOOKINGS
+    if (status && status !== "all") {
+      url += `?status=${status.toUpperCase()}`
     }
 
-    const response = await fetchWithAuth(
-      API_ENDPOINTS.INSTANT_BOOKING_STATUS(bookingId),
-      token,
-    )
-
+    // Fetch bookings from Django API
+    const response = await fetchWithAuth(url, token)
     const data = await response.json()
 
     if (response.ok) {
+      // Handle paginated or non-paginated response
+      const bookings = data.results || data || []
       return NextResponse.json({
         success: true,
-        ...data,
+        bookings: bookings,
+        count: data.count || bookings.length,
       })
     } else {
       return NextResponse.json(
-        { message: data.detail || "Failed to fetch booking status" },
+        { message: data.detail || "Failed to fetch bookings" },
         { status: response.status }
       )
     }
   } catch (error) {
-    console.error("Instant booking status error:", error)
+    console.error("Fetch bookings error:", error)
     return NextResponse.json(
       { message: "Something went wrong. Please try again." },
       { status: 500 }

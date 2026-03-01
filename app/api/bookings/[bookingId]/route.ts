@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth"
 
 /**
- * GET /api/booking/[bookingId]
+ * GET /api/bookings/[bookingId]
  * Fetch booking details by booking_id
  */
 export async function GET(

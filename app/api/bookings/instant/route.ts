@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth"
 
 /**
- * POST /api/booking/instant
+ * POST /api/bookings/instant
  * Create an instant (quick) booking
  *
  * Body: {

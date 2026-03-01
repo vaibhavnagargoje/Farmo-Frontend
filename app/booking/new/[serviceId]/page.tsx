@@ -122,7 +122,7 @@ export default function NewBookingPage() {
         note: note || undefined,
       }
 
-      const res = await fetch("/api/booking", {
+      const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -160,9 +160,9 @@ export default function NewBookingPage() {
   const totalPrice = service ? parseFloat(service.price) * quantity : 0
 
   // Get all images including thumbnail
-  const allImages = service?.images?.length 
-    ? service.images 
-    : service?.thumbnail 
+  const allImages = service?.images?.length
+    ? service.images
+    : service?.thumbnail
       ? [{ id: 0, image: service.thumbnail, is_thumbnail: true }]
       : []
 
@@ -231,7 +231,7 @@ export default function NewBookingPage() {
                     <span className="material-symbols-outlined text-6xl">image</span>
                   </div>
                 )}
-                
+
                 {/* Availability Badge */}
                 {!service.is_available && (
                   <div className="absolute top-4 left-4 px-3 py-1 bg-destructive text-white text-sm font-bold rounded-full">
@@ -453,7 +453,7 @@ export default function NewBookingPage() {
               <span className="material-symbols-outlined text-6xl">image</span>
             </div>
           )}
-          
+
           {/* Back Button */}
           <Link
             href="/"
@@ -608,7 +608,7 @@ export default function NewBookingPage() {
             ₹{service.price} × {quantity}
           </div>
         </div>
-        
+
         {bookingError && (
           <p className="text-xs text-destructive mb-2">{bookingError}</p>
         )}

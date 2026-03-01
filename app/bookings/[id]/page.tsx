@@ -88,7 +88,7 @@ export default function BookingDetailsPage() {
       setError(null)
 
       try {
-        const res = await fetch(`/api/booking/${bookingId}`, {
+        const res = await fetch(`/api/bookings/${bookingId}`, {
           method: "GET",
           credentials: "include",
         })
