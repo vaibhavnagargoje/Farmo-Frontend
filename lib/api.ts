@@ -39,6 +39,12 @@ export const API_ENDPOINTS = {
   PROVIDER_BOOKING_ACTION: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/action/`,
   PROVIDER_BOOKING_CANCEL: (id: string) => `${API_BASE_URL}/bookings/provider/${id}/cancel/`,
 
+  // Instant Bookings
+  INSTANT_BOOKING_CREATE: `${API_BASE_URL}/bookings/instant/`,
+  INSTANT_BOOKING_STATUS: (id: string) => `${API_BASE_URL}/bookings/instant/${id}/status/`,
+
+  // Price Units
+  PRICE_UNITS: `${API_BASE_URL}/services/price-units/`,
 
 } as const
 
@@ -116,6 +122,11 @@ export interface Category {
   slug: string
   icon: string
   is_active: boolean
+  instant_price: string
+  instant_price_unit: string
+  instant_enabled: boolean
+  instant_timeout_minutes?: number
+  instant_search_radius_km?: number
 }
 
 export interface Service {
@@ -144,7 +155,7 @@ export interface Service {
 export interface Booking {
   id: string
   booking_id: string
-  booking_type: "SCHEDULED"
+  booking_type: "SCHEDULED" | "INSTANT"
   order_number: string | null
   service: Service
   provider: PartnerProfile
@@ -159,6 +170,7 @@ export interface Booking {
   current_broadcast_radius?: string | null
   assigned_at?: string | null
   quantity: number
+  price_unit?: string
   unit_price: string
   total_amount: string
   address: string
@@ -181,6 +193,37 @@ export interface Booking {
 export interface ApiError {
   message: string
   errors?: Record<string, string[]>
+}
+
+export interface PriceUnit {
+  value: string
+  label: string
+}
+
+export interface InstantBookingStatus {
+  booking_id: string
+  order_number: string | null
+  status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  booking_type: "INSTANT"
+  category_name: string | null
+  quantity: number
+  price_unit: string
+  unit_price: string
+  total_amount: string
+  broadcast_count: number
+  current_broadcast_radius: string | null
+  expires_at: string | null
+  assigned_at: string | null
+  created_at: string
+  providers_notified: number
+  providers_declined: number
+  provider?: {
+    id: number
+    business_name: string
+    rating: string
+    jobs_completed: number
+    phone: string
+  }
 }
 
 // Helper to make API calls from server-side with auth token

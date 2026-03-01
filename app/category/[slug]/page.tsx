@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import GoogleMapPicker, { type SelectedLocation, type ServiceMarker } from "@/components/GoogleMapPicker"
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
 import { APIProvider } from "@vis.gl/react-google-maps"
-import { type Service, type Category } from "@/lib/api"
+import { type Service, type Category, type PriceUnit } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 
 // ── Constants ──
 const DISTANCE_OPTIONS = [
@@ -24,6 +25,8 @@ const DISTANCE_OPTIONS = [
 export default function CategoryServicesPage() {
   const params = useParams()
   const slug = params.slug as string
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
 
   // ── Data ──
   const [services, setServices] = useState<Service[]>([])
@@ -43,8 +46,17 @@ export default function CategoryServicesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
-  // ── Coming Soon popup ──
-  const [showComingSoon, setShowComingSoon] = useState(false)
+  // ── Instant Booking ──
+  const [priceUnits, setPriceUnits] = useState<PriceUnit[]>([])
+  const [quantity, setQuantity] = useState(1)
+  const [selectedPriceUnit, setSelectedPriceUnit] = useState("")
+  const [bookingNote, setBookingNote] = useState("")
+  const [bookingStatus, setBookingStatus] = useState<"idle" | "creating" | "created" | "active_exists" | "error">("idle")
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null)
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
+  const [activeExistingBookingId, setActiveExistingBookingId] = useState<string | null>(null)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   // ── Swipe slider ──
   const sliderRef = useRef<HTMLDivElement>(null)
@@ -52,6 +64,7 @@ export default function CategoryServicesPage() {
   const [isDragging, setIsDragging] = useState(false)
   const sliderStartX = useRef(0)
   const sliderWidth = useRef(0)
+  const isSubmittingRef = useRef(false)
 
   // ── Build providers page URL ──
   const getProvidersUrl = useCallback(() => {
@@ -113,7 +126,7 @@ export default function CategoryServicesPage() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ latitude, longitude, address }),
-            }).catch(() => {})
+            }).catch(() => { })
           },
           () => {
             setLocationStatus("no_location")
@@ -200,7 +213,7 @@ export default function CategoryServicesPage() {
         longitude: location.lng,
         address: location.address,
       }),
-    }).catch(() => {})
+    }).catch(() => { })
   }, [])
 
   // ── Handle "get my location" button ──
@@ -236,6 +249,31 @@ export default function CategoryServicesPage() {
     )
   }, [])
 
+  // ── Fetch price units on mount ──
+  useEffect(() => {
+    const fetchPriceUnits = async () => {
+      try {
+        const res = await fetch("/api/services/price-units")
+        if (res.ok) {
+          const data = await res.json()
+          setPriceUnits(Array.isArray(data) ? data : [])
+        }
+      } catch {
+        // Price units fetch is optional fallback
+      }
+    }
+    fetchPriceUnits()
+  }, [])
+
+  // ── Set default price unit when category loads ──
+  useEffect(() => {
+    if (category?.instant_price_unit && !selectedPriceUnit) {
+      setSelectedPriceUnit(category.instant_price_unit)
+    }
+  }, [category, selectedPriceUnit])
+
+
+
   // ── Build service markers for the map ──
   const serviceMarkers: ServiceMarker[] = services
     .filter((s) => s.location_lat && s.location_lng)
@@ -254,11 +292,82 @@ export default function CategoryServicesPage() {
     services.length > 0
       ? Math.round(services.reduce((sum, s) => sum + parseFloat(s.price || "0"), 0) / services.length)
       : 0
+  const estimatedTotal = avgPrice * quantity
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
+  const selectedUnitLabel = priceUnits.find((u) => u.value === selectedPriceUnit)?.label || selectedPriceUnit
+  const isInstantEnabled = category?.instant_enabled !== false
+
+  // ── Instant Booking: Create ──
+  const handleInstantBooking = useCallback(async () => {
+    if (bookingStatus === "creating" || isSubmittingRef.current) return
+    isSubmittingRef.current = true
+
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true)
+      setSliderProgress(0)
+      isSubmittingRef.current = false
+      return
+    }
+    if (!selectedLocation || !category) {
+      setBookingError("Please set your location first")
+      setSliderProgress(0)
+      isSubmittingRef.current = false
+      return
+    }
+
+    setBookingStatus("creating")
+    setBookingError(null)
+    try {
+      const res = await fetch("/api/booking/instant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category_id: category.id,
+          quantity,
+          price_unit: selectedPriceUnit || category.instant_price_unit || "HOUR",
+          note: bookingNote,
+          address: selectedLocation.address,
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+        }),
+      })
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        const bookingId = data.booking?.booking_id
+        const orderNumber = data.booking?.order_number
+        setCreatedBookingId(bookingId)
+        setCreatedOrderNumber(orderNumber || bookingId)
+        setBookingStatus("created")
+      } else {
+        // Check if user already has an active order
+        if (data.active_booking_id) {
+          setActiveExistingBookingId(
+            Array.isArray(data.active_booking_id)
+              ? data.active_booking_id[0]
+              : data.active_booking_id
+          )
+          setBookingStatus("active_exists")
+          setSliderProgress(0)
+          return
+        }
+
+        setBookingError(data.message || "Failed to create booking")
+        setBookingStatus("error")
+        setTimeout(() => setBookingStatus("idle"), 3000)
+      }
+    } catch {
+      setBookingError("Network error. Please try again.")
+      setBookingStatus("error")
+      setTimeout(() => setBookingStatus("idle"), 3000)
+    }
+    setSliderProgress(0)
+    isSubmittingRef.current = false
+  }, [bookingStatus, isAuthenticated, selectedLocation, category, quantity, selectedPriceUnit, bookingNote])
 
   // ── Slider handlers ──
   const onSliderTouchStart = (e: React.TouchEvent) => {
-    if (!sliderRef.current) return
+    if (!sliderRef.current || (bookingStatus !== "idle" && bookingStatus !== "error")) return
     setIsDragging(true)
     sliderStartX.current = e.touches[0].clientX
     sliderWidth.current = sliderRef.current.offsetWidth - 64
@@ -274,15 +383,14 @@ export default function CategoryServicesPage() {
     setIsDragging(false)
     if (sliderProgress > 0.85) {
       setSliderProgress(1)
-      setShowComingSoon(true)
-      setTimeout(() => setSliderProgress(0), 300)
+      setTimeout(() => handleInstantBooking(), 0)
     } else {
       setSliderProgress(0)
     }
   }
 
   const onSliderMouseDown = (e: React.MouseEvent) => {
-    if (!sliderRef.current) return
+    if (!sliderRef.current || (bookingStatus !== "idle" && bookingStatus !== "error")) return
     setIsDragging(true)
     sliderStartX.current = e.clientX
     sliderWidth.current = sliderRef.current.offsetWidth - 64
@@ -297,8 +405,7 @@ export default function CategoryServicesPage() {
       document.removeEventListener("mouseup", onMouseUp)
       setSliderProgress((prev) => {
         if (prev > 0.85) {
-          setShowComingSoon(true)
-          setTimeout(() => setSliderProgress(0), 300)
+          setTimeout(() => handleInstantBooking(), 0)
           return 1
         }
         return 0
@@ -339,7 +446,7 @@ export default function CategoryServicesPage() {
             <div className="flex items-center gap-2">
               {/* Search input with suggestions */}
               <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
-                <PlacesAutocomplete 
+                <PlacesAutocomplete
                   defaultValue={searchQuery}
                   onPlaceSelect={(place) => {
                     setSearchQuery(place.address)
@@ -350,18 +457,17 @@ export default function CategoryServicesPage() {
                     }
                     setSelectedLocation(loc)
                     setLocationStatus("ready")
-                  }} 
+                  }}
                 />
               </APIProvider>
 
               {/* Get Location button */}
               <button
                 onClick={handleGetCurrentLocation}
-                className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${
-                  locationStatus === "fetching_gps"
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-card text-primary border-border hover:bg-primary/5"
-                }`}
+                className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${locationStatus === "fetching_gps"
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-card text-primary border-border hover:bg-primary/5"
+                  }`}
                 title="Get current location"
               >
                 {locationStatus === "fetching_gps" ? (
@@ -375,11 +481,10 @@ export default function CategoryServicesPage() {
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${
-                    activeDistance !== "all"
-                      ? "bg-navy text-white border-navy"
-                      : "bg-card text-foreground border-border hover:bg-muted/50"
-                  }`}
+                  className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${activeDistance !== "all"
+                    ? "bg-navy text-white border-navy"
+                    : "bg-card text-foreground border-border hover:bg-muted/50"
+                    }`}
                   title="Filters"
                 >
                   <span className="material-symbols-outlined text-[20px]">tune</span>
@@ -398,11 +503,10 @@ export default function CategoryServicesPage() {
                           setActiveDistance(option.value)
                           setShowFilters(false)
                         }}
-                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${
-                          activeDistance === option.value
-                            ? "bg-navy/5 text-navy font-semibold"
-                            : "text-foreground hover:bg-muted/40"
-                        }`}
+                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between transition-colors ${activeDistance === option.value
+                          ? "bg-navy/5 text-navy font-semibold"
+                          : "text-foreground hover:bg-muted/40"
+                          }`}
                       >
                         <span>{option.label}</span>
                         {activeDistance === option.value && (
@@ -451,7 +555,7 @@ export default function CategoryServicesPage() {
         {/* ── RIGHT / BOTTOM: Booking Panel ── */}
         <div className="lg:w-[420px] xl:w-[460px] lg:border-l lg:border-border/50 flex flex-col">
 
-          {/* ── Stats + Swipe to Book ── */}
+          {/* ── Stats + Instant Booking Form ── */}
           {selectedLocation && (
             <div className="px-4 lg:px-6 pb-3 lg:pt-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
@@ -484,53 +588,151 @@ export default function CategoryServicesPage() {
                   )}
                 </div>
 
-                {/* Fixed Price */}
+                {/* Average Price */}
                 <div className="bg-gradient-to-br from-navy/5 to-navy/10 border border-navy/15 rounded-2xl p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="material-symbols-outlined text-navy text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    <span className="text-[11px] font-medium text-navy">Fixed Price</span>
+                    <span className="text-[11px] font-medium text-navy">Avg. Price</span>
                   </div>
-                  <p className="text-2xl font-bold text-foreground leading-none">{avgPrice || "\u2014"}</p>
-                  <p className="text-[9px] text-navy/60 mt-1.5">Pay after service fee</p>
+                  <p className="text-2xl font-bold text-foreground leading-none">
+                    {avgPrice ? `₹${avgPrice}` : "\u2014"}
+                  </p>
+                  <p className="text-[9px] text-navy/60 mt-1.5">
+                    {selectedUnitLabel || "Per unit"} • Area average
+                  </p>
                 </div>
               </div>
 
-              {/* Swipe to Book slider */}
-              {availableProviders > 0 ? (
-                <div
-                  ref={sliderRef}
-                  className="relative h-14 lg:h-16 rounded-2xl overflow-hidden select-none touch-none shadow-lg bg-navy"
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
-                      Swipe to Book Now
-                    </p>
+              {/* ── Instant Booking Form ── */}
+              {isInstantEnabled && availableProviders > 0 && (
+                <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="material-symbols-outlined text-navy text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>flash_on</span>
+                    <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
                   </div>
-                  <div
-                    className="absolute inset-y-0 left-0 bg-green-500/20 rounded-2xl transition-[width] duration-75"
-                    style={{ width: `${sliderProgress * 100}%` }}
-                  />
-                  <div
-                    className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[14px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
-                    style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
-                    onTouchStart={onSliderTouchStart}
-                    onTouchMove={onSliderTouchMove}
-                    onTouchEnd={onSliderTouchEnd}
-                    onMouseDown={onSliderMouseDown}
-                  >
-                    {sliderProgress > 0.85 ? (
-                      <span className="material-symbols-outlined text-green-600 text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
-                    ) : (
-                      <span className="material-symbols-outlined text-navy text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>double_arrow</span>
-                    )}
+
+                  {/* Quantity + Price Unit Row */}
+                  <div className="flex gap-2.5">
+                    {/* Quantity */}
+                    <div className="flex-1">
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Quantity</label>
+                      <div className="flex items-center border border-border rounded-xl overflow-hidden bg-background">
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          className="px-3 py-2.5 text-foreground hover:bg-muted/50 active:bg-muted transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">remove</span>
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          value={quantity}
+                          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="flex-1 text-center text-sm font-semibold bg-transparent outline-none py-2.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(quantity + 1)}
+                          className="px-3 py-2.5 text-foreground hover:bg-muted/50 active:bg-muted transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Price Unit */}
+                    <div className="flex-1">
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit Type</label>
+                      <select
+                        value={selectedPriceUnit}
+                        onChange={(e) => setSelectedPriceUnit(e.target.value)}
+                        className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all"
+                      >
+                        {priceUnits.map((u) => (
+                          <option key={u.value} value={u.value}>
+                            {u.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
+                  {/* Estimated Total */}
+                  {avgPrice > 0 && (
+                    <div className="flex items-center justify-between bg-navy/5 rounded-xl px-3 py-2">
+                      <span className="text-[11px] text-muted-foreground">
+                        Est. Total ({quantity} × ₹{avgPrice})
+                      </span>
+                      <span className="text-sm font-bold text-navy">₹{estimatedTotal}</span>
+                    </div>
+                  )}
+
+                  {/* Note */}
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Additional Note</label>
+                    <textarea
+                      value={bookingNote}
+                      onChange={(e) => setBookingNote(e.target.value)}
+                      placeholder="Any special instructions... (optional)"
+                      rows={2}
+                      className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
+                    />
+                  </div>
+
+                  {/* Error message */}
+                  {bookingError && (
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2">
+                      <span className="material-symbols-outlined text-[16px]">error</span>
+                      <p className="text-xs font-medium">{bookingError}</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              )}
+
+              {/* Swipe to Book slider */}
+              {availableProviders > 0 && isInstantEnabled ? (
+                (bookingStatus === "idle" || bookingStatus === "error") ? (
+                  <div
+                    ref={sliderRef}
+                    className="relative h-14 lg:h-16 rounded-2xl overflow-hidden select-none touch-none shadow-lg bg-navy"
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
+                        Swipe to Book Now
+                      </p>
+                    </div>
+                    <div
+                      className="absolute inset-y-0 left-0 bg-green-500/20 rounded-2xl transition-[width] duration-75"
+                      style={{ width: `${sliderProgress * 100}%` }}
+                    />
+                    <div
+                      className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[14px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
+                      style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
+                      onTouchStart={onSliderTouchStart}
+                      onTouchMove={onSliderTouchMove}
+                      onTouchEnd={onSliderTouchEnd}
+                      onMouseDown={onSliderMouseDown}
+                    >
+                      {sliderProgress > 0.85 ? (
+                        <span className="material-symbols-outlined text-green-600 text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-navy text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>double_arrow</span>
+                      )}
+                    </div>
+                  </div>
+                ) : bookingStatus === "creating" ? (
+                  <div className="relative h-14 lg:h-16 rounded-2xl bg-navy/80 flex items-center justify-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                    <p className="text-white/80 text-sm font-semibold">Creating booking...</p>
+                  </div>
+                ) : null
+              ) : availableProviders === 0 ? (
                 <div className="relative h-14 bg-muted/60 border border-border rounded-2xl flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
                   <p className="text-sm font-medium text-muted-foreground">No providers available in this area</p>
                 </div>
-              )}
+              ) : null}
 
               {/* ─── BROWSE PROVIDERS BUTTON ─── */}
               <Link
@@ -576,53 +778,133 @@ export default function CategoryServicesPage() {
         </div>
       </div>
 
-      {/* ─── COMING SOON POPUP ─── */}
-      {showComingSoon && (
+      {/* ─── ORDER CREATED POPUP ─── */}
+      {bookingStatus === "created" && (
         <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowComingSoon(false)} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
-
-            {/* Header */}
-            <div className="bg-gradient-to-br from-navy to-navy/90 px-6 py-8 text-center text-white">
+            <div className="bg-gradient-to-br from-green-600 to-green-700 px-6 py-8 text-center text-white">
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Coming Soon!</h2>
-              <p className="text-sm text-white/80">Instant booking is under development</p>
+              <h2 className="text-xl font-bold mb-1">Order Created!</h2>
+              <p className="text-sm text-white/80">
+                {categoryName} • {quantity} {selectedUnitLabel}
+              </p>
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-start gap-3">
-                <span className="material-symbols-outlined text-primary text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+              <div className="bg-navy/5 rounded-xl p-3 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Order</span>
+                  <span className="font-semibold text-foreground">{createdOrderNumber || createdBookingId || "—"}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Quantity</span>
+                  <span className="font-semibold text-foreground">{quantity} {selectedUnitLabel}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Est. Total</span>
+                  <span className="font-bold text-navy">₹{estimatedTotal}</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                See status in Orders page
+              </p>
+
+              <button
+                onClick={() => {
+                  setBookingStatus("idle")
+                  setCreatedBookingId(null)
+                  setCreatedOrderNumber(null)
+                }}
+                className="w-full py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ACTIVE ORDER EXISTS MODAL ─── */}
+      {bookingStatus === "active_exists" && (
+        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBookingStatus("idle")} />
+          <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
+              <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <h2 className="text-xl font-bold mb-1">Active Order Exists</h2>
+              <p className="text-sm text-white/80">You already have an active order</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-orange-600 text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Instant Booking Feature</p>
+                  <p className="text-sm font-semibold text-foreground">Cannot create a new order</p>
                   <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
-                    We&apos;re working hard to bring you instant equipment booking. Soon you&apos;ll be able to
-                    book Available providers with just a swipe!
+                    Cancel your existing order or wait for it to expire before creating a new one.
                   </p>
                 </div>
               </div>
 
-              <div className="bg-muted/30 rounded-xl p-4 flex items-start gap-3">
-                <span className="material-symbols-outlined text-navy text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Browse & Schedule</p>
-                  <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
-                    You can browse available providers and schedule a booking at your preferred date and time.
-                  </p>
+              {activeExistingBookingId && (
+                <div className="bg-navy/5 rounded-xl p-3">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Active Order</span>
+                    <span className="font-semibold text-foreground">{activeExistingBookingId}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => router.push("/orders")}
+                  className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm"
+                >
+                  View Orders
+                </button>
+                <button
+                  onClick={() => {
+                    setBookingStatus("idle")
+                    setActiveExistingBookingId(null)
+                  }}
+                  className="flex-1 py-3 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── LOGIN PROMPT ─── */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLoginPrompt(false)} />
+          <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+            <div className="bg-gradient-to-br from-navy to-navy/90 px-6 py-8 text-center text-white">
+              <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
+              </div>
+              <h2 className="text-xl font-bold mb-1">Login Required</h2>
+              <p className="text-sm text-white/80">Please login to create a booking</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex gap-3">
                 <Link
-                  href={getProvidersUrl()}
-                  onClick={() => setShowComingSoon(false)}
+                  href="/auth"
                   className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm text-center"
                 >
-                  Browse Providers
+                  Login / Sign Up
                 </Link>
                 <button
-                  onClick={() => setShowComingSoon(false)}
+                  onClick={() => setShowLoginPrompt(false)}
                   className="py-3 px-4 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
                 >
                   Close
@@ -637,3 +919,4 @@ export default function CategoryServicesPage() {
     </div>
   )
 }
+
