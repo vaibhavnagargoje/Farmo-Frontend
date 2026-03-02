@@ -43,6 +43,11 @@ export const API_ENDPOINTS = {
   INSTANT_BOOKING_CREATE: `${API_BASE_URL}/bookings/instant/`,
   INSTANT_BOOKING_STATUS: (id: string) => `${API_BASE_URL}/bookings/instant/${id}/status/`,
 
+  // Provider Instant Requests
+  PROVIDER_INSTANT_REQUESTS: `${API_BASE_URL}/bookings/provider/instant-requests/`,
+  PROVIDER_INSTANT_REQUEST_ACCEPT: (id: number) => `${API_BASE_URL}/bookings/provider/instant-requests/${id}/accept/`,
+  PROVIDER_INSTANT_REQUEST_DECLINE: (id: number) => `${API_BASE_URL}/bookings/provider/instant-requests/${id}/decline/`,
+
   // Price Units
   PRICE_UNITS: `${API_BASE_URL}/services/price-units/`,
 
