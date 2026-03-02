@@ -10,13 +10,10 @@ import { useAuth } from "@/contexts/auth-context"
 import type { PartnerProfile } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
-// Sidebar navigation items
+// Sidebar navigation items (desktop only)
 const sidebarNavItems = [
     { icon: "person", label: "Profile", href: "/profile", key: "profile" },
     { icon: "calendar_today", label: "My Bookings", href: "/bookings", key: "bookings" },
-    { icon: "settings", label: "Settings", href: "/settings", key: "settings" },
-    { icon: "headset_mic", label: "Help & Support", href: "/support", key: "support" },
-    { icon: "notifications", label: "Notifications", href: "/notifications", key: "notifications" },
 ]
 
 interface AccountLayoutProps {
@@ -30,7 +27,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
     const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth()
     const [partner, setPartner] = useState<PartnerProfile | null>(null)
     const [isLoadingProfile, setIsLoadingProfile] = useState(true)
-    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
 
     // Fetch partner profile data
     useEffect(() => {
@@ -59,29 +56,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
         }
     }, [isAuthenticated, authLoading])
 
-    // Close sidebar on escape
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setIsMobileSidebarOpen(false)
-        }
-        window.addEventListener("keydown", handleEsc)
-        return () => window.removeEventListener("keydown", handleEsc)
-    }, [])
 
-    // Lock body scroll when mobile sidebar is open
-    useEffect(() => {
-        if (isMobileSidebarOpen) {
-            document.body.style.overflow = "hidden"
-        } else {
-            document.body.style.overflow = ""
-        }
-        return () => { document.body.style.overflow = "" }
-    }, [isMobileSidebarOpen])
-
-    // Close sidebar on route change
-    useEffect(() => {
-        setIsMobileSidebarOpen(false)
-    }, [pathname])
 
     const handleLogout = async () => {
         await logout()
@@ -137,7 +112,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
                     </button>
                 </div>
                 <h2 className="text-base font-bold text-foreground">{displayName}</h2>
-                
+
             </div>
 
             {/* Navigation */}
@@ -187,39 +162,10 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
             <div className="lg:hidden flex flex-col min-h-screen pb-24">
                 <MobileHeader />
 
-                {/* Mobile Top Bar with Menu Button */}
-                <div className="sticky top-16 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-                    <button
-                        onClick={() => setIsMobileSidebarOpen(true)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted/30 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-foreground">menu</span>
-                        <span className="text-sm font-semibold text-foreground">Menu</span>
-                    </button>
+                {/* Mobile Title Bar */}
+                <div className="sticky top-16 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-center">
                     <h1 className="text-base font-bold text-foreground">{pageTitle}</h1>
-                    <button className="p-2 rounded-full hover:bg-muted/30 transition-colors text-muted">
-                        <span className="material-symbols-outlined text-xl">notifications</span>
-                    </button>
                 </div>
-
-                {/* Mobile Slide-Out Sidebar */}
-                {isMobileSidebarOpen && (
-                    <div className="fixed inset-0 z-[100] flex">
-                        <div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-                            onClick={() => setIsMobileSidebarOpen(false)}
-                        />
-                        <div className="relative w-[280px] max-w-[80vw] bg-card h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-300">
-                            <button
-                                onClick={() => setIsMobileSidebarOpen(false)}
-                                className="absolute top-5 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-lg text-foreground">close</span>
-                            </button>
-                            <SidebarContent onNavClick={() => setIsMobileSidebarOpen(false)} />
-                        </div>
-                    </div>
-                )}
 
                 {/* Mobile Content */}
                 <main className="flex-1 px-4 py-5">

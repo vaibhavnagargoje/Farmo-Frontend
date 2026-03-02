@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { AccountLayout } from "@/components/account-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 // Booking type from backend
 interface BookingItem {
@@ -39,38 +40,28 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   CANCELLED: { label: "Cancelled", color: "text-muted", bgColor: "bg-muted" },
 }
 
-// Tab filters
-const tabs = [
-  { key: "all", label: "All" },
-  { key: "pending", label: "Pending" },
-  { key: "confirmed", label: "Upcoming" },
-  { key: "in_progress", label: "Active" },
-  { key: "completed", label: "Completed" },
-]
+
 
 export default function BookingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
 
   const [bookings, setBookings] = useState<BookingItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("all")
+  const [searchingToast, setSearchingToast] = useState(false)
 
   const isNewBooking = searchParams.get("success") === "true"
   const newBookingId = searchParams.get("booking_id")
 
   // Fetch bookings
-  const fetchBookings = async (tab?: string) => {
+  const fetchBookings = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const url = tab && tab !== "all"
-        ? `/api/bookings/list?status=${tab}`
-        : "/api/bookings/list"
-
-      const res = await fetch(url, {
+      const res = await fetch("/api/bookings/list", {
         method: "GET",
         credentials: "include",
       })
@@ -97,9 +88,19 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      fetchBookings(activeTab)
+      fetchBookings()
     }
-  }, [activeTab, authLoading])
+  }, [authLoading])
+
+  // Handle clicking on a booking card
+  const handleBookingClick = (booking: BookingItem) => {
+    if (booking.status === "SEARCHING" || booking.status === "CANCELLED" || booking.status === "EXPIRED") {
+      setSearchingToast(true)
+      setTimeout(() => setSearchingToast(false), 3000)
+      return
+    }
+    router.push(`/bookings/${booking.booking_id}`)
+  }
 
   // Format date
   const formatDate = (dateStr: string, timeStr?: string) => {
@@ -130,19 +131,10 @@ export default function BookingsPage() {
 
   return (
     <AccountLayout pageTitle="My Bookings">
-      {/* Header + New Booking Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-foreground">My Bookings</h2>
-          <p className="text-sm text-muted mt-1">Track and manage your service bookings</p>
-        </div>
-        <Link
-          href="/"
-          className="flex items-center gap-2 px-4 lg:px-6 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors text-sm"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>
-          <span className="hidden sm:inline">New Booking</span>
-        </Link>
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-xl lg:text-2xl font-bold text-foreground">My Bookings</h2>
+        <p className="text-sm text-muted mt-1">Track and manage your service bookings</p>
       </div>
 
       {/* Success Message */}
@@ -156,23 +148,13 @@ export default function BookingsPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="py-4 flex gap-2 overflow-x-auto no-scrollbar">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "px-4 lg:px-6 py-2 lg:py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
-              activeTab === tab.key
-                ? "bg-navy text-white"
-                : "bg-card text-foreground border border-border hover:bg-muted/50"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Searching Toast */}
+      {searchingToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 bg-navy text-white rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="material-symbols-outlined text-lg">info</span>
+          <span className="text-sm font-medium">Order details are not available for this booking.</span>
+        </div>
+      )}
 
       {/* Loading */}
       {isLoading && (
@@ -187,7 +169,7 @@ export default function BookingsPage() {
           <span className="material-symbols-outlined text-5xl text-muted mb-3">cloud_off</span>
           <p className="text-foreground font-medium">{error}</p>
           <button
-            onClick={() => fetchBookings(activeTab)}
+            onClick={() => fetchBookings()}
             className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium"
           >
             Try Again
@@ -201,10 +183,7 @@ export default function BookingsPage() {
           <span className="material-symbols-outlined text-6xl text-muted mb-4">calendar_month</span>
           <h3 className="text-lg font-bold text-foreground mb-2">No Bookings Yet</h3>
           <p className="text-muted mb-6">
-            {activeTab === "all"
-              ? "You haven't made any bookings yet. Start exploring our services!"
-              : `No ${tabs.find(t => t.key === activeTab)?.label.toLowerCase()} bookings found.`
-            }
+            You haven&apos;t made any bookings yet. Start exploring our services!
           </p>
           <Link
             href="/"
@@ -220,13 +199,17 @@ export default function BookingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 pb-4">
           {bookings.map((booking) => {
             const status = statusConfig[booking.status] || statusConfig.PENDING
+            const isBlocked = booking.status === "SEARCHING" || booking.status === "CANCELLED" || booking.status === "EXPIRED"
 
             return (
-              <Link
+              <div
                 key={booking.id}
-                href={`/bookings/${booking.booking_id}`}
+                onClick={() => handleBookingClick(booking)}
                 className={cn(
-                  "bg-card rounded-2xl p-4 lg:p-5 shadow-sm border border-border flex flex-col gap-4 active:scale-[0.99] hover:shadow-lg transition-all",
+                  "bg-card rounded-2xl p-4 lg:p-5 shadow-sm border border-border flex flex-col gap-4 transition-all",
+                  isBlocked
+                    ? "opacity-75 cursor-default"
+                    : "active:scale-[0.99] hover:shadow-lg cursor-pointer",
                   isNewBooking && booking.booking_id === newBookingId && "ring-2 ring-success"
                 )}
               >
@@ -239,7 +222,7 @@ export default function BookingsPage() {
                       </h3>
                     </div>
                     <p className="text-sm text-muted mt-0.5">
-                      {booking.provider_name}
+                      {booking.status === "SEARCHING" ? "Finding provider..." : booking.provider_name}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -266,12 +249,23 @@ export default function BookingsPage() {
                   <span className="text-xs text-muted">
                     {booking.order_number ? booking.order_number : `#${booking.booking_id}`}
                   </span>
-                  <div className="flex items-center gap-1 text-primary text-sm font-medium">
-                    <span>View Details</span>
-                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                  </div>
+                  {booking.status === "SEARCHING" ? (
+                    <div className="flex items-center gap-1 text-muted text-sm">
+                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                      <span>Processing</span>
+                    </div>
+                  ) : isBlocked ? (
+                    <div className="flex items-center gap-1 text-muted text-sm">
+                      <span>{status.label}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-primary text-sm font-medium">
+                      <span>View Details</span>
+                      <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                    </div>
+                  )}
                 </div>
-              </Link>
+              </div>
             )
           })}
         </div>

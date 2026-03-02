@@ -5,58 +5,35 @@ import Link from "next/link"
 import { AccountLayout } from "@/components/account-layout"
 import { useAuth } from "@/contexts/auth-context"
 import type { PartnerProfile } from "@/lib/api"
-import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
-// Quick settings cards
-const quickSettings = [
+// Menu items that were previously in sidebar
+const profileMenuItems = [
   {
-    icon: "manage_accounts",
-    label: "Profile Details",
-    description: "Update name, email & location",
+    icon: "settings",
+    label: "Settings",
+    description: "App preferences & account settings",
     href: "/settings",
   },
   {
-    icon: "lock",
-    label: "Security",
-    description: "Password & 2FA",
-    href: "/settings",
-  },
-]
-
-// Mock recent bookings
-const recentBookings = [
-  {
-    id: 1,
-    name: "John Deere 5050D",
-    type: "Rental",
-    date: "Oct 24, 2023",
-    status: "Completed",
-    statusColor: "bg-green-100 text-green-700",
-    price: "₹2,400",
-    priceLabel: "Paid",
-    icon: "agriculture",
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
+    icon: "headset_mic",
+    label: "Help & Support",
+    description: "Get help, FAQs & contact support",
+    href: "/support",
   },
   {
-    id: 2,
-    name: "Rotavator 6ft",
-    type: "Rental",
-    date: "Nov 02, 2023",
-    status: "Upcoming",
-    statusColor: "bg-blue-100 text-blue-700",
-    price: "₹800",
-    priceLabel: "Pending",
-    icon: "hardware",
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-600",
+    icon: "notifications",
+    label: "Notifications",
+    description: "Manage your notification preferences",
+    href: "/notifications",
   },
 ]
 
 export default function ProfilePage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, logout } = useAuth()
   const [partner, setPartner] = useState<PartnerProfile | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -78,8 +55,13 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, authLoading])
 
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+  }
+
   return (
-    <AccountLayout pageTitle="Account Settings">
+    <AccountLayout pageTitle="My Profile">
       {/* Mobile Profile Card */}
       <div className="flex items-center gap-4 mb-6 p-4 bg-card rounded-2xl border border-border shadow-sm lg:hidden">
         <div className="relative flex-shrink-0">
@@ -143,111 +125,55 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Grid: Bookings + Sidebar Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left: Bookings + Quick Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Recent Bookings</h3>
-              <Link href="/bookings" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-                View All
-              </Link>
-            </div>
-
-            {recentBookings.map((booking) => (
+        {/* Menu Items — Settings, Help & Support, Notifications */}
+        <div>
+          <h3 className="text-lg font-bold text-foreground mb-4">Account</h3>
+          <div className="flex flex-col gap-3">
+            {profileMenuItems.map((item) => (
               <Link
-                key={booking.id}
-                href="/bookings"
-                className="block bg-card rounded-2xl p-4 lg:p-5 border border-border shadow-sm hover:shadow-md transition-shadow"
+                key={item.label}
+                href={item.href}
+                className="flex items-center gap-4 p-4 bg-card rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all group"
               >
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className={cn("w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center flex-shrink-0", booking.iconBg, booking.iconColor)}>
-                    <span className="material-symbols-outlined text-xl lg:text-2xl">{booking.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-foreground truncate text-sm lg:text-base">{booking.name}</h4>
-                      <span className={cn("text-xs font-medium px-2 py-1 rounded-full ml-2 whitespace-nowrap", booking.statusColor)}>
-                        {booking.status}
-                      </span>
-                    </div>
-                    <p className="text-xs lg:text-sm text-muted truncate">
-                      {booking.type} • {booking.date}
-                    </p>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                    <p className="font-bold text-foreground text-sm lg:text-base">{booking.price}</p>
-                    <p className="text-xs text-muted">{booking.priceLabel}</p>
-                  </div>
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <span className="material-symbols-outlined text-primary text-xl">{item.icon}</span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">{item.label}</p>
+                  <p className="text-xs text-muted mt-0.5">{item.description}</p>
+                </div>
+                <span className="material-symbols-outlined text-muted text-lg group-hover:text-primary transition-colors">chevron_right</span>
               </Link>
             ))}
-
-            {/* Quick Settings */}
-            <div className="pt-2 lg:pt-4">
-              <h3 className="text-lg font-bold text-foreground mb-4">Quick Settings</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                {quickSettings.map((setting) => (
-                  <Link
-                    key={setting.label}
-                    href={setting.href}
-                    className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-muted group-hover:text-primary transition-colors">
-                        {setting.icon}
-                      </span>
-                      <span className="font-semibold text-foreground text-sm">{setting.label}</span>
-                    </div>
-                    <p className="text-xs text-muted pl-9">{setting.description}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
           </div>
+        </div>
 
-          {/* Right: Impact + Help */}
-          <div className="space-y-6">
-            <div className="bg-background rounded-2xl p-5 lg:p-6 border border-border">
-              <h3 className="font-bold text-foreground mb-4">Your Impact</h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted">Total Spending</span>
-                    <span className="font-bold text-foreground">₹12,400</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-navy h-2 rounded-full transition-all duration-1000" style={{ width: "70%" }}></div>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted">Bookings this month</span>
-                    <span className="font-bold text-foreground">4</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full transition-all duration-1000" style={{ width: "45%" }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Logout Button (mobile only — desktop has it in sidebar) */}
+        <div className="lg:hidden">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-3.5 bg-red-50 text-red-600 font-semibold rounded-2xl border border-red-100 hover:bg-red-100 transition-colors"
+          >
+            <span className="material-symbols-outlined text-xl rotate-180">logout</span>
+            Log Out
+          </button>
+        </div>
 
-            <div className="bg-orange-50 rounded-2xl p-5 lg:p-6 border border-orange-100">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="material-symbols-outlined text-orange-600">help_outline</span>
-                <h3 className="font-bold text-orange-900">Need Help?</h3>
-              </div>
-              <p className="text-sm text-orange-800/80 mb-4 leading-relaxed">
-                Having trouble with a recent booking? Our support team is here for you 24/7.
-              </p>
-              <Link
-                href="/support"
-                className="block w-full py-2.5 bg-white text-orange-600 font-medium text-sm rounded-lg shadow-sm hover:bg-orange-50 transition-colors border border-orange-200 text-center"
-              >
-                Contact Support
-              </Link>
-            </div>
+        {/* Need Help Card */}
+        <div className="bg-orange-50 rounded-2xl p-5 lg:p-6 border border-orange-100">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="material-symbols-outlined text-orange-600">help_outline</span>
+            <h3 className="font-bold text-orange-900">Need Help?</h3>
           </div>
+          <p className="text-sm text-orange-800/80 mb-4 leading-relaxed">
+            Having trouble with a recent booking? Our support team is here for you 24/7.
+          </p>
+          <Link
+            href="/support"
+            className="block w-full py-2.5 bg-white text-orange-600 font-medium text-sm rounded-lg shadow-sm hover:bg-orange-50 transition-colors border border-orange-200 text-center"
+          >
+            Contact Support
+          </Link>
         </div>
       </div>
     </AccountLayout>
