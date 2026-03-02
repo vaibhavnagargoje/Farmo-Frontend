@@ -174,25 +174,8 @@ function MapContent({
                 ))}
             </Map>
 
-            {/* ── "Use Current Location" Button (overlaid on map) ── */}
-            <button
-                onClick={handleUseCurrentLocation}
-                disabled={isLocating}
-                className="absolute bottom-3 right-3 z-10 flex items-center gap-2 px-3 py-2 bg-white dark:bg-card text-foreground text-xs font-semibold rounded-xl shadow-lg border border-border hover:bg-muted/50 active:scale-95 transition-all disabled:opacity-50"
-                title="Use current location"
-            >
-                {isLocating ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                ) : (
-                    <span
-                        className="material-symbols-outlined text-[18px] text-primary"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                        my_location
-                    </span>
-                )}
-                {isLocating ? "Locating..." : "My Location"}
-            </button>
+
+
 
             {/* ── No-location overlay ── */}
             {!selectedLocation && (

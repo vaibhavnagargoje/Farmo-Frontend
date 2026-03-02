@@ -242,7 +242,9 @@ export default function CategoryServicesPage() {
         setSearchQuery(address)
         setLocationStatus("ready")
       },
-      () => {
+      (error) => {
+        console.error("Geolocation error:", error)
+        alert("Unable to get your location. Please ensure location services are enabled on your device and give browser permissions.")
         setLocationStatus("no_location")
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -445,26 +447,28 @@ export default function CategoryServicesPage() {
           <div className="px-4 lg:px-6 pb-3">
             <div className="flex items-center gap-2">
               {/* Search input with suggestions */}
-              <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
-                <PlacesAutocomplete
-                  defaultValue={searchQuery}
-                  onPlaceSelect={(place) => {
-                    setSearchQuery(place.address)
-                    const loc: SelectedLocation = {
-                      lat: place.lat,
-                      lng: place.lng,
-                      address: place.address,
-                    }
-                    setSelectedLocation(loc)
-                    setLocationStatus("ready")
-                  }}
-                />
-              </APIProvider>
+              <div className="flex-1 min-w-0">
+                <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+                  <PlacesAutocomplete
+                    defaultValue={searchQuery}
+                    onPlaceSelect={(place) => {
+                      setSearchQuery(place.address)
+                      const loc: SelectedLocation = {
+                        lat: place.lat,
+                        lng: place.lng,
+                        address: place.address,
+                      }
+                      setSelectedLocation(loc)
+                      setLocationStatus("ready")
+                    }}
+                  />
+                </APIProvider>
+              </div>
 
               {/* Get Location button */}
               <button
                 onClick={handleGetCurrentLocation}
-                className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${locationStatus === "fetching_gps"
+                className={`size-10 shrink-0 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${locationStatus === "fetching_gps"
                   ? "bg-primary/10 border-primary/30 text-primary"
                   : "bg-card text-primary border-border hover:bg-primary/5"
                   }`}
@@ -478,7 +482,7 @@ export default function CategoryServicesPage() {
               </button>
 
               {/* Filter button */}
-              <div className="relative" ref={filterRef}>
+              <div className="relative shrink-0" ref={filterRef}>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`size-10 rounded-xl border flex items-center justify-center shadow-sm active:scale-95 transition-all ${activeDistance !== "all"
@@ -611,38 +615,23 @@ export default function CategoryServicesPage() {
                     <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
                   </div>
 
-                  {/* Quantity + Price Unit Row */}
+                  {/* Estimated Area + Unit Type Row */}
                   <div className="flex gap-2.5">
-                    {/* Quantity */}
-                    <div className="flex-1">
-                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Quantity</label>
-                      <div className="flex items-center border border-border rounded-xl overflow-hidden bg-background">
-                        <button
-                          type="button"
-                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                          className="px-3 py-2.5 text-foreground hover:bg-muted/50 active:bg-muted transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">remove</span>
-                        </button>
-                        <input
-                          type="number"
-                          min={1}
-                          value={quantity}
-                          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="flex-1 text-center text-sm font-semibold bg-transparent outline-none py-2.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setQuantity(quantity + 1)}
-                          className="px-3 py-2.5 text-foreground hover:bg-muted/50 active:bg-muted transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">add</span>
-                        </button>
-                      </div>
+                    {/* Estimated Area */}
+                    <div className="w-1/2">
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated Area</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="Enter area"
+                      />
                     </div>
 
-                    {/* Price Unit */}
-                    <div className="flex-1">
+                    {/* Unit Type */}
+                    <div className="w-1/2">
                       <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit Type</label>
                       <select
                         value={selectedPriceUnit}
