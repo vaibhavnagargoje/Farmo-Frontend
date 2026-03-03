@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ["*.ngrok-free.app", "localhost", "127.0.0.1","api.farmo.in"],
+  allowedDevOrigins: ["*.ngrok-free.app", "localhost", "127.0.0.1","api.farmo.in","farmo.in"],
   typescript: {
     ignoreBuildErrors: true,
   },
