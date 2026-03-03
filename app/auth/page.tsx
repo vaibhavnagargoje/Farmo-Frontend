@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { API_ENDPOINTS } from "@/lib/api"
@@ -15,6 +15,18 @@ interface LocationOption {
 }
 
 export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
+  )
+}
+
+function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { sendOtp, login, logout, refreshUser, isAuthenticated, isLoading: authLoading, user } = useAuth()

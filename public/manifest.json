@@ -1,0 +1,17 @@
+{
+  "name": "Farmo - Farm Equipment & Services Rental",
+  "short_name": "Farmo",
+  "description": "Rent tractors, harvesters, and farm equipment on demand. Book verified farm service providers near you.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a4570",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

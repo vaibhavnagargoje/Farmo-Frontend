@@ -8,9 +8,58 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "My Farmo - Farm Equipment Rental",
-  description: "Rent tractors, harvesters, and farm equipment on demand",
-  generator: "v0.app",
+  title: {
+    default: "Farmo - Farm Equipment & Services Rental | farmo.in",
+    template: "%s | Farmo",
+  },
+  description:
+    "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you. Fast, affordable & reliable.",
+  metadataBase: new URL("https://farmo.in"),
+  keywords: [
+    "farm equipment rental",
+    "tractor rental",
+    "harvester rental",
+    "farm services",
+    "agriculture equipment",
+    "farmo",
+    "rotavator",
+    "farm machinery",
+    "kisan services",
+    "farming India",
+  ],
+  authors: [{ name: "Farmo" }],
+  creator: "Farmo",
+  publisher: "Farmo",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://farmo.in",
+    siteName: "Farmo",
+    title: "Farmo - Farm Equipment & Services Rental",
+    description:
+      "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Farmo - Farm Equipment & Services Rental",
+    description:
+      "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://farmo.in",
+  },
 }
 
 export const viewport: Viewport = {

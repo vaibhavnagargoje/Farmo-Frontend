@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { AccountLayout } from "@/components/account-layout"
@@ -43,6 +43,20 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
 
 
 export default function BookingsPage() {
+  return (
+    <Suspense fallback={
+      <AccountLayout pageTitle="My Bookings">
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      </AccountLayout>
+    }>
+      <BookingsPageContent />
+    </Suspense>
+  )
+}
+
+function BookingsPageContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
