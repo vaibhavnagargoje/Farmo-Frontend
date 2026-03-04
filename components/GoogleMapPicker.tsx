@@ -101,24 +101,44 @@ function MapContent({
             return
         }
         setIsLocating(true)
+
+        const onSuccess = async (position: GeolocationPosition) => {
+            const lat = position.coords.latitude
+            const lng = position.coords.longitude
+            const address = await reverseGeocode(lat, lng)
+            onLocationSelect({ lat, lng, address })
+            if (map) {
+                map.panTo({ lat, lng })
+                map.setZoom(14)
+            }
+            setIsLocating(false)
+        }
+
+        const onFinalError = (error: GeolocationPositionError) => {
+            console.error("Geolocation error:", error.code, error.message)
+            let msg = "Unable to get your location. "
+            if (error.code === 1) {
+                msg += "Please enable location access in your browser settings."
+            } else if (error.code === 2) {
+                msg += "Please check that your device's location services are turned on."
+            } else {
+                msg += "Please try again or pick a location on the map."
+            }
+            alert(msg)
+            setIsLocating(false)
+        }
+
+        // Try high accuracy first (GPS), fallback to network-based
         navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude
-                const lng = position.coords.longitude
-                const address = await reverseGeocode(lat, lng)
-                onLocationSelect({ lat, lng, address })
-                if (map) {
-                    map.panTo({ lat, lng })
-                    map.setZoom(14)
-                }
-                setIsLocating(false)
+            onSuccess,
+            () => {
+                navigator.geolocation.getCurrentPosition(
+                    onSuccess,
+                    onFinalError,
+                    { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                )
             },
-            (error) => {
-                console.error("Geolocation error:", error)
-                alert("Unable to get your location. Please allow location access or pick on the map.")
-                setIsLocating(false)
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
         )
     }, [map, onLocationSelect, reverseGeocode])
 

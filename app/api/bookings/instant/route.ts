@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import {
-  AUTH_COOKIE_NAME,
-  REFRESH_COOKIE_NAME,
-  isTokenExpired,
-} from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, unauthenticatedResponse, extractErrorMessage } from "@/lib/api-server"
 
 /**
  * POST /api/bookings/instant
@@ -23,48 +18,6 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
-    const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { message: "Please login to create an instant booking" },
-        { status: 401 }
-      )
-    }
-
-    let token = accessToken
-
-    // If access token is expired, try to refresh
-    if (isTokenExpired(accessToken) && refreshToken) {
-      const refreshResponse = await fetch(
-        process.env.NEXT_PUBLIC_API_URL + "/users/auth/token/refresh/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh: refreshToken }),
-        }
-      )
-
-      if (refreshResponse.ok) {
-        const data = await refreshResponse.json()
-        token = data.access
-        cookieStore.set(AUTH_COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60,
-        })
-      } else {
-        return NextResponse.json(
-          { message: "Session expired, please login again" },
-          { status: 401 }
-        )
-      }
-    }
-
     const body = await request.json()
 
     // Validate required fields
@@ -103,9 +56,8 @@ export async function POST(request: NextRequest) {
     const roundedLng = parseFloat(Number(lng).toFixed(6))
 
     // Create instant booking via Django API
-    const response = await fetchWithAuth(
+    const { response } = await apiRequest(
       API_ENDPOINTS.INSTANT_BOOKING_CREATE,
-      token,
       {
         method: "POST",
         body: JSON.stringify({
@@ -120,6 +72,10 @@ export async function POST(request: NextRequest) {
       }
     )
 
+    if (!response) {
+      return unauthenticatedResponse("Please login to create an instant booking")
+    }
+
     const data = await response.json()
 
     if (response.ok) {
@@ -130,36 +86,17 @@ export async function POST(request: NextRequest) {
         providers_notified: data.providers_notified || 0,
       })
     } else {
-      let errorMessage = "Failed to create instant booking"
-      let activeBookingId: string | null = null
-
       // Check for active booking conflict
+      let activeBookingId: string | null = null
+      let errorMessage = "Failed to create instant booking"
+
       if (data.active_booking_id) {
         activeBookingId = Array.isArray(data.active_booking_id)
           ? data.active_booking_id[0]
           : data.active_booking_id
-        errorMessage = data.message
-          ? (Array.isArray(data.message) ? data.message[0] : data.message)
-          : "You already have an active order. Cancel it or wait for it to expire."
-      } else if (data.detail) {
-        errorMessage = data.detail
-      } else if (data.category_id) {
-        errorMessage = Array.isArray(data.category_id) ? data.category_id[0] : data.category_id
-      } else if (data.quantity) {
-        errorMessage = Array.isArray(data.quantity) ? data.quantity[0] : data.quantity
-      } else if (data.price_unit) {
-        errorMessage = Array.isArray(data.price_unit) ? data.price_unit[0] : data.price_unit
-      } else if (data.error) {
-        errorMessage = data.error
-      } else if (data.non_field_errors) {
-        errorMessage = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors
-      } else if (typeof data === "object") {
-        const firstError = Object.values(data)[0]
-        if (Array.isArray(firstError)) {
-          errorMessage = firstError[0] as string
-        } else if (typeof firstError === "string") {
-          errorMessage = firstError
-        }
+        errorMessage = extractErrorMessage(data, "You already have an active order. Cancel it or wait for it to expire.")
+      } else {
+        errorMessage = extractErrorMessage(data, "Failed to create instant booking")
       }
 
       return NextResponse.json(

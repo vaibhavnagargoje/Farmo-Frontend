@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
 import { API_ENDPOINTS } from "@/lib/api"
-import {
-  AUTH_COOKIE_NAME,
-  REFRESH_COOKIE_NAME,
-  isTokenExpired,
-} from "@/lib/auth"
+import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 /**
  * POST /api/bookings/[bookingId]/cancel
@@ -17,63 +12,20 @@ export async function POST(
 ) {
   try {
     const { bookingId } = await params
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
-    const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { message: "Please login to cancel a booking" },
-        { status: 401 }
-      )
-    }
-
-    let token = accessToken
-
-    // If access token is expired, try to refresh
-    if (isTokenExpired(accessToken) && refreshToken) {
-      const refreshResponse = await fetch(
-        process.env.NEXT_PUBLIC_API_URL + "/users/auth/token/refresh/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh: refreshToken }),
-        }
-      )
-
-      if (refreshResponse.ok) {
-        const data = await refreshResponse.json()
-        token = data.access
-
-        cookieStore.set(AUTH_COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60,
-        })
-      } else {
-        return NextResponse.json(
-          { message: "Session expired, please login again" },
-          { status: 401 }
-        )
-      }
-    }
-
     const body = await request.json()
 
     // Call Django cancel endpoint
-    const response = await fetch(
+    const { response } = await apiRequest(
       API_ENDPOINTS.CUSTOMER_BOOKING_CANCEL(bookingId),
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ reason: body.reason || "Cancelled by customer" }),
       }
     )
+
+    if (!response) {
+      return unauthenticatedResponse("Please login to cancel a booking")
+    }
 
     const data = await response.json()
 

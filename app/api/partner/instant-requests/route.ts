@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 // GET - List pending instant booking requests for the provider
 export async function GET(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
+        const { response } = await apiRequest(API_ENDPOINTS.PROVIDER_INSTANT_REQUESTS)
 
-        if (!token || isTokenExpired(token)) {
-            return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
         }
 
-        const response = await fetchWithAuth(API_ENDPOINTS.PROVIDER_INSTANT_REQUESTS, token)
         const data = await response.json()
 
         if (!response.ok) {

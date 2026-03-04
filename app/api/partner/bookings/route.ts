@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 // GET - List provider's scheduled/regular bookings
 export async function GET(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
-
-        if (!token || isTokenExpired(token)) {
-            return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
-        }
-
         const { searchParams } = new URL(request.url)
         const status = searchParams.get("status")
 
@@ -21,7 +13,12 @@ export async function GET(request: NextRequest) {
             url += `?status=${status}`
         }
 
-        const response = await fetchWithAuth(url, token)
+        const { response } = await apiRequest(url)
+
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
+        }
+
         const data = await response.json()
 
         if (!response.ok) {

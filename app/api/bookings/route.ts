@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import {
-  AUTH_COOKIE_NAME,
-  REFRESH_COOKIE_NAME,
-  isTokenExpired,
-} from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, unauthenticatedResponse, extractErrorMessage } from "@/lib/api-server"
 
 /**
  * POST /api/bookings
  * Create a new booking
- * 
+ *
  * Body: {
  *   service_id: number,
  *   scheduled_date: string (YYYY-MM-DD),
@@ -24,50 +19,6 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
-    const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { message: "Please login to book a service" },
-        { status: 401 }
-      )
-    }
-
-    let token = accessToken
-
-    // If access token is expired, try to refresh
-    if (isTokenExpired(accessToken) && refreshToken) {
-      const refreshResponse = await fetch(
-        process.env.NEXT_PUBLIC_API_URL + "/users/auth/token/refresh/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh: refreshToken }),
-        }
-      )
-
-      if (refreshResponse.ok) {
-        const data = await refreshResponse.json()
-        token = data.access
-
-        // Update the access token cookie
-        cookieStore.set(AUTH_COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60, // 1 hour
-        })
-      } else {
-        return NextResponse.json(
-          { message: "Session expired, please login again" },
-          { status: 401 }
-        )
-      }
-    }
-
     const body = await request.json()
 
     // Validate required fields
@@ -102,9 +53,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create booking via Django API
-    const response = await fetchWithAuth(
+    const { response } = await apiRequest(
       API_ENDPOINTS.CUSTOMER_BOOKINGS,
-      token,
       {
         method: "POST",
         body: JSON.stringify({
@@ -120,6 +70,10 @@ export async function POST(request: NextRequest) {
       }
     )
 
+    if (!response) {
+      return unauthenticatedResponse("Please login to book a service")
+    }
+
     const data = await response.json()
 
     if (response.ok) {
@@ -129,33 +83,8 @@ export async function POST(request: NextRequest) {
         booking: data.booking || data,
       })
     } else {
-      // Handle Django validation errors
-      let errorMessage = "Failed to create booking"
-
-      if (data.detail) {
-        errorMessage = data.detail
-      } else if (data.service_id) {
-        errorMessage = Array.isArray(data.service_id) ? data.service_id[0] : data.service_id
-      } else if (data.scheduled_date) {
-        errorMessage = Array.isArray(data.scheduled_date) ? data.scheduled_date[0] : data.scheduled_date
-      } else if (data.quantity) {
-        errorMessage = Array.isArray(data.quantity) ? data.quantity[0] : data.quantity
-      } else if (data.error) {
-        errorMessage = data.error
-      } else if (data.non_field_errors) {
-        errorMessage = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors
-      } else if (typeof data === "object") {
-        // Get first error from any field
-        const firstError = Object.values(data)[0]
-        if (Array.isArray(firstError)) {
-          errorMessage = firstError[0] as string
-        } else if (typeof firstError === "string") {
-          errorMessage = firstError
-        }
-      }
-
       return NextResponse.json(
-        { message: errorMessage },
+        { message: extractErrorMessage(data, "Failed to create booking") },
         { status: response.status }
       )
     }

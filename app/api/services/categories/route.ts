@@ -1,25 +1,11 @@
 import { NextResponse } from "next/server"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1"
-
-// Rewrite absolute backend media URLs to the Next.js proxy
-function rewriteMediaUrl(url: string | null | undefined): string | null {
-    if (!url) return null
-    const match = url.match(/https?:\/\/[^/]+\/media\/(.+)/)
-    if (match) return `/api/media/${match[1]}`
-    if (url.startsWith("/media/")) return `/api/media${url.slice(6)}`
-    return url
-}
+import { API_ENDPOINTS } from "@/lib/api"
+import { publicApiRequest, rewriteMediaUrl } from "@/lib/api-server"
 
 // GET /api/services/categories
 export async function GET() {
     try {
-        const res = await fetch(`${API_BASE_URL}/services/categories/`, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-
+        const res = await publicApiRequest(API_ENDPOINTS.CATEGORIES)
         const data = await res.json()
 
         // Rewrite icon URLs in categories

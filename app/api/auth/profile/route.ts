@@ -1,27 +1,21 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { API_ENDPOINTS } from "@/lib/api"
-import { AUTH_COOKIE_NAME, USER_COOKIE_NAME, cookieOptions, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth"
+import { USER_COOKIE_NAME, cookieOptions, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth"
+import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
-
-    if (!accessToken) {
-      return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
-    }
-
     const body = await request.json()
 
-    const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+    const { response, token } = await apiRequest(API_ENDPOINTS.USER_PROFILE, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
       body: JSON.stringify(body),
     })
+
+    if (!response) {
+      return unauthenticatedResponse("Not authenticated")
+    }
 
     const data = await response.json()
 
@@ -31,6 +25,7 @@ export async function POST(request: Request) {
 
     // Update the user cookie with the new user data
     if (data.user) {
+      const cookieStore = await cookies()
       cookieStore.set(USER_COOKIE_NAME, JSON.stringify(data.user), {
         ...cookieOptions,
         httpOnly: false, // Allow client to read user info

@@ -98,40 +98,51 @@ export default function CategoryServicesPage() {
       // No saved location — auto-detect via GPS
       if ("geolocation" in navigator) {
         setLocationStatus("fetching_gps")
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords
-            let address = "Current location"
 
-            try {
-              const geocodeRes = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-              )
-              if (geocodeRes.ok) {
-                const geocodeData = await geocodeRes.json()
-                if (geocodeData.results?.[0]?.formatted_address) {
-                  address = geocodeData.results[0].formatted_address
-                }
+        const onGpsSuccess = async (position: GeolocationPosition) => {
+          const { latitude, longitude } = position.coords
+          let address = "Current location"
+
+          try {
+            const geocodeRes = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+            )
+            if (geocodeRes.ok) {
+              const geocodeData = await geocodeRes.json()
+              if (geocodeData.results?.[0]?.formatted_address) {
+                address = geocodeData.results[0].formatted_address
               }
-            } catch {
-              // Geocode failed
             }
+          } catch {
+            // Geocode failed — use raw coords as address
+          }
 
-            const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
-            setSelectedLocation(loc)
-            setSearchQuery(address)
-            setLocationStatus("ready")
+          const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
+          setSelectedLocation(loc)
+          setSearchQuery(address)
+          setLocationStatus("ready")
 
-            fetch("/api/auth/location", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ latitude, longitude, address }),
-            }).catch(() => { })
-          },
+          fetch("/api/auth/location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude, longitude, address }),
+          }).catch(() => { })
+        }
+
+        // Try high accuracy first, fallback to network-based location
+        navigator.geolocation.getCurrentPosition(
+          onGpsSuccess,
           () => {
-            setLocationStatus("no_location")
+            // High accuracy failed — try lower accuracy (network/WiFi based)
+            navigator.geolocation.getCurrentPosition(
+              onGpsSuccess,
+              () => {
+                setLocationStatus("no_location")
+              },
+              { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+            )
           },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
         )
       } else {
         setLocationStatus("no_location")
@@ -218,36 +229,67 @@ export default function CategoryServicesPage() {
 
   // ── Handle "get my location" button ──
   const handleGetCurrentLocation = useCallback(() => {
-    if (!("geolocation" in navigator)) return
+    if (!("geolocation" in navigator)) {
+      alert("Geolocation is not supported by your browser.")
+      return
+    }
     setLocationStatus("fetching_gps")
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords
-        let address = "Current location"
-        try {
-          const geocodeRes = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-          )
-          if (geocodeRes.ok) {
-            const geocodeData = await geocodeRes.json()
-            if (geocodeData.results?.[0]?.formatted_address) {
-              address = geocodeData.results[0].formatted_address
-            }
+
+    const onSuccess = async (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords
+      let address = "Current location"
+      try {
+        const geocodeRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+        )
+        if (geocodeRes.ok) {
+          const geocodeData = await geocodeRes.json()
+          if (geocodeData.results?.[0]?.formatted_address) {
+            address = geocodeData.results[0].formatted_address
           }
-        } catch {
-          // Geocode failed
         }
-        const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
-        setSelectedLocation(loc)
-        setSearchQuery(address)
-        setLocationStatus("ready")
+      } catch {
+        // Geocode failed — use raw coords
+      }
+      const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
+      setSelectedLocation(loc)
+      setSearchQuery(address)
+      setLocationStatus("ready")
+
+      // Save to profile in background
+      fetch("/api/auth/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude, longitude, address }),
+      }).catch(() => { })
+    }
+
+    const onFinalError = (error: GeolocationPositionError) => {
+      console.error("Geolocation error:", error.code, error.message)
+      let msg = "Unable to get your location. "
+      if (error.code === 1) {
+        msg += "Location permission was denied. Please enable location access in your browser settings."
+      } else if (error.code === 2) {
+        msg += "Location is unavailable. Please check that your device's location services are turned on."
+      } else {
+        msg += "Location request timed out. Please try again or search for your location manually."
+      }
+      alert(msg)
+      setLocationStatus("no_location")
+    }
+
+    // Try high accuracy first (GPS), fallback to network-based
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (highAccError) => {
+        console.warn("High accuracy geolocation failed, trying network fallback:", highAccError.message)
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          onFinalError,
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+        )
       },
-      (error) => {
-        console.error("Geolocation error:", error)
-        alert("Unable to get your location. Please ensure location services are enabled on your device and give browser permissions.")
-        setLocationStatus("no_location")
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
   }, [])
 

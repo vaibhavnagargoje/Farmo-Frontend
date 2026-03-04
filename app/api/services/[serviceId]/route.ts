@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1"
+import { API_ENDPOINTS } from "@/lib/api"
+import { publicApiRequest } from "@/lib/api-server"
 
 // GET /api/services/:serviceId — proxy to Django service detail
 export async function GET(
@@ -9,14 +9,9 @@ export async function GET(
 ) {
     try {
         const { serviceId } = await params
-        const url = `${API_BASE_URL}/services/${serviceId}/`
-
-        const res = await fetch(url, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-
+        const res = await publicApiRequest(
+            API_ENDPOINTS.SERVICE_DETAIL(Number(serviceId))
+        )
         const data = await res.json()
         return NextResponse.json(data, { status: res.status })
     } catch (error) {

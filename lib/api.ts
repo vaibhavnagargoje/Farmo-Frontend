@@ -1,10 +1,11 @@
 // API Configuration and utilities
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const API_ENDPOINTS = {
   // Auth
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
+  TOKEN_REFRESH: `${API_BASE_URL}/users/auth/token/refresh/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
 
   // Location (moved to locations app)

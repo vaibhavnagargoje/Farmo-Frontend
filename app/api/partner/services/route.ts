@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, getValidToken, unauthenticatedResponse } from "@/lib/api-server"
 
 // GET - List partner's own services
 export async function GET() {
     try {
-        const cookieStore = await cookies()
-        const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
+        const { response } = await apiRequest(API_ENDPOINTS.MY_SERVICES)
 
-        if (!accessToken || isTokenExpired(accessToken)) {
-            return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
         }
 
-        const response = await fetchWithAuth(API_ENDPOINTS.MY_SERVICES, accessToken)
         const data = await response.json()
 
         if (!response.ok) {
@@ -33,21 +30,10 @@ export async function GET() {
 // POST - Create a new service with images (multipart/form-data)
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
+        const token = await getValidToken()
 
-        if (!accessToken) {
-            return NextResponse.json(
-                { message: "Not authenticated" },
-                { status: 401 }
-            )
-        }
-
-        if (isTokenExpired(accessToken)) {
-            return NextResponse.json(
-                { message: "Session expired, please login again" },
-                { status: 401 }
-            )
+        if (!token) {
+            return unauthenticatedResponse("Not authenticated")
         }
 
         // Parse the incoming multipart form data
@@ -76,11 +62,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Forward to Django backend
+        // Forward to Django backend — don't set Content-Type (fetch auto-sets multipart boundary)
         const response = await fetch(API_ENDPOINTS.MY_SERVICES, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${token}`,
             },
             body: djangoFormData,
         })

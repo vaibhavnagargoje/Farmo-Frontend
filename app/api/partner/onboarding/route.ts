@@ -1,35 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
 import { API_ENDPOINTS } from "@/lib/api"
-import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
+import { getValidToken, apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 // GET - Check partner status (is the user already a partner?)
 export async function GET() {
     try {
-        const cookieStore = await cookies()
-        const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
+        const { response } = await apiRequest(API_ENDPOINTS.PARTNER_STATUS)
 
-        if (!accessToken) {
-            return NextResponse.json(
-                { message: "Not authenticated" },
-                { status: 401 }
-            )
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
         }
-
-        if (isTokenExpired(accessToken)) {
-            return NextResponse.json(
-                { message: "Session expired, please login again" },
-                { status: 401 }
-            )
-        }
-
-        const response = await fetch(API_ENDPOINTS.PARTNER_STATUS, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-            },
-        })
 
         const data = await response.json()
 
@@ -53,21 +33,10 @@ export async function GET() {
 // POST - Register as partner with KYC documents (multipart/form-data)
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies()
-        const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
+        const token = await getValidToken()
 
-        if (!accessToken) {
-            return NextResponse.json(
-                { message: "Not authenticated" },
-                { status: 401 }
-            )
-        }
-
-        if (isTokenExpired(accessToken)) {
-            return NextResponse.json(
-                { message: "Session expired, please login again" },
-                { status: 401 }
-            )
+        if (!token) {
+            return unauthenticatedResponse("Not authenticated")
         }
 
         // Parse the incoming multipart form data
@@ -99,7 +68,7 @@ export async function POST(request: NextRequest) {
         const response = await fetch(API_ENDPOINTS.PARTNER_REGISTER, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${token}`,
             },
             body: djangoFormData,
         })

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
-    ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
-    : "http://127.0.0.1:8000"
+import { BACKEND_ORIGIN } from "@/lib/api-server"
 
 // GET /api/media/[...path] — proxy media files from Django backend
 export async function GET(
@@ -12,7 +9,7 @@ export async function GET(
     try {
         const { path } = await params
         const mediaPath = path.join("/")
-        const backendUrl = `${BACKEND_URL}/media/${mediaPath}`
+        const backendUrl = `${BACKEND_ORIGIN}/media/${mediaPath}`
 
         const res = await fetch(backendUrl)
 

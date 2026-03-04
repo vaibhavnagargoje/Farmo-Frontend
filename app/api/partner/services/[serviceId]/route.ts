@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { API_ENDPOINTS, fetchWithAuth } from "@/lib/api"
-import { AUTH_COOKIE_NAME, isTokenExpired } from "@/lib/auth"
+import { API_ENDPOINTS } from "@/lib/api"
+import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
 
 // PATCH - Update a service (price, description, availability, etc.)
 export async function PATCH(
@@ -9,24 +8,20 @@ export async function PATCH(
     { params }: { params: Promise<{ serviceId: string }> }
 ) {
     try {
-        const cookieStore = await cookies()
-        const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
-
-        if (!token || isTokenExpired(token)) {
-            return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
-        }
-
         const { serviceId } = await params
         const body = await request.json()
 
-        const response = await fetchWithAuth(
+        const { response } = await apiRequest(
             API_ENDPOINTS.MY_SERVICE_DETAIL(Number(serviceId)),
-            token,
             {
                 method: "PATCH",
                 body: JSON.stringify(body),
             }
         )
+
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
+        }
 
         const data = await response.json()
 
@@ -50,20 +45,16 @@ export async function DELETE(
     { params }: { params: Promise<{ serviceId: string }> }
 ) {
     try {
-        const cookieStore = await cookies()
-        const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
-
-        if (!token || isTokenExpired(token)) {
-            return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
-        }
-
         const { serviceId } = await params
 
-        const response = await fetchWithAuth(
+        const { response } = await apiRequest(
             API_ENDPOINTS.MY_SERVICE_DETAIL(Number(serviceId)),
-            token,
             { method: "DELETE" }
         )
+
+        if (!response) {
+            return unauthenticatedResponse("Not authenticated")
+        }
 
         if (response.status === 204) {
             return NextResponse.json({ message: "Service deleted successfully" })
