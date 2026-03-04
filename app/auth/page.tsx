@@ -9,11 +9,6 @@ import { toast } from "sonner"
 
 type AuthStep = "phone" | "otp" | "register"
 
-interface LocationOption {
-  id: number
-  name: string
-}
-
 export default function AuthPage() {
   return (
     <Suspense fallback={
@@ -41,20 +36,6 @@ function AuthPageContent() {
 
   // Registration fields
   const [fullName, setFullName] = useState("")
-  const [states, setStates] = useState<LocationOption[]>([])
-  const [districts, setDistricts] = useState<LocationOption[]>([])
-  const [tahsils, setTahsils] = useState<LocationOption[]>([])
-  const [villages, setVillages] = useState<LocationOption[]>([])
-  const [selectedState, setSelectedState] = useState("")
-  const [selectedDistrict, setSelectedDistrict] = useState("")
-  const [selectedTahsil, setSelectedTahsil] = useState("")
-  const [selectedVillage, setSelectedVillage] = useState("")
-
-  // Loading states for dropdowns
-  const [statesLoading, setStatesLoading] = useState(false)
-  const [districtsLoading, setDistrictsLoading] = useState(false)
-  const [tahsilsLoading, setTahsilsLoading] = useState(false)
-  const [villagesLoading, setVillagesLoading] = useState(false)
 
   // GPS location state
   const [latitude, setLatitude] = useState<number | null>(null)
@@ -64,6 +45,8 @@ function AuthPageContent() {
 
   // Ref to prevent redirect useEffect from racing with handleVerifyOtp
   const isVerifyingRef = useRef(false)
+  // Ref to prevent OTP auto-submit race condition
+  const isOtpSubmittingRef = useRef(false)
   const errorRef = useRef<HTMLDivElement>(null)
 
   const otpRefs = [
@@ -92,78 +75,6 @@ function AuthPageContent() {
       errorRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
   }, [error])
-
-  // Load states when reaching register step (via Next.js proxy)
-  useEffect(() => {
-    if (step === "register") {
-      setStatesLoading(true)
-      fetch("/api/locations/states")
-        .then((r) => {
-          if (!r.ok) throw new Error("Failed to load states")
-          return r.json()
-        })
-        .then((data: LocationOption[]) => setStates(Array.isArray(data) ? data : []))
-        .catch((err) => {
-          console.error("States fetch error:", err)
-          toast.error("Failed to load states. Please check your connection.")
-        })
-        .finally(() => setStatesLoading(false))
-    }
-  }, [step])
-
-  // Load districts when state changes (via Next.js proxy)
-  useEffect(() => {
-    if (!selectedState) {
-      setDistricts([]); setSelectedDistrict(""); setTahsils([]); setSelectedTahsil(""); setVillages([]); setSelectedVillage("")
-      return
-    }
-    setDistrictsLoading(true)
-    fetch(`/api/locations/districts?state_id=${selectedState}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load districts")
-        return r.json()
-      })
-      .then((data: LocationOption[]) => { setDistricts(Array.isArray(data) ? data : []); setSelectedDistrict(""); setTahsils([]); setSelectedTahsil(""); setVillages([]); setSelectedVillage("") })
-      .catch((err) => {
-        console.error("Districts fetch error:", err)
-        toast.error("Failed to load districts.")
-      })
-      .finally(() => setDistrictsLoading(false))
-  }, [selectedState])
-
-  // Load tahsils when district changes (via Next.js proxy)
-  useEffect(() => {
-    if (!selectedDistrict) { setTahsils([]); setSelectedTahsil(""); setVillages([]); setSelectedVillage(""); return }
-    setTahsilsLoading(true)
-    fetch(`/api/locations/tahsils?district_id=${selectedDistrict}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load tahsils")
-        return r.json()
-      })
-      .then((data: LocationOption[]) => { setTahsils(Array.isArray(data) ? data : []); setSelectedTahsil(""); setVillages([]); setSelectedVillage("") })
-      .catch((err) => {
-        console.error("Tahsils fetch error:", err)
-        toast.error("Failed to load tahsils.")
-      })
-      .finally(() => setTahsilsLoading(false))
-  }, [selectedDistrict])
-
-  // Load villages when tahsil changes (via Next.js proxy)
-  useEffect(() => {
-    if (!selectedTahsil) { setVillages([]); setSelectedVillage(""); return }
-    setVillagesLoading(true)
-    fetch(`/api/locations/villages?tahsil_id=${selectedTahsil}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load villages")
-        return r.json()
-      })
-      .then((data: LocationOption[]) => { setVillages(Array.isArray(data) ? data : []); setSelectedVillage("") })
-      .catch((err) => {
-        console.error("Villages fetch error:", err)
-        toast.error("Failed to load villages.")
-      })
-      .finally(() => setVillagesLoading(false))
-  }, [selectedTahsil])
 
   const handleSendOtp = async () => {
     if (phone.length < 10) return
@@ -230,10 +141,11 @@ function AuthPageContent() {
 
   const handleVerifyOtp = useCallback(async () => {
     const otpValue = otp.join("")
-    if (otpValue.length !== 4 || isLoading) return
+    if (otpValue.length !== 4 || isLoading || isOtpSubmittingRef.current) return
 
-    // Prevent the redirect useEffect from racing with this handler
+    // Prevent the redirect useEffect and auto-submit from racing
     isVerifyingRef.current = true
+    isOtpSubmittingRef.current = true
     setIsLoading(true)
     setError(null)
 
@@ -241,6 +153,7 @@ function AuthPageContent() {
     const result = await login(cleanPhone, otpValue)
 
     setIsLoading(false)
+    isOtpSubmittingRef.current = false
 
     if (result.success) {
       if (result.isNewUser) {
@@ -261,7 +174,7 @@ function AuthPageContent() {
 
   // Auto-submit OTP when all 4 digits are entered
   useEffect(() => {
-    if (step === "otp" && otp.join("").length === 4 && !isLoading) {
+    if (step === "otp" && otp.join("").length === 4 && !isLoading && !isOtpSubmittingRef.current) {
       handleVerifyOtp()
     }
   }, [otp, step, isLoading, handleVerifyOtp])
@@ -330,47 +243,55 @@ function AuthPageContent() {
   }, [])
 
   const handleRegister = async () => {
-    if (!fullName.trim()) return
+    if (!fullName.trim() || isLoading) return
     setIsLoading(true)
     setError(null)
     const nameParts = fullName.trim().split(" ").filter(Boolean)
     const firstName = nameParts[0] || ""
     const lastName = nameParts.slice(1).join(" ")
-    const response = await fetch("/api/auth/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        first_name: firstName,
-        last_name: lastName,
-        full_name: fullName,
-        user_address: userAddress || undefined,
-        latitude: latitude ?? undefined,
-        longitude: longitude ?? undefined,
-        state: selectedState ? Number(selectedState) : null,
-        district: selectedDistrict ? Number(selectedDistrict) : null,
-        tahsil: selectedTahsil ? Number(selectedTahsil) : null,
-        village: selectedVillage ? Number(selectedVillage) : null,
-      }),
-    })
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      setIsLoading(false)
-      setError(data.message || "Failed to update profile")
-      return
-    }
-
-    // Also persist coordinates via the dedicated location endpoint (fire-and-forget)
-    if (latitude && longitude) {
-      fetch("/api/auth/location", {
+    try {
+      const response = await fetch("/api/auth/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, address: userAddress }),
-      }).catch(() => {}) // non-critical
-    }
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+          user_address: userAddress || undefined,
+          latitude: latitude ?? undefined,
+          longitude: longitude ?? undefined,
+        }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        setIsLoading(false)
+        // Show specific field errors if available
+        if (data.errors) {
+          const firstError = Object.values(data.errors).flat()[0]
+          setError(typeof firstError === "string" ? firstError : data.message || "Failed to update profile")
+        } else {
+          setError(data.message || "Failed to update profile. Please try again.")
+        }
+        return
+      }
 
-    await refreshUser()
-    setIsLoading(false)
-    router.push(searchParams.get("redirect") || "/")
+      // Also persist coordinates via the dedicated location endpoint (fire-and-forget)
+      if (latitude && longitude) {
+        fetch("/api/auth/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ latitude, longitude, address: userAddress }),
+        }).catch(() => { }) // non-critical
+      }
+
+      await refreshUser()
+      setIsLoading(false)
+      router.push(searchParams.get("redirect") || "/")
+    } catch (err) {
+      console.error("Registration error:", err)
+      setIsLoading(false)
+      setError("Network error. Please check your connection and try again.")
+    }
   }
 
   const handleResendOtp = async () => {
@@ -414,8 +335,8 @@ function AuthPageContent() {
         <div className="relative px-5 pt-12 pb-8 flex flex-col items-center text-center">
           {step !== "phone" && (
             <button
-              onClick={() => { 
-                setError(null); 
+              onClick={() => {
+                setError(null);
                 if (step === "register" && isAuthenticated) {
                   logout();
                 } else {
@@ -440,7 +361,7 @@ function AuthPageContent() {
           <h1 className="text-white text-xl font-bold tracking-tight leading-none">Farmo</h1>
           <p className="text-white/50 text-xs mt-1">Farm Services at your fingertips</p>
 
-          
+
         </div>
       </div>
 
@@ -474,7 +395,7 @@ function AuthPageContent() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                
+
                 <div className="flex gap-2">
                   <div className="flex items-center gap-1.5 px-3 h-11 bg-background border border-border rounded-xl text-sm font-semibold text-foreground whitespace-nowrap shrink-0 select-none">
                     <span>{countryCode}</span>
@@ -581,7 +502,7 @@ function AuthPageContent() {
             </div>
           )}
 
-          {/* ── STEP 3 : Register ──────────────────────────────────────── */}
+          {/* ── STEP 3 : Register (simplified — name + GPS only) ──────── */}
           {step === "register" && (
             <div className="flex flex-col gap-4">
               <div>
@@ -648,74 +569,6 @@ function AuthPageContent() {
                   </div>
                 </div>
               )}
-
-              {/* State */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-foreground">State</label>
-                <div className="relative">
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    disabled={statesLoading}
-                    className="appearance-none w-full px-4 h-11 rounded-xl bg-background border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all cursor-pointer text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <option value="">{statesLoading ? "Loading states…" : "Select state…"}</option>
-                    {states.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-[18px]">{statesLoading ? "progress_activity" : "expand_more"}</span>
-                </div>
-              </div>
-
-              {/* District */}
-              <div className="flex flex-col gap-1.5">
-                <label className={cn("text-sm font-semibold", !selectedState ? "text-muted" : "text-foreground")}>District</label>
-                <div className="relative">
-                  <select
-                    value={selectedDistrict}
-                    onChange={(e) => setSelectedDistrict(e.target.value)}
-                    disabled={!selectedState || districtsLoading}
-                    className="appearance-none w-full px-4 h-11 rounded-xl bg-background border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all cursor-pointer text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <option value="">{districtsLoading ? "Loading districts…" : "Select district…"}</option>
-                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-[18px]">{districtsLoading ? "progress_activity" : "expand_more"}</span>
-                </div>
-              </div>
-
-              {/* Tahsil */}
-              <div className="flex flex-col gap-1.5">
-                <label className={cn("text-sm font-semibold", !selectedDistrict ? "text-muted" : "text-foreground")}>Tahsil / Taluka</label>
-                <div className="relative">
-                  <select
-                    value={selectedTahsil}
-                    onChange={(e) => setSelectedTahsil(e.target.value)}
-                    disabled={!selectedDistrict || tahsilsLoading}
-                    className="appearance-none w-full px-4 h-11 rounded-xl bg-background border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all cursor-pointer text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <option value="">{tahsilsLoading ? "Loading tahsils…" : "Select tahsil…"}</option>
-                    {tahsils.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-[18px]">{tahsilsLoading ? "progress_activity" : "expand_more"}</span>
-                </div>
-              </div>
-
-              {/* Village */}
-              <div className="flex flex-col gap-1.5">
-                <label className={cn("text-sm font-semibold", !selectedTahsil ? "text-muted" : "text-foreground")}>Village</label>
-                <div className="relative">
-                  <select
-                    value={selectedVillage}
-                    onChange={(e) => setSelectedVillage(e.target.value)}
-                    disabled={!selectedTahsil || villagesLoading}
-                    className="appearance-none w-full px-4 h-11 rounded-xl bg-background border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all cursor-pointer text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <option value="">{villagesLoading ? "Loading villages…" : "Select village…"}</option>
-                    {villages.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-[18px]">{villagesLoading ? "progress_activity" : "expand_more"}</span>
-                </div>
-              </div>
 
               <button
                 onClick={handleRegister}
