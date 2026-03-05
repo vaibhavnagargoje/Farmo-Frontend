@@ -158,6 +158,7 @@ export function extractErrorMessage(
     if (typeof data.detail === "string") return data.detail
     if (typeof data.error === "string") return data.error
     if (typeof data.message === "string") return data.message
+    if (Array.isArray(data.message)) return (data.message as string[]).join(", ")
 
     // Check non_field_errors
     if (data.non_field_errors) {

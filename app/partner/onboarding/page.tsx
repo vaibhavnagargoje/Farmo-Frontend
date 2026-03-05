@@ -200,7 +200,10 @@ export default function OnboardingPage() {
       if (!partnerRes.ok) {
         const err = await partnerRes.json()
         console.error("Partner registration error details:", err)
-        const errorMsg = err.message || err.error || err.detail
+        let baseMsg = err.message;
+        if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ");
+
+        const errorMsg = baseMsg || err.error || err.detail
           || (err.errors ? JSON.stringify(err.errors) : null)
           || "Failed to register as partner"
 
@@ -229,8 +232,11 @@ export default function OnboardingPage() {
 
       if (!serviceRes.ok) {
         const err = await serviceRes.json()
-        let errorMsg = err.message || "Failed to create service";
-        if (err.errors && typeof err.errors === 'object') {
+        let baseMsg = err.message;
+        if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ");
+
+        let errorMsg = baseMsg || "Failed to create service";
+        if (!baseMsg && err.errors && typeof err.errors === 'object') {
           const firstKey = Object.keys(err.errors)[0];
           const firstError = (err.errors as Record<string, any>)[firstKey];
           errorMsg = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`;
