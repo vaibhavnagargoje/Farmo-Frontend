@@ -28,7 +28,7 @@ interface BookingItem {
   note?: string
   cancellation_reason?: string
   // Detail fields (only from detail API)
-  customer?: { phone_number: string; first_name: string; last_name: string }
+  customer?: { phone_number: string; full_name: string }
   start_job_otp?: string
   end_job_otp?: string
   work_started_at?: string
@@ -657,7 +657,7 @@ function BookingDetailModal({
 }) {
   const [otp, setOtp] = useState("")
   const [detail, setDetail] = useState<{
-    customer?: { phone_number: string; first_name: string; last_name: string }
+    customer?: { phone_number: string; full_name: string }
     start_job_otp?: string
     end_job_otp?: string
     work_started_at?: string
@@ -688,7 +688,7 @@ function BookingDetailModal({
   }, [booking.booking_id, booking.type, isWaiting])
 
   const customerName = detail?.customer
-    ? [detail.customer.first_name, detail.customer.last_name].filter(Boolean).join(" ") || "Customer"
+    ? detail.customer.full_name || "Customer"
     : null
 
   return (

@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export interface PersonalInfoData {
-    firstName: string
-    lastName: string
+    fullName: string
     address: string
     lat: number | null
     lng: number | null
@@ -65,49 +64,26 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false 
                 <p className="text-sm text-muted mt-1">Tell us about yourself to get started</p>
             </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                    <Label htmlFor="firstName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        First Name <span className="text-destructive">*</span>
-                        {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
-                    </Label>
-                    <Input
-                        id="firstName"
-                        placeholder="e.g. Rajesh"
-                        value={data.firstName}
-                        onChange={(e) => handleChange("firstName", e.target.value)}
-                        disabled={nameReadOnly}
-                        className={`h-12 rounded-xl border ${nameReadOnly ? "bg-muted/10 text-muted cursor-not-allowed" : "bg-card"} ${errors.firstName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
-                    />
-                    {errors.firstName && (
-                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">error</span>
-                            {errors.firstName}
-                        </p>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                    <Label htmlFor="lastName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        Last Name <span className="text-destructive">*</span>
-                        {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
-                    </Label>
-                    <Input
-                        id="lastName"
-                        placeholder="e.g. Kumar"
-                        value={data.lastName}
-                        onChange={(e) => handleChange("lastName", e.target.value)}
-                        disabled={nameReadOnly}
-                        className={`h-12 rounded-xl border ${nameReadOnly ? "bg-muted/10 text-muted cursor-not-allowed" : "bg-card"} ${errors.lastName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
-                    />
-                    {errors.lastName && (
-                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">error</span>
-                            {errors.lastName}
-                        </p>
-                    )}
-                </div>
+            {/* Full Name Field */}
+            <div className="flex flex-col gap-2">
+                <Label htmlFor="fullName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    Full Name <span className="text-destructive">*</span>
+                    {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
+                </Label>
+                <Input
+                    id="fullName"
+                    placeholder="e.g. Rajesh Kumar"
+                    value={data.fullName}
+                    onChange={(e) => handleChange("fullName", e.target.value)}
+                    disabled={nameReadOnly}
+                    className={`h-12 rounded-xl border ${nameReadOnly ? "bg-muted/10 text-muted cursor-not-allowed" : "bg-card"} ${errors.fullName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
+                />
+                {errors.fullName && (
+                    <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">error</span>
+                        {errors.fullName}
+                    </p>
+                )}
             </div>
 
             {/* Address Field */}

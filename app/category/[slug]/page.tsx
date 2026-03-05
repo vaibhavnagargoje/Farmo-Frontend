@@ -49,7 +49,6 @@ export default function CategoryServicesPage() {
   // ── Instant Booking ──
   const [priceUnits, setPriceUnits] = useState<PriceUnit[]>([])
   const [quantity, setQuantity] = useState(1)
-  const [selectedPriceUnit, setSelectedPriceUnit] = useState("")
   const [bookingNote, setBookingNote] = useState("")
   const [bookingStatus, setBookingStatus] = useState<"idle" | "creating" | "created" | "active_exists" | "error">("idle")
   const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null)
@@ -309,15 +308,6 @@ export default function CategoryServicesPage() {
     fetchPriceUnits()
   }, [])
 
-  // ── Set default price unit when category loads ──
-  useEffect(() => {
-    if (category?.instant_price_unit && !selectedPriceUnit) {
-      setSelectedPriceUnit(category.instant_price_unit)
-    }
-  }, [category, selectedPriceUnit])
-
-
-
   // ── Build service markers for the map ──
   const serviceMarkers: ServiceMarker[] = services
     .filter((s) => s.location_lat && s.location_lng)
@@ -332,13 +322,10 @@ export default function CategoryServicesPage() {
   // ── Computed ──
   const categoryName = category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
   const availableProviders = services.filter((s) => s.is_available).length
-  const avgPrice =
-    services.length > 0
-      ? Math.round(services.reduce((sum, s) => sum + parseFloat(s.price || "0"), 0) / services.length)
-      : 0
-  const estimatedTotal = avgPrice * quantity
+  const instantPrice = category ? Math.round(parseFloat(category.instant_price || "0")) : 0
+  const estimatedTotal = instantPrice * quantity
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
-  const selectedUnitLabel = priceUnits.find((u) => u.value === selectedPriceUnit)?.label || selectedPriceUnit
+  const priceUnitLabel = priceUnits.find((u) => u.value === category?.instant_price_unit)?.label || category?.instant_price_unit || "Per unit"
   const isInstantEnabled = category?.instant_enabled !== false
 
   // ── Instant Booking: Create ──
@@ -368,7 +355,6 @@ export default function CategoryServicesPage() {
         body: JSON.stringify({
           category_id: category.id,
           quantity,
-          price_unit: selectedPriceUnit || category.instant_price_unit || "HOUR",
           note: bookingNote,
           address: selectedLocation.address,
           lat: selectedLocation.lat,
@@ -407,7 +393,7 @@ export default function CategoryServicesPage() {
     }
     setSliderProgress(0)
     isSubmittingRef.current = false
-  }, [bookingStatus, isAuthenticated, selectedLocation, category, quantity, selectedPriceUnit, bookingNote])
+  }, [bookingStatus, isAuthenticated, selectedLocation, category, quantity, bookingNote])
 
   // ── Slider handlers ──
   const onSliderTouchStart = (e: React.TouchEvent) => {
@@ -638,13 +624,13 @@ export default function CategoryServicesPage() {
                 <div className="bg-gradient-to-br from-navy/5 to-navy/10 border border-navy/15 rounded-2xl p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="material-symbols-outlined text-navy text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    <span className="text-[11px] font-medium text-navy">Avg. Price</span>
+                    <span className="text-[11px] font-medium text-navy">Instant Price</span>
                   </div>
                   <p className="text-2xl font-bold text-foreground leading-none">
-                    {avgPrice ? `₹${avgPrice}` : "\u2014"}
+                    {instantPrice ? `₹${instantPrice}` : "\u2014"}
                   </p>
-                  <p className="text-[9px] text-navy/60 mt-1.5">
-                    {selectedUnitLabel || "Per unit"} • Area average
+                  <p className="text-[10px] text-navy/60 mt-1.5">
+                    {priceUnitLabel}
                   </p>
                 </div>
               </div>
@@ -657,43 +643,24 @@ export default function CategoryServicesPage() {
                     <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
                   </div>
 
-                  {/* Estimated Area + Unit Type Row */}
-                  <div className="flex gap-2.5">
-                    {/* Estimated Area */}
-                    <div className="w-1/2">
-                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated Area</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="Enter area"
-                      />
-                    </div>
-
-                    {/* Unit Type */}
-                    <div className="w-1/2">
-                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit Type</label>
-                      <select
-                        value={selectedPriceUnit}
-                        onChange={(e) => setSelectedPriceUnit(e.target.value)}
-                        className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all"
-                      >
-                        {priceUnits.map((u) => (
-                          <option key={u.value} value={u.value}>
-                            {u.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  {/* Estimated Area */}
+                  <div className="flex-1">
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated Area</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="Enter area"
+                    />
                   </div>
 
                   {/* Estimated Total */}
-                  {avgPrice > 0 && (
+                  {instantPrice > 0 && (
                     <div className="flex items-center justify-between bg-navy/5 rounded-xl px-3 py-2">
                       <span className="text-[11px] text-muted-foreground">
-                        Est. Total ({quantity} × ₹{avgPrice})
+                        Est. Total ({quantity} × ₹{instantPrice})
                       </span>
                       <span className="text-sm font-bold text-navy">₹{estimatedTotal}</span>
                     </div>
@@ -820,7 +787,7 @@ export default function CategoryServicesPage() {
               </div>
               <h2 className="text-xl font-bold mb-1">Order Created!</h2>
               <p className="text-sm text-white/80">
-                {categoryName} • {quantity} {selectedUnitLabel}
+                {categoryName} • {quantity} {priceUnitLabel}
               </p>
             </div>
 
@@ -832,11 +799,11 @@ export default function CategoryServicesPage() {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Quantity</span>
-                  <span className="font-semibold text-foreground">{quantity} {selectedUnitLabel}</span>
+                  <span className="font-semibold text-foreground">{quantity} {priceUnitLabel}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Est. Total</span>
-                  <span className="font-bold text-navy">₹{estimatedTotal}</span>
+                  <span className="font-bold text-navy">₹{quantity * instantPrice}</span>
                 </div>
               </div>
 

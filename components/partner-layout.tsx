@@ -44,7 +44,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
             if (response.ok) {
                 const data = await response.json()
                 if (data.user) {
-                    const name = [data.user.first_name, data.user.last_name].filter(Boolean).join(" ")
+                    const name = data.user.full_name || ""
                     setPartnerName(name || "Partner")
                 }
                 if (data.partner) {

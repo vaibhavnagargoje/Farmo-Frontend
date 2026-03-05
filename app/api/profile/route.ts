@@ -59,7 +59,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { first_name, last_name, address, ...otherData } = body
+    const { full_name, address, ...otherData } = body
 
     const { token } = await apiRequest(API_ENDPOINTS.USER_PROFILE)
 
@@ -68,10 +68,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 1. Update basic User info (Name) via /users/profile/
-    if (first_name !== undefined || last_name !== undefined) {
+    if (full_name !== undefined) {
       const userUpdatePayload: Record<string, string> = {}
-      if (first_name) userUpdatePayload.first_name = first_name
-      if (last_name) userUpdatePayload.last_name = last_name
+      if (full_name) userUpdatePayload.full_name = full_name
       if (address) userUpdatePayload.village = address
 
       await apiRequest(API_ENDPOINTS.USER_PROFILE, {
@@ -103,9 +102,8 @@ export async function PATCH(request: NextRequest) {
     const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
     let user = userCookie ? JSON.parse(userCookie) : null
 
-    if (user && (first_name || last_name)) {
-      if (first_name) user.first_name = first_name
-      if (last_name) user.last_name = last_name
+    if (user && full_name) {
+      user.full_name = full_name
 
       cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), {
         httpOnly: false,

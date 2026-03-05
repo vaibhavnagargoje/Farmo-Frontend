@@ -64,7 +64,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
     }
 
     const displayName = user
-        ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Farmer"
+        ? user.full_name || "Farmer"
         : "Farmer"
 
     // Loading state

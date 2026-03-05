@@ -37,8 +37,8 @@ export function proxy(request: NextRequest) {
     if (userCookie) {
       try {
         const user = JSON.parse(decodeURIComponent(userCookie))
-        // If user has no first_name, profile is incomplete
-        if (!user.first_name) {
+        // If user has no full_name, profile is incomplete
+        if (!user.full_name) {
           isProfileIncomplete = true
         }
       } catch (e) {

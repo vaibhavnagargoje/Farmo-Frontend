@@ -60,7 +60,7 @@ function AuthPageContent() {
   useEffect(() => {
     if (isVerifyingRef.current) return
     if (!authLoading && isAuthenticated) {
-      if (user && !user.first_name) {
+      if (user && !user.full_name) {
         setStep("register")
       } else if (step !== "register") {
         const redirect = searchParams.get("redirect") || "/"
@@ -156,6 +156,8 @@ function AuthPageContent() {
     isOtpSubmittingRef.current = false
 
     if (result.success) {
+      // Clear OTP inputs immediately to prevent auto-submit useEffect re-firing
+      setOtp(["", "", "", ""])
       if (result.isNewUser) {
         setStep("register")
       } else {
@@ -246,17 +248,12 @@ function AuthPageContent() {
     if (!fullName.trim() || isLoading) return
     setIsLoading(true)
     setError(null)
-    const nameParts = fullName.trim().split(" ").filter(Boolean)
-    const firstName = nameParts[0] || ""
-    const lastName = nameParts.slice(1).join(" ")
     try {
       const response = await fetch("/api/auth/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          full_name: fullName,
+          full_name: fullName.trim(),
           user_address: userAddress || undefined,
           latitude: latitude ?? undefined,
           longitude: longitude ?? undefined,

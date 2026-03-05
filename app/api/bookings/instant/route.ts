@@ -9,7 +9,6 @@ import { apiRequest, unauthenticatedResponse, extractErrorMessage } from "@/lib/
  * Body: {
  *   category_id: number,
  *   quantity: number,
- *   price_unit: string,
  *   note?: string,
  *   address: string,
  *   lat: number,
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    const { category_id, quantity, price_unit, address, lat, lng } = body
+    const { category_id, quantity, address, lat, lng } = body
 
     if (!category_id) {
       return NextResponse.json(
@@ -33,13 +32,6 @@ export async function POST(request: NextRequest) {
     if (!quantity || quantity < 1) {
       return NextResponse.json(
         { message: "Quantity must be at least 1" },
-        { status: 400 }
-      )
-    }
-
-    if (!price_unit) {
-      return NextResponse.json(
-        { message: "Price unit is required" },
         { status: 400 }
       )
     }
@@ -63,7 +55,6 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           category_id,
           quantity,
-          price_unit,
           address,
           lat: roundedLat,
           lng: roundedLng,

@@ -42,8 +42,7 @@ export default function OnboardingPage() {
 
   // Step 1: Personal Info
   const [personalInfo, setPersonalInfo] = useState<PersonalInfoData>({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     address: "",
     lat: null,
     lng: null,
@@ -97,11 +96,10 @@ export default function OnboardingPage() {
           // User is not a partner — pre-fill name if available
           const user = data.user
           if (user) {
-            const hasName = user.first_name || user.last_name
+            const hasName = !!user.full_name
             setPersonalInfo((prev) => ({
               ...prev,
-              firstName: user.first_name || "",
-              lastName: user.last_name || "",
+              fullName: user.full_name || "",
             }))
             if (hasName) {
               setNameReadOnly(true)
@@ -124,10 +122,8 @@ export default function OnboardingPage() {
       const newErrors: Record<string, string> = {}
 
       if (step === 1) {
-        if (!personalInfo.firstName.trim())
-          newErrors.firstName = "First name is required"
-        if (!personalInfo.lastName.trim())
-          newErrors.lastName = "Last name is required"
+        if (!personalInfo.fullName.trim())
+          newErrors.fullName = "Full name is required"
         if (!personalInfo.address.trim())
           newErrors.address = "Address is required"
       }
@@ -168,8 +164,7 @@ export default function OnboardingPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: personalInfo.firstName,
-          last_name: personalInfo.lastName,
+          full_name: personalInfo.fullName,
           address: personalInfo.address,
           default_lat: personalInfo.lat,
           default_lng: personalInfo.lng,

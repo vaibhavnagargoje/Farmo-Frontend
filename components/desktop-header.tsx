@@ -82,13 +82,13 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               >
                 <Avatar className="size-8 border-2 border-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                    {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U"}
+                    {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col items-start gap-0.5">
                   <span className="text-sm font-semibold leading-none">
-                    {user?.first_name || "User"}
+                    {user?.full_name || "User"}
                   </span>
 
                 </div>

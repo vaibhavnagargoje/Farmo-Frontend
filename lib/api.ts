@@ -60,8 +60,7 @@ export interface User {
   phone_number: string
   email: string | null
   role: "CUSTOMER" | "PARTNER" | "ADMIN" | "SUPERADMIN"
-  first_name: string
-  last_name: string
+  full_name: string
   is_active: boolean
 }
 
