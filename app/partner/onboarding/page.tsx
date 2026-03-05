@@ -18,6 +18,7 @@ import {
   type ListServicesData,
 } from "@/components/onboarding/list-services-step"
 import { VerificationStep } from "@/components/onboarding/verification-step"
+import { APIProvider } from "@vis.gl/react-google-maps"
 
 // Step metadata for progress display
 const steps = [
@@ -39,6 +40,7 @@ export default function OnboardingPage() {
   const [isPartner, setIsPartner] = useState(false)
   const [partnerData, setPartnerData] = useState<any>(null)
   const [nameReadOnly, setNameReadOnly] = useState(false)
+  const [existingLocations, setExistingLocations] = useState<{ address: string }[]>([])
 
   // Step 1: Personal Info
   const [personalInfo, setPersonalInfo] = useState<PersonalInfoData>({
@@ -51,7 +53,6 @@ export default function OnboardingPage() {
   // Step 2: KYC Details
   const [kycDetails, setKYCDetails] = useState<KYCDetailsData>({
     partnerType: "",
-    businessName: "",
     aadharFront: null,
     aadharFrontPreview: "",
     aadharBack: null,
@@ -65,9 +66,6 @@ export default function OnboardingPage() {
     description: "",
     price: "",
     priceUnit: "",
-    locationLat: null,
-    locationLng: null,
-    serviceRadius: 15,
     images: [],
   })
 
@@ -104,6 +102,16 @@ export default function OnboardingPage() {
             if (hasName) {
               setNameReadOnly(true)
             }
+            // Pre-fill existing locations
+            if (user.locations && user.locations.length > 0) {
+              setExistingLocations(user.locations)
+              // Pre-fill address from first location
+              setPersonalInfo((prev) => ({
+                ...prev,
+                fullName: user.full_name || prev.fullName,
+                address: user.locations[0].address || "",
+              }))
+            }
           }
         }
       } catch (error) {
@@ -131,8 +139,6 @@ export default function OnboardingPage() {
       if (step === 2) {
         if (!kycDetails.partnerType)
           newErrors.partnerType = "Please select a partner type"
-        if (!kycDetails.businessName.trim())
-          newErrors.businessName = "Business name is required"
         if (!kycDetails.aadharFront)
           newErrors.aadharFront = "Please upload Aadhar front side"
         if (!kycDetails.aadharBack)
@@ -179,7 +185,6 @@ export default function OnboardingPage() {
       // Step 2: Register as partner with KYC documents
       const partnerFormData = new FormData()
       partnerFormData.append("partner_type", kycDetails.partnerType)
-      partnerFormData.append("business_name", kycDetails.businessName)
       if (kycDetails.aadharFront) {
         partnerFormData.append("aadhar_card_front", kycDetails.aadharFront)
       }
@@ -195,11 +200,13 @@ export default function OnboardingPage() {
       if (!partnerRes.ok) {
         const err = await partnerRes.json()
         console.error("Partner registration error details:", err)
-        // Django validation errors come as { field: ["error msg"] } or { error: "msg" }
         const errorMsg = err.message || err.error || err.detail
           || (err.errors ? JSON.stringify(err.errors) : null)
           || "Failed to register as partner"
-        throw new Error(errorMsg)
+
+        if (errorMsg !== "You are already registered as a Partner.") {
+          throw new Error(errorMsg)
+        }
       }
 
       // Step 3: Create the first service with images
@@ -211,13 +218,6 @@ export default function OnboardingPage() {
       }
       serviceFormData.append("price", serviceData.price)
       serviceFormData.append("price_unit", serviceData.priceUnit)
-      if (serviceData.locationLat) {
-        serviceFormData.append("location_lat", String(serviceData.locationLat))
-      }
-      if (serviceData.locationLng) {
-        serviceFormData.append("location_lng", String(serviceData.locationLng))
-      }
-      serviceFormData.append("service_radius_km", String(serviceData.serviceRadius))
       for (const image of serviceData.images) {
         serviceFormData.append("images", image.file)
       }
@@ -229,7 +229,13 @@ export default function OnboardingPage() {
 
       if (!serviceRes.ok) {
         const err = await serviceRes.json()
-        throw new Error(err.message || "Failed to create service")
+        let errorMsg = err.message || "Failed to create service";
+        if (err.errors && typeof err.errors === 'object') {
+          const firstKey = Object.keys(err.errors)[0];
+          const firstError = (err.errors as Record<string, any>)[firstKey];
+          errorMsg = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`;
+        }
+        throw new Error(errorMsg)
       }
 
       // All steps succeeded — move to verification
@@ -306,7 +312,7 @@ export default function OnboardingPage() {
                 You&apos;re Already a Partner!
               </h1>
               <p className="text-muted text-sm mt-2 leading-relaxed">
-                You are registered as <strong className="text-foreground">{partnerData?.business_name || "a partner"}</strong>.
+                You are registered as <strong className="text-foreground">a partner</strong>.
                 Manage your services, view bookings, and track earnings from your dashboard.
               </p>
             </div>
@@ -315,10 +321,6 @@ export default function OnboardingPage() {
             {partnerData && (
               <div className="w-full bg-card rounded-2xl border border-border p-5">
                 <div className="flex flex-col gap-2.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted">Business</span>
-                    <span className="text-sm font-semibold text-foreground">{partnerData.business_name}</span>
-                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted">Type</span>
                     <span className="text-sm font-semibold text-foreground capitalize">{partnerData.partner_type?.toLowerCase()}</span>
@@ -362,161 +364,240 @@ export default function OnboardingPage() {
 
   // --- Onboarding Flow ---
   return (
-    <div className="bg-background font-sans min-h-screen flex flex-col relative">
-      {/* Error Toast */}
-      {submitError && (
-        <div className="fixed top-4 right-4 z-[100] max-w-sm animate-in slide-in-from-top-2 fade-in">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg flex items-start gap-3">
-            <span className="material-symbols-outlined text-red-500 mt-0.5">error</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-800">Submission Error</p>
-              <p className="text-sm text-red-600 mt-0.5">{submitError}</p>
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+      <div className="bg-background font-sans min-h-screen flex flex-col relative">
+        {/* Error Toast */}
+        {submitError && (
+          <div className="fixed top-4 right-4 z-[100] max-w-sm animate-in slide-in-from-top-2 fade-in">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg flex items-start gap-3">
+              <span className="material-symbols-outlined text-red-500 mt-0.5">error</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800">Submission Error</p>
+                <p className="text-sm text-red-600 mt-0.5">{submitError}</p>
+              </div>
+              <button
+                onClick={() => setSubmitError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
             </div>
-            <button
-              onClick={() => setSubmitError(null)}
-              className="text-red-400 hover:text-red-600 transition-colors"
-            >
-              <span className="material-symbols-outlined text-lg">close</span>
-            </button>
           </div>
-        </div>
-      )}
-
-      {/* Loading Overlay */}
-      {isSubmitting && (
-        <div className="fixed inset-0 z-[90] bg-background/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-card rounded-2xl border border-border p-8 flex flex-col items-center gap-4 shadow-xl max-w-xs mx-4">
-            <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <p className="font-semibold text-foreground text-center">Submitting your details...</p>
-            <p className="text-sm text-muted text-center">Setting up your partner account, uploading KYC documents, and creating your service.</p>
-          </div>
-        </div>
-      )}
-      {/* Desktop Header */}
-      <DesktopHeader variant="partner" />
-      <MobileHeader />
-
-      {/* Mobile Header Bar */}
-      <header className="flex items-center justify-between py-2 px-4 pt-12 lg:hidden">
-        {currentStep > 1 && currentStep < 4 ? (
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-navy shadow-sm hover:bg-muted/10 transition-colors active:scale-95"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-        ) : (
-          <Link
-            href={currentStep === 4 ? "/partner" : "/partner"}
-            className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-navy shadow-sm hover:bg-muted/10 transition-colors"
-          >
-            <span className="material-symbols-outlined">
-              {currentStep === 4 ? "close" : "arrow_back"}
-            </span>
-          </Link>
         )}
-        <h1 className="text-navy text-lg font-bold">
-          {steps[currentStep - 1].label}
-        </h1>
-        <div className="w-10 h-10 flex items-center justify-center">
-          <span className="text-xs font-bold text-muted bg-muted/10 px-2 py-1 rounded-md">
-            {currentStep}/4
-          </span>
-        </div>
-      </header>
 
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex max-w-6xl mx-auto w-full px-6 py-8 gap-8">
-        {/* Left - Progress Sidebar */}
-        <div className="w-72 shrink-0">
-          <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
-            <h2 className="font-bold text-lg text-foreground mb-6">
-              Onboarding Progress
-            </h2>
-            <div className="flex flex-col gap-1">
-              {steps.map((step, index) => {
-                const status = getStepStatus(step.id)
-                return (
-                  <div key={step.id}>
-                    <div className="flex items-center gap-3 py-3">
-                      <div
-                        className={`size-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 transition-all ${status === "completed"
-                          ? "bg-success text-white"
-                          : status === "active"
-                            ? "bg-primary text-white shadow-md shadow-primary/30"
-                            : "bg-muted/15 text-muted"
-                          }`}
-                      >
-                        {status === "completed" ? (
-                          <span className="material-symbols-outlined text-lg">check</span>
-                        ) : (
-                          <span className="material-symbols-outlined text-lg">
-                            {step.icon}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`font-semibold text-sm ${status === "active"
-                            ? "text-primary"
-                            : status === "completed"
-                              ? "text-foreground"
-                              : "text-muted"
+        {/* Loading Overlay */}
+        {isSubmitting && (
+          <div className="fixed inset-0 z-[90] bg-background/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-card rounded-2xl border border-border p-8 flex flex-col items-center gap-4 shadow-xl max-w-xs mx-4">
+              <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="font-semibold text-foreground text-center">Submitting your details...</p>
+              <p className="text-sm text-muted text-center">Setting up your partner account, uploading KYC documents, and creating your service.</p>
+            </div>
+          </div>
+        )}
+        {/* Desktop Header */}
+        <DesktopHeader variant="partner" />
+        <MobileHeader />
+
+        {/* Mobile Header Bar */}
+        <header className="flex items-center justify-between py-2 px-4 pt-12 lg:hidden">
+          {currentStep > 1 && currentStep < 4 ? (
+            <button
+              onClick={handleBack}
+              className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-navy shadow-sm hover:bg-muted/10 transition-colors active:scale-95"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+          ) : (
+            <Link
+              href={currentStep === 4 ? "/partner" : "/partner"}
+              className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-navy shadow-sm hover:bg-muted/10 transition-colors"
+            >
+              <span className="material-symbols-outlined">
+                {currentStep === 4 ? "close" : "arrow_back"}
+              </span>
+            </Link>
+          )}
+          <h1 className="text-navy text-lg font-bold">
+            {steps[currentStep - 1].label}
+          </h1>
+          <div className="w-10 h-10 flex items-center justify-center">
+            <span className="text-xs font-bold text-muted bg-muted/10 px-2 py-1 rounded-md">
+              {currentStep}/4
+            </span>
+          </div>
+        </header>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex max-w-6xl mx-auto w-full px-6 py-8 gap-8">
+          {/* Left - Progress Sidebar */}
+          <div className="w-72 shrink-0">
+            <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
+              <h2 className="font-bold text-lg text-foreground mb-6">
+                Onboarding Progress
+              </h2>
+              <div className="flex flex-col gap-1">
+                {steps.map((step, index) => {
+                  const status = getStepStatus(step.id)
+                  return (
+                    <div key={step.id}>
+                      <div className="flex items-center gap-3 py-3">
+                        <div
+                          className={`size-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 transition-all ${status === "completed"
+                            ? "bg-success text-white"
+                            : status === "active"
+                              ? "bg-primary text-white shadow-md shadow-primary/30"
+                              : "bg-muted/15 text-muted"
                             }`}
                         >
-                          {step.label}
-                        </p>
-                        <p className="text-xs text-muted truncate">
-                          {status === "completed"
-                            ? "Completed"
-                            : status === "active"
-                              ? "In Progress"
-                              : step.description}
-                        </p>
+                          {status === "completed" ? (
+                            <span className="material-symbols-outlined text-lg">check</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-lg">
+                              {step.icon}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`font-semibold text-sm ${status === "active"
+                              ? "text-primary"
+                              : status === "completed"
+                                ? "text-foreground"
+                                : "text-muted"
+                              }`}
+                          >
+                            {step.label}
+                          </p>
+                          <p className="text-xs text-muted truncate">
+                            {status === "completed"
+                              ? "Completed"
+                              : status === "active"
+                                ? "In Progress"
+                                : step.description}
+                          </p>
+                        </div>
                       </div>
+                      {/* Connector line */}
+                      {index < steps.length - 1 && (
+                        <div className="ml-5 h-4 w-px bg-border" />
+                      )}
                     </div>
-                    {/* Connector line */}
-                    {index < steps.length - 1 && (
-                      <div className="ml-5 h-4 w-px bg-border" />
-                    )}
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col gap-6">
+            {/* Desktop Title */}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                {steps[currentStep - 1].label}
+              </h1>
+              <p className="text-muted mt-1">
+                Step {currentStep} of 4 — {steps[currentStep - 1].description}
+              </p>
+            </div>
+
+            {/* Desktop Progress Bar */}
+            <div className="flex items-center gap-2">
+              {steps.map((step) => (
+                <div
+                  key={step.id}
+                  className={`h-2 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
+                    }`}
+                />
+              ))}
+            </div>
+
+            {/* Step Content */}
+            <div className="bg-card rounded-2xl border border-border p-8">
+              {currentStep === 1 && (
+                <PersonalInfoStep
+                  data={personalInfo}
+                  onChange={setPersonalInfo}
+                  errors={errors}
+                  nameReadOnly={nameReadOnly}
+                  existingLocations={existingLocations}
+                />
+              )}
+              {currentStep === 2 && (
+                <KYCDetailsStep
+                  data={kycDetails}
+                  onChange={setKYCDetails}
+                  errors={errors}
+                />
+              )}
+              {currentStep === 3 && (
+                <ListServicesStep
+                  data={serviceData}
+                  onChange={setServiceData}
+                  errors={errors}
+                />
+              )}
+              {currentStep === 4 && (
+                <VerificationStep
+                  serviceName={serviceData.title}
+                  category={serviceData.category}
+                  price={serviceData.price}
+                  priceUnit={serviceData.priceUnit}
+                />
+              )}
+            </div>
+
+            {/* Desktop Navigation */}
+            {currentStep < 4 && (
+              <div className="flex justify-between items-center">
+                {currentStep > 1 ? (
+                  <button
+                    onClick={handleBack}
+                    className="px-6 h-12 bg-card border border-border hover:bg-muted/10 text-foreground rounded-xl text-sm font-semibold transition-all flex items-center gap-2 active:scale-[0.98]"
+                  >
+                    <span className="material-symbols-outlined text-lg">arrow_back</span>
+                    <span>Back</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <button
+                  onClick={handleNext}
+                  disabled={isSubmitting}
+                  className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
+                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                    {currentStep === 3 ? "check_circle" : "arrow_forward"}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col gap-6">
-          {/* Desktop Title */}
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {steps[currentStep - 1].label}
-            </h1>
-            <p className="text-muted mt-1">
-              Step {currentStep} of 4 — {steps[currentStep - 1].description}
-            </p>
-          </div>
+        {/* ---- Mobile Layout ---- */}
+        <div className="flex-1 flex flex-col items-center p-4 lg:hidden">
+          <div className="w-full max-w-[420px] flex flex-col gap-6 pb-24">
+            {/* Mobile Progress Bar */}
+            <div className="flex items-center gap-2 px-1">
+              {steps.map((step) => (
+                <div
+                  key={step.id}
+                  className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
+                    }`}
+                />
+              ))}
+            </div>
 
-          {/* Desktop Progress Bar */}
-          <div className="flex items-center gap-2">
-            {steps.map((step) => (
-              <div
-                key={step.id}
-                className={`h-2 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
-                  }`}
-              />
-            ))}
-          </div>
-
-          {/* Step Content */}
-          <div className="bg-card rounded-2xl border border-border p-8">
+            {/* Step Content */}
             {currentStep === 1 && (
               <PersonalInfoStep
                 data={personalInfo}
                 onChange={setPersonalInfo}
                 errors={errors}
                 nameReadOnly={nameReadOnly}
+                existingLocations={existingLocations}
               />
             )}
             {currentStep === 2 && (
@@ -531,8 +612,6 @@ export default function OnboardingPage() {
                 data={serviceData}
                 onChange={setServiceData}
                 errors={errors}
-                defaultLat={personalInfo.lat}
-                defaultLng={personalInfo.lng}
               />
             )}
             {currentStep === 4 && (
@@ -541,29 +620,27 @@ export default function OnboardingPage() {
                 category={serviceData.category}
                 price={serviceData.price}
                 priceUnit={serviceData.priceUnit}
-                businessName={kycDetails.businessName}
               />
             )}
           </div>
+        </div>
 
-          {/* Desktop Navigation */}
-          {currentStep < 4 && (
-            <div className="flex justify-between items-center">
-              {currentStep > 1 ? (
+        {/* Fixed Bottom Button - Mobile only */}
+        {currentStep < 4 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border flex justify-center z-50 lg:hidden">
+            <div className="w-full max-w-[420px] flex gap-3">
+              {currentStep > 1 && (
                 <button
                   onClick={handleBack}
-                  className="px-6 h-12 bg-card border border-border hover:bg-muted/10 text-foreground rounded-xl text-sm font-semibold transition-all flex items-center gap-2 active:scale-[0.98]"
+                  className="w-14 h-14 bg-card border border-border rounded-2xl flex items-center justify-center text-navy hover:bg-muted/10 active:scale-95 transition-all shrink-0"
                 >
-                  <span className="material-symbols-outlined text-lg">arrow_back</span>
-                  <span>Back</span>
+                  <span className="material-symbols-outlined">arrow_back</span>
                 </button>
-              ) : (
-                <div />
               )}
               <button
                 onClick={handleNext}
                 disabled={isSubmitting}
-                className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
@@ -571,86 +648,9 @@ export default function OnboardingPage() {
                 </span>
               </button>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* ---- Mobile Layout ---- */}
-      <div className="flex-1 flex flex-col items-center p-4 lg:hidden">
-        <div className="w-full max-w-[420px] flex flex-col gap-6 pb-24">
-          {/* Mobile Progress Bar */}
-          <div className="flex items-center gap-2 px-1">
-            {steps.map((step) => (
-              <div
-                key={step.id}
-                className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
-                  }`}
-              />
-            ))}
           </div>
-
-          {/* Step Content */}
-          {currentStep === 1 && (
-            <PersonalInfoStep
-              data={personalInfo}
-              onChange={setPersonalInfo}
-              errors={errors}
-              nameReadOnly={nameReadOnly}
-            />
-          )}
-          {currentStep === 2 && (
-            <KYCDetailsStep
-              data={kycDetails}
-              onChange={setKYCDetails}
-              errors={errors}
-            />
-          )}
-          {currentStep === 3 && (
-            <ListServicesStep
-              data={serviceData}
-              onChange={setServiceData}
-              errors={errors}
-              defaultLat={personalInfo.lat}
-              defaultLng={personalInfo.lng}
-            />
-          )}
-          {currentStep === 4 && (
-            <VerificationStep
-              serviceName={serviceData.title}
-              category={serviceData.category}
-              price={serviceData.price}
-              priceUnit={serviceData.priceUnit}
-              businessName={kycDetails.businessName}
-            />
-          )}
-        </div>
+        )}
       </div>
-
-      {/* Fixed Bottom Button - Mobile only */}
-      {currentStep < 4 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border flex justify-center z-50 lg:hidden">
-          <div className="w-full max-w-[420px] flex gap-3">
-            {currentStep > 1 && (
-              <button
-                onClick={handleBack}
-                className="w-14 h-14 bg-card border border-border rounded-2xl flex items-center justify-center text-navy hover:bg-muted/10 active:scale-95 transition-all shrink-0"
-              >
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-            )}
-            <button
-              onClick={handleNext}
-              disabled={isSubmitting}
-              className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                {currentStep === 3 ? "check_circle" : "arrow_forward"}
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </APIProvider>
   )
 }

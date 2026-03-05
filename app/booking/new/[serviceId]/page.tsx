@@ -278,7 +278,7 @@ export default function NewBookingPage() {
                   <span className="material-symbols-outlined text-2xl text-muted-foreground">person</span>
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">{service.partner?.business_name || service.partner_name}</p>
+                  <p className="font-semibold text-foreground">{service.partner?.full_name || service.partner_name}</p>
                   <div className="flex items-center gap-2 text-sm text-muted">
                     <span className="material-symbols-outlined text-yellow-500 text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span className="font-semibold text-foreground">{service.partner?.rating || service.partner_rating || "New"}</span>
@@ -505,7 +505,7 @@ export default function NewBookingPage() {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-yellow-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 <span className="font-semibold">{service.partner?.rating || service.partner_rating || "New"}</span>
-                <span className="text-muted text-sm">• {service.partner?.business_name || service.partner_name}</span>
+                <span className="text-muted text-sm">• {service.partner?.full_name || service.partner_name}</span>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-navy">₹{service.price}</span>

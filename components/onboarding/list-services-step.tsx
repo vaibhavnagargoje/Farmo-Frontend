@@ -4,7 +4,6 @@ import { useRef, useState, useEffect } from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
 import {
     Select,
     SelectContent,
@@ -26,9 +25,6 @@ export interface ListServicesData {
     description: string
     price: string
     priceUnit: string
-    locationLat: number | null
-    locationLng: number | null
-    serviceRadius: number
     images: ServiceImageItem[]
 }
 
@@ -36,8 +32,6 @@ interface ListServicesStepProps {
     data: ListServicesData
     onChange: (data: ListServicesData) => void
     errors: Record<string, string>
-    defaultLat?: number | null
-    defaultLng?: number | null
 }
 
 interface CategoryOption {
@@ -59,11 +53,8 @@ export function ListServicesStep({
     data,
     onChange,
     errors,
-    defaultLat,
-    defaultLng,
 }: ListServicesStepProps) {
     const imageInputRef = useRef<HTMLInputElement>(null)
-    const [isFetchingLocation, setIsFetchingLocation] = useState(false)
     const [categories, setCategories] = useState<CategoryOption[]>([])
     const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
 
@@ -86,11 +77,6 @@ export function ListServicesStep({
         }
         fetchCategories()
     }, [])
-
-    // Pre-fill location from Step 1 if not already set
-    const hasLocation = data.locationLat !== null && data.locationLng !== null
-    const displayLat = data.locationLat ?? defaultLat
-    const displayLng = data.locationLng ?? defaultLng
 
     const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
@@ -117,32 +103,6 @@ export function ListServicesStep({
         const img = data.images.find((i) => i.id === id)
         if (img) URL.revokeObjectURL(img.preview)
         onChange({ ...data, images: data.images.filter((i) => i.id !== id) })
-    }
-
-    const fetchServiceLocation = () => {
-        if (!navigator.geolocation) return
-
-        setIsFetchingLocation(true)
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                onChange({
-                    ...data,
-                    locationLat: position.coords.latitude,
-                    locationLng: position.coords.longitude,
-                })
-                setIsFetchingLocation(false)
-            },
-            () => {
-                setIsFetchingLocation(false)
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        )
-    }
-
-    const useDefaultLocation = () => {
-        if (defaultLat && defaultLng) {
-            onChange({ ...data, locationLat: defaultLat, locationLng: defaultLng })
-        }
     }
 
     return (
@@ -280,74 +240,6 @@ export function ListServicesStep({
                             {errors.priceUnit}
                         </p>
                     )}
-                </div>
-            </div>
-
-            {/* Service Location */}
-            <div className="flex flex-col gap-3">
-                <Label className="text-sm font-semibold text-foreground">Service Location</Label>
-
-                {displayLat && displayLng ? (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-success/10 border border-success/20 rounded-xl">
-                        <span className="material-symbols-outlined text-success text-lg">location_on</span>
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-success">Location Set</p>
-                            <p className="text-xs text-muted font-mono">
-                                {displayLat.toFixed(6)}, {displayLng.toFixed(6)}
-                            </p>
-                        </div>
-                        {!hasLocation && (
-                            <span className="text-[10px] px-2 py-1 bg-navy/10 text-navy font-bold rounded-md uppercase">
-                                From Profile
-                            </span>
-                        )}
-                    </div>
-                ) : null}
-
-                <div className="flex gap-3">
-                    {defaultLat && defaultLng && !hasLocation && (
-                        <button
-                            type="button"
-                            onClick={useDefaultLocation}
-                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border border-border bg-card text-foreground font-medium text-sm hover:bg-primary/5 hover:border-primary/30 active:scale-[0.98] transition-all"
-                        >
-                            <span className="material-symbols-outlined text-lg">home</span>
-                            <span>Use Profile Location</span>
-                        </button>
-                    )}
-                    <button
-                        type="button"
-                        onClick={fetchServiceLocation}
-                        disabled={isFetchingLocation}
-                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border border-navy/30 bg-navy/5 text-navy font-medium text-sm hover:bg-navy/10 active:scale-[0.98] transition-all disabled:opacity-50"
-                    >
-                        {isFetchingLocation ? (
-                            <div className="size-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
-                        ) : (
-                            <span className="material-symbols-outlined text-lg">my_location</span>
-                        )}
-                        <span>Current Location</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Service Radius */}
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold text-foreground">Service Radius</Label>
-                    <span className="text-sm font-bold text-primary">{data.serviceRadius} km</span>
-                </div>
-                <Slider
-                    value={[data.serviceRadius]}
-                    onValueChange={(value) => onChange({ ...data, serviceRadius: value[0] })}
-                    min={5}
-                    max={50}
-                    step={1}
-                    className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted">
-                    <span>5 km</span>
-                    <span>50 km</span>
                 </div>
             </div>
 

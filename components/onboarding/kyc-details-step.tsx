@@ -2,12 +2,10 @@
 
 import { useRef } from "react"
 import Image from "next/image"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export interface KYCDetailsData {
     partnerType: string
-    businessName: string
     aadharFront: File | null
     aadharFrontPreview: string
     aadharBack: File | null
@@ -94,7 +92,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
         <div className="flex flex-col gap-6">
             {/* Section Header */}
             <div>
-                <h2 className="text-xl font-bold text-navy lg:text-2xl">KYC & Business Details</h2>
+                <h2 className="text-xl font-bold text-navy lg:text-2xl">KYC & Verification</h2>
                 <p className="text-sm text-muted mt-1">Help us verify your identity and classify your services</p>
             </div>
 
@@ -110,14 +108,14 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                             type="button"
                             onClick={() => handlePartnerType(type.value)}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all active:scale-[0.97] ${data.partnerType === type.value
-                                    ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                                    : "border-border bg-card hover:border-primary/30 hover:bg-primary/[0.02]"
+                                ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                                : "border-border bg-card hover:border-primary/30 hover:bg-primary/[0.02]"
                                 }`}
                         >
                             <div
                                 className={`size-12 rounded-xl flex items-center justify-center transition-colors ${data.partnerType === type.value
-                                        ? "bg-primary text-white"
-                                        : "bg-navy/5 text-navy"
+                                    ? "bg-primary text-white"
+                                    : "bg-navy/5 text-navy"
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-2xl">{type.icon}</span>
@@ -142,25 +140,6 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                 )}
             </div>
 
-            {/* Business Name */}
-            <div className="flex flex-col gap-2">
-                <Label htmlFor="businessName" className="text-sm font-semibold text-foreground">
-                    Business / Display Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                    id="businessName"
-                    placeholder="e.g. Rajesh Tractor Services"
-                    value={data.businessName}
-                    onChange={(e) => onChange({ ...data, businessName: e.target.value })}
-                    className={`h-12 rounded-xl bg-card border ${errors.businessName ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
-                />
-                {errors.businessName && (
-                    <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">error</span>
-                        {errors.businessName}
-                    </p>
-                )}
-            </div>
 
             {/* KYC Document Uploads */}
             <div className="flex flex-col gap-3">

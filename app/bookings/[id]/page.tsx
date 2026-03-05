@@ -30,7 +30,7 @@ interface BookingDetail {
   }
   provider: {
     id: number
-    business_name: string
+    full_name: string
     rating: string
     jobs_completed: number
     user_phone?: string
@@ -268,7 +268,7 @@ export default function BookingDetailsPage() {
                 <div className="flex-1">
                   <p className="text-sm text-primary font-semibold mb-1">{booking.service.category_name}</p>
                   <h2 className="text-2xl font-bold text-foreground">{booking.service.title}</h2>
-                  <p className="text-muted mt-1">by {booking.provider.business_name}</p>
+                  <p className="text-muted mt-1">by {booking.provider.full_name}</p>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-2xl font-bold text-navy">₹{booking.service.price}</span>
                     <span className="text-muted">{getPriceUnit(booking.service.price_unit)}</span>
@@ -347,7 +347,7 @@ export default function BookingDetailsPage() {
                   <span className="material-symbols-outlined text-3xl text-muted-foreground">person</span>
                 </div>
                 <div className="text-center">
-                  <p className="font-bold text-foreground text-lg">{booking.provider.business_name}</p>
+                  <p className="font-bold text-foreground text-lg">{booking.provider.full_name}</p>
                   <div className="flex items-center justify-center gap-1 mt-2">
                     <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span className="text-sm font-bold">{booking.provider.rating || "New"}</span>
@@ -424,7 +424,7 @@ export default function BookingDetailsPage() {
             <div className="flex-1">
               <p className="text-xs text-primary font-semibold">{booking.service.category_name}</p>
               <h2 className="text-lg font-bold text-foreground">{booking.service.title}</h2>
-              <p className="text-sm text-muted">by {booking.provider.business_name}</p>
+              <p className="text-sm text-muted">by {booking.provider.full_name}</p>
             </div>
           </div>
         </div>
@@ -477,7 +477,7 @@ export default function BookingDetailsPage() {
               <span className="material-symbols-outlined text-2xl text-muted-foreground">person</span>
             </div>
             <div className="flex-1">
-              <p className="font-bold text-foreground">{booking.provider.business_name}</p>
+              <p className="font-bold text-foreground">{booking.provider.full_name}</p>
               <div className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 <span className="text-sm font-semibold">{booking.provider.rating || "New"}</span>

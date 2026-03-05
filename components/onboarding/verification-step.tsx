@@ -7,7 +7,6 @@ interface VerificationStepProps {
     category: string
     price: string
     priceUnit: string
-    businessName: string
 }
 
 const priceUnitLabels: Record<string, string> = {
@@ -23,7 +22,6 @@ export function VerificationStep({
     category,
     price,
     priceUnit,
-    businessName,
 }: VerificationStepProps) {
     return (
         <div className="flex flex-col items-center gap-6 py-4">
@@ -100,12 +98,6 @@ export function VerificationStep({
                     Submission Summary
                 </h3>
                 <div className="flex flex-col gap-2.5">
-                    {businessName && (
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted">Business</span>
-                            <span className="text-sm font-semibold text-foreground">{businessName}</span>
-                        </div>
-                    )}
                     {serviceName && (
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-muted">Service</span>

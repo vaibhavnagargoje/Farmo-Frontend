@@ -91,8 +91,8 @@ export interface PartnerProfile {
   id: number
   user: number
   user_phone: string
+  full_name: string
   partner_type: "LABOR" | "MACHINERY_OWNER" | "TRANSPORTER"
-  business_name: string
   about: string
   is_verified: boolean
   is_kyc_submitted: boolean
@@ -102,7 +102,6 @@ export interface PartnerProfile {
 }
 
 export interface PartnerDashboard {
-  business_name: string
   is_verified: boolean
   rating: string
   stats: {
@@ -217,7 +216,7 @@ export interface InstantBookingStatus {
   providers_declined: number
   provider?: {
     id: number
-    business_name: string
+    full_name: string
     rating: string
     jobs_completed: number
     phone: string
