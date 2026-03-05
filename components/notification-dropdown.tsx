@@ -132,7 +132,7 @@ export function NotificationDropdown({ variant = "farmer" }: NotificationDropdow
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-card rounded-2xl shadow-2xl border border-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-card rounded-2xl shadow-2xl border border-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ export function NotificationDropdown({ variant = "farmer" }: NotificationDropdow
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[60vh] lg:max-h-[400px] overflow-y-auto">
             {notifications.map((notification) => {
               const { icon, bg, color } = getIconForType(notification.type)
               return (

@@ -84,22 +84,20 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                         <Link
                                             key={category.id}
                                             href={`/category/${category.slug}`}
-                                            className="group relative overflow-hidden rounded-md bg-card border border-border hover:shadow-lg transition-all active:scale-[0.98]"
+                                            className="group flex flex-col overflow-hidden rounded-sm bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                                         >
-                                            <div className="relative w-full aspect-[3/2] overflow-hidden">
+                                            <div className="relative w-full aspect-[3/2] overflow-hidden bg-muted/20">
                                                 <Image
                                                     src={category.icon || image}
                                                     alt={category.name}
                                                     fill
                                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                                             </div>
-                                            <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5">
-                                                <h3 className="text-white text-sm font-semibold leading-tight truncate">
+                                            <div className="p-2 lg:p-4 flex flex-col items-center justify-center">
+                                                <h3 className="text-foreground text-xs lg:text-sm font-bold leading-tight truncate text-center">
                                                     {category.name}
                                                 </h3>
-                                                <p className="text-white/60 text-[11px] mt-0.5">View services →</p>
                                             </div>
                                         </Link>
                                     )

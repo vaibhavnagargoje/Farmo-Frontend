@@ -22,8 +22,76 @@ const publicRoutes = [
   "/api",
 ]
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // --- Site Access Protection ---
+  const SITE_ACCESS_PASSWORD = process.env.SITE_ACCESS_PASSWORD || "farmo2026"
+  const siteAccessCookie = request.cookies.get("site_access_token")?.value
+
+  if (pathname === "/site-access-login" && request.method === "POST") {
+    try {
+      const formData = await request.formData();
+      const code = formData.get("code");
+
+      if (code === SITE_ACCESS_PASSWORD) {
+        const response = NextResponse.redirect(new URL("/", request.url));
+        // Set cookie for 24 hours
+        response.cookies.set("site_access_token", "granted", {
+          maxAge: 60 * 60 * 24, // 24 hours
+          httpOnly: true,
+          path: "/",
+        });
+        return response;
+      } else {
+        // Redirect back with error
+        return NextResponse.redirect(new URL("/?error=wrong_code", request.url));
+      }
+    } catch (e) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
+  // If not authenticated for the site, show the overlay form
+  if (siteAccessCookie !== "granted" && !pathname.startsWith("/_next") && !pathname.startsWith("/api")) {
+    const errorParam = request.nextUrl.searchParams.get("error");
+    const errorMsg = errorParam === "wrong_code" ? "<p style='color:red;'>Incorrect access code.</p>" : "";
+
+    // Return simple HTML form
+    return new NextResponse(
+      `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Site Access</title>
+        <meta name="viewport" content="width=device-width, initial-width=1" />
+        <style>
+          body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f3f4f6; }
+          .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+          input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 1rem; width: 100%; box-sizing: border-box; }
+          button { padding: 0.5rem 1rem; background-color: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
+          button:hover { background-color: #059669; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Site Under Development</h2>
+          <p>Please enter the access code.</p>
+          ${errorMsg}
+          <form method="POST" action="/site-access-login">
+            <input type="password" name="code" placeholder="Access Code" required autofocus />
+            <button type="submit">Enter</button>
+          </form>
+        </div>
+      </body>
+      </html>
+      `,
+      {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      }
+    );
+  }
 
   // Get tokens from cookies
   const accessToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
@@ -44,10 +112,6 @@ export function proxy(request: NextRequest) {
       } catch (e) {
         // Ignore parse errors
       }
-    } else {
-      // If authenticated but no user cookie, we can't verify profile status.
-      // We could force them to /auth, but it might cause issues if they just logged in
-      // and the cookie hasn't propagated. Let's just rely on the frontend check.
     }
   }
 
