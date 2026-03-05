@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/contexts/auth-context"
+import { AccessGate } from "@/components/access-gate"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -85,10 +86,12 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased min-h-screen bg-muted/30`}>
         <AuthProvider>
-          {/* Mobile: constrained width, Desktop: full width */}
-          <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
-            {children}
-          </div>
+          <AccessGate>
+            {/* Mobile: constrained width, Desktop: full width */}
+            <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
+              {children}
+            </div>
+          </AccessGate>
         </AuthProvider>
         <Analytics />
       </body>
