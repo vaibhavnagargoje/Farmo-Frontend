@@ -254,9 +254,6 @@ function AuthPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: fullName.trim(),
-          user_address: userAddress || undefined,
-          latitude: latitude ?? undefined,
-          longitude: longitude ?? undefined,
         }),
       })
       if (!response.ok) {

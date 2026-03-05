@@ -67,21 +67,21 @@ export default function NewBookingPage() {
     }
   }, [serviceId])
 
-  // Fetch address from user profile
+  // Fetch address from user location (shared UserLocation model)
   useEffect(() => {
     const fetchProfileAddress = async () => {
       try {
-        const res = await fetch("/api/profile", { credentials: "include" })
+        const res = await fetch("/api/auth/location", { credentials: "include" })
         if (res.ok) {
           const data = await res.json()
-          if (data.profile?.user_address) {
-            setProfileAddress(data.profile.user_address)
+          if (data.has_location && data.location) {
+            if (data.location.address) setProfileAddress(data.location.address)
+            if (data.location.latitude) setProfileLat(parseFloat(data.location.latitude))
+            if (data.location.longitude) setProfileLng(parseFloat(data.location.longitude))
           }
-          if (data.profile?.latitude) setProfileLat(parseFloat(data.profile.latitude))
-          if (data.profile?.longitude) setProfileLng(parseFloat(data.profile.longitude))
         }
       } catch {
-        // Profile fetch failed — address will be empty
+        // Location fetch failed — address will be empty
       }
     }
     fetchProfileAddress()

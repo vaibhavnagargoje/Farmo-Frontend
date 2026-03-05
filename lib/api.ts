@@ -66,13 +66,6 @@ export interface User {
 
 export interface CustomerProfile {
   full_name: string
-  user_address: string | null
-  latitude: string | null
-  longitude: string | null
-  state: number | null
-  district: number | null
-  tahsil: number | null
-  village: number | null
 }
 
 export interface AuthTokens {
