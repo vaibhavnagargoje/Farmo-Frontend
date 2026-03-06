@@ -78,7 +78,7 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
 
     // Not authenticated
     if (!isAuthenticated) {
-        router.push("/auth?redirect=/profile")
+        router.push(`/auth?redirect=${pathname}`)
         return null
     }
 

@@ -74,19 +74,19 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                         </Link>
                     </div>
 
-                    {/* Equipment Categories Grid */}
-                    <section className="px-4 lg:px-6 pb-6">
+                    {/* Equipment Categories Row */}
+                    <section className="pb-6">
                         {categories.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 lg:gap-3">
+                            <div className="flex overflow-x-auto gap-3 lg:gap-4 px-4 lg:px-6 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                 {categories.map((category) => {
                                     const image = getCategoryImage(category.slug)
                                     return (
                                         <Link
                                             key={category.id}
                                             href={`/category/${category.slug}`}
-                                            className="group flex flex-col overflow-hidden rounded-sm bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                                            className="flex-none w-[130px] sm:w-[150px] lg:w-[180px] group flex flex-col overflow-hidden rounded-sm bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                                         >
-                                            <div className="relative w-full aspect-[3/2] overflow-hidden bg-muted/20">
+                                            <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted/20">
                                                 <Image
                                                     src={category.icon || image}
                                                     alt={category.name}
@@ -94,8 +94,8 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             </div>
-                                            <div className="p-2 lg:p-4 flex flex-col items-center justify-center">
-                                                <h3 className="text-foreground text-xs lg:text-sm font-bold leading-tight truncate text-center">
+                                            <div className="px-3 py-2.5 lg:px-4 lg:py-3 flex flex-col justify-center">
+                                                <h3 className="text-foreground text-[13px] lg:text-sm font-semibold leading-tight truncate text-left w-full pl-0.5">
                                                     {category.name}
                                                 </h3>
                                             </div>
@@ -104,10 +104,13 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                 })}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 lg:gap-3">
+                            <div className="flex overflow-x-auto gap-3 lg:gap-4 px-4 lg:px-6 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                                    <div key={i} className="rounded-md overflow-hidden bg-card border border-border animate-pulse">
-                                        <div className="w-full aspect-[3/2] bg-muted/30" />
+                                    <div key={i} className="flex-none w-[130px] sm:w-[150px] lg:w-[180px] rounded-sm overflow-hidden bg-card border border-border animate-pulse">
+                                        <div className="w-full aspect-[4/3] bg-muted/30" />
+                                        <div className="px-3 py-2.5 lg:px-4 lg:py-3">
+                                            <div className="h-4 bg-muted/30 rounded w-3/4 ml-0.5" />
+                                        </div>
                                     </div>
                                 ))}
                             </div>

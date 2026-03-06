@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { APIProvider } from "@vis.gl/react-google-maps"
+import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
 
 type AuthStep = "phone" | "otp" | "register"
 
@@ -24,7 +26,7 @@ export default function AuthPage() {
 function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { sendOtp, login, logout, refreshUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
+  const { sendOtp, login, logout, updateUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
 
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode] = useState("+91")
@@ -37,14 +39,15 @@ function AuthPageContent() {
   // Registration fields
   const [fullName, setFullName] = useState("")
 
-  // GPS location state
+  // Location state
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [userAddress, setUserAddress] = useState<string>("")
-  const [isLocating, setIsLocating] = useState(false)
 
   // Ref to prevent redirect useEffect from racing with handleVerifyOtp
   const isVerifyingRef = useRef(false)
+  // Ref to prevent redirect useEffect from racing with handleRegister
+  const isRegisteringRef = useRef(false)
   // Ref to prevent OTP auto-submit race condition
   const isOtpSubmittingRef = useRef(false)
   const errorRef = useRef<HTMLDivElement>(null)
@@ -56,9 +59,9 @@ function AuthPageContent() {
     useRef<HTMLInputElement>(null),
   ]
 
-  // Redirect if already authenticated (skip when OTP verification is in progress)
+  // Redirect if already authenticated (skip when OTP verification or registration is in progress)
   useEffect(() => {
-    if (isVerifyingRef.current) return
+    if (isVerifyingRef.current || isRegisteringRef.current) return
     if (!authLoading && isAuthenticated) {
       if (user && !user.full_name) {
         setStep("register")
@@ -141,7 +144,7 @@ function AuthPageContent() {
 
   const handleVerifyOtp = useCallback(async () => {
     const otpValue = otp.join("")
-    if (otpValue.length !== 4 || isLoading || isOtpSubmittingRef.current) return
+    if (otpValue.length !== 4 || isOtpSubmittingRef.current) return
 
     // Prevent the redirect useEffect and auto-submit from racing
     isVerifyingRef.current = true
@@ -152,100 +155,43 @@ function AuthPageContent() {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10)
     const result = await login(cleanPhone, otpValue)
 
-    setIsLoading(false)
-    isOtpSubmittingRef.current = false
-
     if (result.success) {
       // Clear OTP inputs immediately to prevent auto-submit useEffect re-firing
       setOtp(["", "", "", ""])
       if (result.isNewUser) {
         setStep("register")
+        setIsLoading(false)
+        isOtpSubmittingRef.current = false
+        isVerifyingRef.current = false
       } else {
+        // Reset refs and loading BEFORE navigation to prevent redirect useEffect race
+        setIsLoading(false)
+        isOtpSubmittingRef.current = false
+        isVerifyingRef.current = false
         router.push(searchParams.get("redirect") || "/")
       }
     } else {
       setError(result.error || "Invalid OTP")
       // Clear OTP inputs on failure so user can retry or resend
       setOtp(["", "", "", ""])
+      setIsLoading(false)
+      isOtpSubmittingRef.current = false
+      isVerifyingRef.current = false
       otpRefs[0].current?.focus()
     }
-
-    // Allow the redirect useEffect to function again
-    isVerifyingRef.current = false
-  }, [otp, isLoading, phone, login, router, searchParams])
+  }, [otp, phone, login, router, searchParams])
 
   // Auto-submit OTP when all 4 digits are entered
   useEffect(() => {
-    if (step === "otp" && otp.join("").length === 4 && !isLoading && !isOtpSubmittingRef.current) {
+    if (step === "otp" && otp.join("").length === 4 && !isOtpSubmittingRef.current) {
       handleVerifyOtp()
     }
-  }, [otp, step, isLoading, handleVerifyOtp])
+  }, [otp, step, handleVerifyOtp])
 
-  // Fetch current location via GPS
-  const handleFetchLocation = useCallback(async () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser")
-      return
-    }
-
-    setIsLocating(true)
-
-    const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        if (!apiKey) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`
-        )
-        const data = await res.json()
-        if (data.results && data.results.length > 0) {
-          return data.results[0].formatted_address
-        }
-      } catch (err) {
-        console.error("Reverse geocoding failed:", err)
-      }
-      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-    }
-
-    const onSuccess = async (position: GeolocationPosition) => {
-      const lat = position.coords.latitude
-      const lng = position.coords.longitude
-      setLatitude(lat)
-      setLongitude(lng)
-      const address = await reverseGeocode(lat, lng)
-      setUserAddress(address)
-      setIsLocating(false)
-      toast.success("Location detected successfully")
-    }
-
-    const onFinalError = (error: GeolocationPositionError) => {
-      console.error("Geolocation error:", error.code, error.message)
-      setIsLocating(false)
-      if (error.code === 1) {
-        toast.error("Location access denied. Please enable it in your browser settings.")
-      } else if (error.code === 2) {
-        toast.error("Location unavailable. Please check your device's location services.")
-      } else {
-        toast.error("Could not get location. Please try again.")
-      }
-    }
-
-    // Try high accuracy first (GPS), fallback to network-based
-    navigator.geolocation.getCurrentPosition(
-      onSuccess,
-      () => {
-        navigator.geolocation.getCurrentPosition(
-          onSuccess,
-          onFinalError,
-          { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
-        )
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    )
-  }, [])
 
   const handleRegister = async () => {
     if (!fullName.trim() || isLoading) return
+    isRegisteringRef.current = true
     setIsLoading(true)
     setError(null)
     try {
@@ -256,9 +202,10 @@ function AuthPageContent() {
           full_name: fullName.trim(),
         }),
       })
+
+      const data = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        setIsLoading(false)
         // Show specific field errors if available
         if (data.errors) {
           const firstError = Object.values(data.errors).flat()[0]
@@ -266,7 +213,15 @@ function AuthPageContent() {
         } else {
           setError(data.message || "Failed to update profile. Please try again.")
         }
+        setIsLoading(false)
+        isRegisteringRef.current = false
         return
+      }
+
+      // Directly update the user in auth context with the response data
+      // This avoids a separate refreshUser() call that could fail/hang
+      if (data.user) {
+        updateUser(data.user)
       }
 
       // Also persist coordinates via the dedicated location endpoint (fire-and-forget)
@@ -278,12 +233,15 @@ function AuthPageContent() {
         }).catch(() => { }) // non-critical
       }
 
-      await refreshUser()
+      // Reset state BEFORE navigation to prevent redirect useEffect race
       setIsLoading(false)
-      router.push(searchParams.get("redirect") || "/")
+      isRegisteringRef.current = false
+      const redirect = searchParams.get("redirect") || "/"
+      router.push(redirect)
     } catch (err) {
       console.error("Registration error:", err)
       setIsLoading(false)
+      isRegisteringRef.current = false
       setError("Network error. Please check your connection and try again.")
     }
   }
@@ -526,21 +484,19 @@ function AuthPageContent() {
                 <div className="h-px flex-1 bg-border" />
               </div>
 
-              {/* GPS Location Button */}
-              <button
-                type="button"
-                onClick={handleFetchLocation}
-                disabled={isLocating}
-                className="w-full h-11 flex items-center justify-center gap-2 text-navy text-sm font-semibold border border-border rounded-xl hover:bg-navy/5 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  className="material-symbols-outlined text-[18px]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  my_location
-                </span>
-                {isLocating ? "Detecting location…" : "Use Current Location"}
-              </button>
+              {/* Address Autocomplete */}
+              <div className="w-full">
+                <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+                  <PlacesAutocomplete
+                    placeholder="Search your address..."
+                    onPlaceSelect={(place) => {
+                      setUserAddress(place.address)
+                      setLatitude(place.lat)
+                      setLongitude(place.lng)
+                    }}
+                  />
+                </APIProvider>
+              </div>
 
               {/* Show detected address */}
               {userAddress && (

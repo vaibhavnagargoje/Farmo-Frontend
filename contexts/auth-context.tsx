@@ -6,6 +6,8 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
+  useRef,
   type ReactNode,
 } from "react"
 import { useRouter } from "next/navigation"
@@ -19,6 +21,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   sendOtp: (phoneNumber: string) => Promise<{ success: boolean; otp?: string; error?: string }>
   refreshUser: () => Promise<void>
+  updateUser: (userData: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -44,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // Keep a ref to the latest user so memoized callbacks don't need user as a dep
+  const userRef = useRef<User | null>(null)
+  userRef.current = user
 
   // Check authentication status on mount
   const checkAuth = useCallback(async () => {
@@ -54,21 +60,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(cookieUser)
       }
 
-      // Then verify with server
+      // Then verify with server (with timeout to prevent hanging)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
       const response = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
-      } else {
+      } else if (response.status === 401) {
+        // Only clear user on explicit 401 (truly not authenticated)
         setUser(null)
       }
+      // On other errors (500, 502, etc.), keep the cookie-based user
+      // This prevents transient backend issues from logging users out
     } catch (error) {
+      // Network error / timeout — keep cookie-based user if we have one
+      // Only clear if we never had a user at all
+      if (!userRef.current) {
+        setUser(null)
+      }
       console.error("Auth check failed:", error)
-      setUser(null)
     } finally {
       setIsLoading(false)
     }
@@ -78,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [checkAuth])
 
-  // Send OTP
-  const sendOtp = async (phoneNumber: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
+  // Send OTP (memoized to prevent unnecessary re-renders)
+  const sendOtp = useCallback(async (phoneNumber: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
     try {
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
@@ -109,10 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: "Network error. Please try again.",
       }
     }
-  }
+  }, [])
 
-  // Login with OTP verification
-  const login = async (
+  // Login with OTP verification (memoized)
+  const login = useCallback(async (
     phoneNumber: string,
     otp: string
   ): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
@@ -149,10 +167,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: "Network error. Please try again.",
       }
     }
-  }
+  }, [])
 
-  // Logout
-  const logout = async () => {
+  // Logout (memoized)
+  const logout = useCallback(async () => {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -164,14 +182,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       router.push("/auth")
     }
-  }
+  }, [router])
+
+  // Directly update user data (e.g., after profile update)
+  const updateUser = useCallback((userData: User) => {
+    setUser(userData)
+  }, [])
 
   // Refresh user data
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     await checkAuth()
-  }
+  }, [checkAuth])
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     user,
     isLoading,
     isAuthenticated: !!user,
@@ -179,7 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     sendOtp,
     refreshUser,
-  }
+    updateUser,
+  }), [user, isLoading, login, logout, sendOtp, refreshUser, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
