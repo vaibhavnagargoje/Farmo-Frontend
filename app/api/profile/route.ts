@@ -59,7 +59,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { full_name, address, ...otherData } = body
+    const { full_name, address, default_lat, default_lng, ...otherData } = body
 
     const { token } = await apiRequest(API_ENDPOINTS.USER_PROFILE)
 
@@ -93,7 +93,10 @@ export async function PATCH(request: NextRequest) {
       )
 
       if (partnerResponse?.ok) {
-        partnerData = await partnerResponse.json()
+        const contentType = partnerResponse.headers.get("content-type") || ""
+        if (contentType.includes("application/json")) {
+          partnerData = await partnerResponse.json()
+        }
       }
     }
 
