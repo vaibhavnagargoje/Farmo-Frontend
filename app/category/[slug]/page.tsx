@@ -591,28 +591,27 @@ export default function CategoryServicesPage() {
           {selectedLocation && (
             <div className="px-4 lg:px-6 pb-3 lg:pt-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
-              {/* ── Providers + Price Row ── */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {/* Available Providers */}
-                <div className="bg-card border border-border rounded-2xl p-3.5">
-                  <div className="flex items-center gap-1.5 mb-2">
+              {/* ── Providers & Price Row ── */}
+              <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
                     <span className="relative flex h-2 w-2 shrink-0">
                       <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${availableProviders > 0 ? "bg-green-400" : "bg-red-400"}`} />
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${availableProviders > 0 ? "bg-green-500" : "bg-red-500"}`} />
                     </span>
-                    <span className="text-[11px] font-medium text-muted-foreground">Available</span>
+                    <span className="text-[12px] font-medium text-foreground">
+                      {availableProviders} Provider{availableProviders !== 1 ? 's' : ''} Available
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-foreground leading-none">{availableProviders}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Providers</p>
                   {services.length > 0 && (
-                    <div className="flex items-center -space-x-2 mt-2.5">
+                    <div className="flex items-center -space-x-1.5 pl-1">
                       {services.slice(0, 5).map((s) => (
-                        <div key={s.id} className="size-7 rounded-full bg-muted/50 overflow-hidden relative border-2 border-card shrink-0">
+                        <div key={s.id} className="size-6 rounded-full bg-muted/50 overflow-hidden relative border-[1.5px] border-card shrink-0 shadow-sm">
                           <Image src={s.thumbnail || "/placeholder.svg"} alt="" fill className="object-cover" />
                         </div>
                       ))}
                       {services.length > 5 && (
-                        <div className="size-7 rounded-full bg-muted flex items-center justify-center border-2 border-card text-[9px] font-bold text-muted-foreground shrink-0">
+                        <div className="size-6 rounded-full bg-muted flex items-center justify-center border-[1.5px] border-card text-[9px] font-bold text-muted-foreground shrink-0 shadow-sm">
                           +{services.length - 5}
                         </div>
                       )}
@@ -620,24 +619,24 @@ export default function CategoryServicesPage() {
                   )}
                 </div>
 
-                {/* Average Price */}
-                <div className="bg-gradient-to-br from-navy/5 to-navy/10 border border-navy/15 rounded-2xl p-3.5">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="material-symbols-outlined text-navy text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    <span className="text-[11px] font-medium text-navy">Instant Price</span>
-                  </div>
-                  <p className="text-2xl font-bold text-foreground leading-none">
-                    {instantPrice ? `₹${instantPrice}` : "\u2014"}
-                  </p>
-                  <p className="text-[10px] text-navy/60 mt-1.5">
-                    {priceUnitLabel}
+                <div className="text-right">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Starting at</p>
+                  <p className="text-2xl font-bold text-navy leading-none">
+                    {instantPrice ? (
+                      <>
+                        ₹{instantPrice}
+                        <span className="text-xs font-medium text-navy/70 ml-0.5">/{priceUnitLabel}</span>
+                      </>
+                    ) : (
+                      "\u2014"
+                    )}
                   </p>
                 </div>
               </div>
 
               {/* ── Instant Booking Form ── */}
               {isInstantEnabled && availableProviders > 0 && (
-                <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <div className="bg-card border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="material-symbols-outlined text-navy text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>flash_on</span>
                     <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
@@ -651,14 +650,14 @@ export default function CategoryServicesPage() {
                       min={1}
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="Enter area"
                     />
                   </div>
 
                   {/* Estimated Total */}
                   {instantPrice > 0 && (
-                    <div className="flex items-center justify-between bg-navy/5 rounded-xl px-3 py-2">
+                    <div className="flex items-center justify-between bg-navy/5 rounded-lg px-3 py-2">
                       <span className="text-[11px] text-muted-foreground">
                         Est. Total ({quantity} × ₹{instantPrice})
                       </span>
@@ -674,13 +673,13 @@ export default function CategoryServicesPage() {
                       onChange={(e) => setBookingNote(e.target.value)}
                       placeholder="Any special instructions... (optional)"
                       rows={2}
-                      className="w-full border border-border rounded-xl bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
+                      className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
                     />
                   </div>
 
                   {/* Error message */}
                   {bookingError && (
-                    <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-950/30 rounded-lg px-3 py-2">
                       <span className="material-symbols-outlined text-[16px]">error</span>
                       <p className="text-xs font-medium">{bookingError}</p>
                     </div>
@@ -693,7 +692,7 @@ export default function CategoryServicesPage() {
                 (bookingStatus === "idle" || bookingStatus === "error") ? (
                   <div
                     ref={sliderRef}
-                    className="relative h-14 lg:h-16 rounded-2xl overflow-hidden select-none touch-none shadow-lg bg-navy"
+                    className="relative h-14 lg:h-16 rounded-xl overflow-hidden select-none touch-none shadow-lg bg-navy"
                   >
                     <div className="absolute inset-0 flex items-center justify-center">
                       <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
@@ -701,11 +700,11 @@ export default function CategoryServicesPage() {
                       </p>
                     </div>
                     <div
-                      className="absolute inset-y-0 left-0 bg-green-500/20 rounded-2xl transition-[width] duration-75"
+                      className="absolute inset-y-0 left-0 bg-green-500/20 rounded-xl transition-[width] duration-75"
                       style={{ width: `${sliderProgress * 100}%` }}
                     />
                     <div
-                      className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[14px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
+                      className="absolute top-1.5 bottom-1.5 w-[52px] rounded-[10px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
                       style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
                       onTouchStart={onSliderTouchStart}
                       onTouchMove={onSliderTouchMove}
@@ -720,13 +719,13 @@ export default function CategoryServicesPage() {
                     </div>
                   </div>
                 ) : bookingStatus === "creating" ? (
-                  <div className="relative h-14 lg:h-16 rounded-2xl bg-navy/80 flex items-center justify-center gap-2">
+                  <div className="relative h-14 lg:h-16 rounded-xl bg-navy/80 flex items-center justify-center gap-2">
                     <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
                     <p className="text-white/80 text-sm font-semibold">Creating booking...</p>
                   </div>
                 ) : null
               ) : availableProviders === 0 ? (
-                <div className="relative h-14 bg-muted/60 border border-border rounded-2xl flex items-center justify-center gap-2">
+                <div className="relative h-14 bg-muted/60 border border-border rounded-xl flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
                   <p className="text-sm font-medium text-muted-foreground">No providers available in this area</p>
                 </div>
@@ -735,7 +734,7 @@ export default function CategoryServicesPage() {
               {/* ─── BROWSE PROVIDERS BUTTON ─── */}
               <Link
                 href={getProvidersUrl()}
-                className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 bg-card border-2 border-navy/15 rounded-2xl text-sm font-semibold text-foreground hover:bg-navy/5 hover:border-navy/30 active:scale-[0.98] transition-all group"
+                className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 bg-card border-2 border-navy/15 rounded-xl text-sm font-semibold text-foreground hover:bg-navy/5 hover:border-navy/30 active:scale-[0.98] transition-all group"
               >
                 <span className="material-symbols-outlined text-[20px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
                 <span>Direct Providers</span>

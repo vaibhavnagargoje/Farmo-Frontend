@@ -15,70 +15,22 @@ interface Notification {
 const farmerNotifications: Notification[] = [
   {
     id: "1",
-    title: "Booking Confirmed",
-    message: "Your rotavator booking for tomorrow has been confirmed",
-    time: "2 min ago",
+    title: "Welcome to Farmo!",
+    message: "We're glad to have you here. Explore services and start booking today.",
+    time: "Just now",
     read: false,
-    type: "booking",
-  },
-  {
-    id: "2",
-    title: "Payment Successful",
-    message: "₹2,400 payment for booking #AG-489 was successful",
-    time: "1 hour ago",
-    read: false,
-    type: "payment",
-  },
-  {
-    id: "3",
-    title: "Partner On The Way",
-    message: "Suresh is on his way with the harvester",
-    time: "3 hours ago",
-    read: true,
-    type: "booking",
-  },
-  {
-    id: "4",
-    title: "Special Offer!",
-    message: "Get 20% off on your next booking. Use code FARM20",
-    time: "1 day ago",
-    read: true,
-    type: "promo",
+    type: "system",
   },
 ]
 
 const partnerNotifications: Notification[] = [
   {
     id: "1",
-    title: "New Booking Request",
-    message: "Ramesh Kumar requested ploughing service for 4 acres",
-    time: "2 min ago",
+    title: "Welcome to Farmo!",
+    message: "We're glad to have you here. Manage your services and start earning.",
+    time: "Just now",
     read: false,
-    type: "booking",
-  },
-  {
-    id: "2",
-    title: "Payment Received",
-    message: "₹2,400 has been credited to your wallet",
-    time: "1 hour ago",
-    read: false,
-    type: "payment",
-  },
-  {
-    id: "3",
-    title: "Job Completed",
-    message: "Your job #AG-491 has been marked as completed",
-    time: "3 hours ago",
-    read: true,
-    type: "booking",
-  },
-  {
-    id: "4",
-    title: "Bonus Earned!",
-    message: "You earned ₹500 bonus for completing 10 jobs this week",
-    time: "1 day ago",
-    read: true,
-    type: "promo",
+    type: "system",
   },
 ]
 

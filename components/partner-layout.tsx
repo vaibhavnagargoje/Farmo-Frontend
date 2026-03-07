@@ -15,8 +15,7 @@ const sidebarNavItems = [
     { icon: "dashboard", label: "Dashboard", href: "/partner", key: "dashboard" },
     { icon: "construction", label: "Manage Services", href: "/partner/services", key: "services" },
     { icon: "account_balance_wallet", label: "Earnings", href: "/partner/earnings", key: "earnings" },
-    { icon: "settings", label: "Settings", href: "/partner/settings", key: "settings" },
-    { icon: "headset_mic", label: "Help & Support", href: "/support", key: "support" },
+    { icon: "person", label: "Profile", href: "/partner/profile", key: "profile" },
 ]
 
 interface PartnerLayoutProps {
@@ -31,7 +30,6 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
     const [partnerName, setPartnerName] = useState("Partner")
     const [isOnline, setIsOnline] = useState(true)
     const [isLoadingProfile, setIsLoadingProfile] = useState(true)
-    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
     // Fetch partner profile data
     const fetchProfile = useCallback(async () => {
@@ -66,29 +64,8 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
         }
     }, [isAuthenticated, authLoading, fetchProfile])
 
-    // Close sidebar on escape
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setIsMobileSidebarOpen(false)
-        }
-        window.addEventListener("keydown", handleEsc)
-        return () => window.removeEventListener("keydown", handleEsc)
-    }, [])
+    // Switch online status toggle to API
 
-    // Lock body scroll when mobile sidebar is open
-    useEffect(() => {
-        if (isMobileSidebarOpen) {
-            document.body.style.overflow = "hidden"
-        } else {
-            document.body.style.overflow = ""
-        }
-        return () => { document.body.style.overflow = "" }
-    }, [isMobileSidebarOpen])
-
-    // Close sidebar on route change
-    useEffect(() => {
-        setIsMobileSidebarOpen(false)
-    }, [pathname])
 
     const handleLogout = async () => {
         await logout()
@@ -236,17 +213,9 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
             <div className="lg:hidden flex flex-col min-h-screen pb-24">
                 <MobileHeader />
 
-                {/* Mobile Top Bar with Menu Button */}
                 <div className="sticky top-16 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-                    <button
-                        onClick={() => setIsMobileSidebarOpen(true)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted/30 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-foreground">menu</span>
-                        <span className="text-sm font-semibold text-foreground">Menu</span>
-                    </button>
                     <h1 className="text-base font-bold text-foreground">{pageTitle}</h1>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 ml-auto">
                         <span className={cn(
                             "w-2 h-2 rounded-full",
                             isOnline ? "bg-green-500" : "bg-gray-400"
@@ -259,25 +228,6 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                         </span>
                     </div>
                 </div>
-
-                {/* Mobile Slide-Out Sidebar */}
-                {isMobileSidebarOpen && (
-                    <div className="fixed inset-0 z-[100] flex">
-                        <div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-                            onClick={() => setIsMobileSidebarOpen(false)}
-                        />
-                        <div className="relative w-[280px] max-w-[80vw] bg-card h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-300">
-                            <button
-                                onClick={() => setIsMobileSidebarOpen(false)}
-                                className="absolute top-5 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-lg text-foreground">close</span>
-                            </button>
-                            <SidebarContent onNavClick={() => setIsMobileSidebarOpen(false)} />
-                        </div>
-                    </div>
-                )}
 
                 {/* Mobile Content */}
                 <main className="flex-1 px-4 py-5">
@@ -310,7 +260,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                                     type="text"
                                 />
                             </div>
-                            <Link href="/profile" className="p-2 rounded-full hover:bg-gray-50 transition-colors text-gray-400">
+                            <Link href="/partner/profile" className="p-2 rounded-full hover:bg-gray-50 transition-colors text-gray-400">
                                 <span className="material-symbols-outlined">person</span>
                             </Link>
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">

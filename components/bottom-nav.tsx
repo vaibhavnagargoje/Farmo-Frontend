@@ -18,10 +18,10 @@ const farmerNavItems: NavItem[] = [
 ]
 
 const partnerNavItems: NavItem[] = [
-  { href: "/partner", icon: "dashboard", label: "Home" },
+  { href: "/partner", icon: "dashboard", label: "Dashboard" },
+  { href: "/partner/services", icon: "construction", label: "Services" },
   { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings" },
   { href: "/partner/profile", icon: "person", label: "Profile" },
-  { href: "/partner/settings", icon: "settings", label: "Settings" },
 ]
 
 interface BottomNavProps {

@@ -8,7 +8,7 @@ import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import { BottomNav } from "@/components/bottom-nav"
 import { useAuth } from "@/contexts/auth-context"
-import { type Service } from "@/lib/api"
+import { type Service, type PriceUnit } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 export default function NewBookingPage() {
@@ -27,6 +27,8 @@ export default function NewBookingPage() {
 
   // Booking Form
   const [quantity, setQuantity] = useState(1)
+  const [selectedUnit, setSelectedUnit] = useState<string>("")
+  const [priceUnits, setPriceUnits] = useState<PriceUnit[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [scheduledDate, setScheduledDate] = useState("")
   const [scheduledTime, setScheduledTime] = useState("")
@@ -146,16 +148,35 @@ export default function NewBookingPage() {
   }
 
   // Price calculation
-  const getPriceUnit = () => {
-    if (!service) return ""
-    switch (service.price_unit) {
-      case "HOUR": return "/hr"
-      case "DAY": return "/day"
-      case "ACRE": return "/acre"
-      case "KM": return "/km"
-      default: return ""
+  // Fetch price units on mount
+  useEffect(() => {
+    const fetchPriceUnits = async () => {
+      try {
+        const res = await fetch("/api/services/price-units")
+        if (res.ok) {
+          const data = await res.json()
+          setPriceUnits(Array.isArray(data) ? data : [])
+        }
+      } catch {
+        // Price units fetch is optional fallback
+      }
     }
+    fetchPriceUnits()
+  }, [])
+
+  // Auto-select unit when service loads
+  useEffect(() => {
+    if (service && service.price_unit && !selectedUnit) {
+      setSelectedUnit(service.price_unit)
+    }
+  }, [service, selectedUnit])
+
+  const getPriceUnitLabel = (unitValue: string) => {
+    const unit = priceUnits.find(u => u.value === unitValue)
+    return unit ? `/${unit.label}` : `/${unitValue.toLowerCase()}`
   }
+
+  const getPriceUnit = () => getPriceUnitLabel(selectedUnit || service?.price_unit || "")
 
   const totalPrice = service ? parseFloat(service.price) * quantity : 0
 
@@ -195,7 +216,7 @@ export default function NewBookingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
+    <div className="min-h-screen flex flex-col pb-44 lg:pb-0 bg-background">
       <DesktopHeader variant="farmer" />
       <MobileHeader />
 
@@ -224,7 +245,7 @@ export default function NewBookingPage() {
                     src={allImages[activeImageIndex]?.image || "/placeholder.svg"}
                     alt={service.title}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-muted">
@@ -262,13 +283,15 @@ export default function NewBookingPage() {
             {/* Service Info */}
             <div className="bg-card rounded-2xl p-6 border border-border">
               <div className="flex items-start justify-between mb-4">
-                <div>
+                <div className="flex-1 pr-4">
                   <p className="text-sm text-primary font-semibold mb-1">{service.category?.name || service.category_name}</p>
-                  <h1 className="text-2xl font-bold text-foreground">{service.title}</h1>
+                  <h1 className="text-2xl font-bold text-foreground overflow-hidden text-ellipsis">{service.title}</h1>
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-navy">₹{service.price}</p>
-                  <p className="text-sm text-muted">{getPriceUnit()}</p>
+                <div className="flex flex-col items-end justify-start shrink-0">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-navy">₹{service.price}</span>
+                    <span className="text-sm font-medium text-muted">{getPriceUnit()}</span>
+                  </div>
                 </div>
               </div>
 
@@ -318,28 +341,55 @@ export default function NewBookingPage() {
             <div className="bg-card rounded-2xl p-6 border border-border sticky top-24">
               <h2 className="text-lg font-bold text-foreground mb-4">Book This Service</h2>
 
-              {/* Quantity */}
-              <div className="mb-4">
-                <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full h-11 px-4 border border-border rounded-xl bg-background font-medium"
-                />
-              </div>
-
-              {/* Location */}
-              <div className="mb-4">
-                <label className="text-sm font-medium text-foreground mb-2 block">Your Location</label>
-                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
-                  <span className="material-symbols-outlined text-xl text-muted">location_on</span>
-                  <span className="text-sm text-foreground">
-                    {profileAddress || "No address on profile"}
-                  </span>
+              {/* Quantity & Unit Row */}
+              <div className={cn("mb-4", priceUnits.length > 0 ? "grid grid-cols-2 gap-4" : "")}>
+                {/* Quantity */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
+                  <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="h-full px-4 text-foreground/70 hover:text-foreground hover:bg-muted/50 transition-colors border-r border-border shrink-0 flex items-center justify-center font-bold text-lg focus:outline-none"
+                      aria-label="Decrease quantity"
+                    >
+                      -
+                    </button>
+                    <div className="flex-1 text-center font-medium text-foreground bg-transparent w-full">
+                      {quantity}
+                    </div>
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="h-full px-4 text-foreground/70 hover:text-foreground hover:bg-muted/50 transition-colors border-l border-border shrink-0 flex items-center justify-center font-bold text-lg focus:outline-none"
+                      aria-label="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
+
+                {/* Unit Selector */}
+                {priceUnits.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Unit</label>
+                    <div className="relative">
+                      <select
+                        value={selectedUnit}
+                        onChange={(e) => setSelectedUnit(e.target.value)}
+                        className="w-full h-11 pl-4 pr-10 border border-border rounded-xl bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="" disabled>Select unit</option>
+                        {priceUnits.map((u) => (
+                          <option key={u.value} value={u.value}>
+                            {u.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
+                        <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Advanced Options Toggle */}
@@ -438,15 +488,15 @@ export default function NewBookingPage() {
       </div>
 
       {/* Mobile Layout */}
-      <main className="lg:hidden flex-1">
+      <main className="lg:hidden flex-1 w-full overflow-x-hidden pb-40">
         {/* Image Gallery - Mobile */}
-        <div className="relative aspect-[4/3] bg-muted">
+        <div className="relative aspect-video w-full max-w-full overflow-hidden bg-muted">
           {allImages.length > 0 ? (
             <Image
               src={allImages[activeImageIndex]?.image || "/placeholder.svg"}
               alt={service.title}
               fill
-              className="object-cover"
+              className="object-contain"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-muted">
@@ -500,16 +550,18 @@ export default function NewBookingPage() {
           {/* Title & Price */}
           <div className="bg-card rounded-2xl p-4 border border-border">
             <p className="text-sm text-primary font-semibold mb-1">{service.category?.name || service.category_name}</p>
-            <h1 className="text-xl font-bold text-foreground mb-2">{service.title}</h1>
-            <div className="flex items-end justify-between">
-              <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground mb-2 break-words">{service.title}</h1>
+            <div className="flex items-end justify-between gap-2 mt-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="material-symbols-outlined text-yellow-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                <span className="font-semibold">{service.partner?.rating || service.partner_rating || "New"}</span>
-                <span className="text-muted text-sm">• {service.partner?.full_name || service.partner_name}</span>
+                <span className="font-semibold text-sm">{service.partner?.rating || service.partner_rating || "New"}</span>
+                <span className="text-muted text-xs truncate max-w-[120px]">• {service.partner?.full_name || service.partner_name}</span>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-navy">₹{service.price}</span>
-                <span className="text-sm text-muted">{getPriceUnit()}</span>
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-navy">₹{service.price}</span>
+                  <span className="text-sm font-medium text-muted">{getPriceUnit()}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -526,28 +578,54 @@ export default function NewBookingPage() {
           <div className="bg-card rounded-2xl p-4 border border-border space-y-4">
             <h3 className="font-semibold text-foreground">Book Now</h3>
 
-            {/* Quantity */}
-            <div>
-              <label className="text-sm text-muted mb-2 block">Quantity</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full h-11 px-4 border border-border rounded-xl bg-background font-medium"
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="text-sm text-muted mb-2 block">Your Location</label>
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30">
-                <span className="material-symbols-outlined text-xl text-muted">location_on</span>
-                <span className="text-sm text-foreground">
-                  {profileAddress || "No address on profile"}
-                </span>
+            <div className={cn("mb-2", priceUnits.length > 0 ? "grid grid-cols-2 gap-3" : "")}>
+              {/* Quantity */}
+              <div>
+                <label className="text-sm text-muted mb-2 block">Quantity</label>
+                <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="h-full px-3 text-foreground/70 active:text-foreground active:bg-muted/50 transition-colors border-r border-border shrink-0 flex items-center justify-center font-medium focus:outline-none text-lg select-none"
+                    aria-label="Decrease quantity"
+                  >
+                    -
+                  </button>
+                  <div className="flex-1 text-center font-medium text-foreground bg-transparent w-full">
+                    {quantity}
+                  </div>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="h-full px-3 text-foreground/70 active:text-foreground active:bg-muted/50 transition-colors border-l border-border shrink-0 flex items-center justify-center font-medium focus:outline-none text-lg select-none"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+
+              {/* Unit Selector */}
+              {priceUnits.length > 0 && (
+                <div>
+                  <label className="text-sm text-muted mb-2 block">Unit</label>
+                  <div className="relative">
+                    <select
+                      value={selectedUnit}
+                      onChange={(e) => setSelectedUnit(e.target.value)}
+                      className="w-full h-11 pl-3 pr-8 border border-border rounded-xl bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                    >
+                      <option value="" disabled>Select unit</option>
+                      {priceUnits.map((u) => (
+                        <option key={u.value} value={u.value}>
+                          {u.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground">
+                      <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Advanced Toggle */}
@@ -598,7 +676,7 @@ export default function NewBookingPage() {
       </main>
 
       {/* Bottom Bar - Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 lg:hidden z-40">
+      <div className="fixed bottom-[75px] left-0 right-0 bg-card border-t border-border p-4 lg:hidden z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] w-full">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-xs text-muted">Total Amount</p>

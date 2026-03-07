@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
-
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,25 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
+  const [locationName, setLocationName] = useState<string>("India")
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/auth/location")
+        .then(res => res.json())
+        .then(data => {
+          if (data.has_location && data.location?.address) {
+            setLocationName(data.location.address.split(',')[0])
+          } else {
+            setLocationName("Set your location")
+          }
+        })
+        .catch(() => { })
+    } else {
+      setLocationName("Set your location")
+    }
+  }, [isAuthenticated])
+
   return (
     <header className="hidden lg:block sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-6">
@@ -46,7 +65,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               <Link href={variant === "partner" ? "/partner" : "/"} className="text-xl font-bold text-navy leading-none tracking-tight">
                 Farmo
               </Link>
-              <span className="text-xs text-muted-foreground leading-none mt-0.5">India</span>
+              <span className="text-xs text-muted-foreground leading-none mt-0.5 max-w-[120px] truncate">{locationName}</span>
             </div>
           </div>
 
@@ -78,20 +97,13 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             ) : isAuthenticated ? (
               <Link
                 href="/profile"
-                className="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
+                className="flex items-center gap-3 p-1.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
               >
                 <Avatar className="size-8 border-2 border-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                     {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
-
-                <div className="flex flex-col items-start gap-0.5">
-                  <span className="text-sm font-semibold leading-none">
-                    {user?.full_name || "User"}
-                  </span>
-
-                </div>
               </Link>
             ) : (
               <Button asChild variant="default" className="rounded-full px-6">

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
+import { useAuth } from "@/contexts/auth-context"
 
 interface MobileHeaderProps {
   className?: string
@@ -13,6 +14,25 @@ interface MobileHeaderProps {
 export function MobileHeader({ className }: MobileHeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { isAuthenticated } = useAuth()
+  const [locationName, setLocationName] = useState<string>("India")
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/auth/location")
+        .then(res => res.json())
+        .then(data => {
+          if (data.has_location && data.location?.address) {
+            setLocationName(data.location.address.split(',')[0])
+          } else {
+            setLocationName("Set your location")
+          }
+        })
+        .catch(() => { })
+    } else {
+      setLocationName("Set your location")
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (isSearchExpanded) {
@@ -35,7 +55,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
             </Link>
             <div className="flex flex-col justify-center">
               <Link href="/" className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</Link>
-              <span className="text-xs text-muted-foreground leading-none mt-0.5">India</span>
+              <span className="text-xs text-muted-foreground leading-none mt-0.5 max-w-[120px] truncate">{locationName}</span>
             </div>
           </div>
         </div>

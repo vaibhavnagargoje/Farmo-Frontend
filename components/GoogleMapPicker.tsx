@@ -235,12 +235,11 @@ function MapContent({
     )
 }
 
-// ── Main Exported Component ──
 export default function GoogleMapPicker(props: GoogleMapPickerProps) {
     const { className = "", ...rest } = props
 
     return (
-        <div className={`relative w-full overflow-hidden rounded-2xl border border-border shadow-sm ${className}`}>
+        <div className={`relative w-full overflow-hidden rounded-xl border border-border ${className}`}>
             <APIProvider apiKey={MAPS_API_KEY}>
                 <MapContent {...rest} />
             </APIProvider>
