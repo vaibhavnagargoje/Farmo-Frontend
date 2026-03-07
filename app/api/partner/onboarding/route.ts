@@ -73,6 +73,18 @@ export async function POST(request: NextRequest) {
             body: djangoFormData,
         })
 
+        // Safety: check that the response is JSON before trying to parse
+        const contentType = response.headers.get("content-type") || ""
+        if (!contentType.includes("application/json")) {
+            // Django returned HTML (404 page, 500 error page, etc.) instead of JSON
+            const text = await response.text()
+            console.error("Partner register returned non-JSON:", response.status, text.slice(0, 200))
+            return NextResponse.json(
+                { message: `Server error (${response.status}). Please try again later.` },
+                { status: response.status || 500 }
+            )
+        }
+
         const data = await response.json()
 
         if (!response.ok) {
