@@ -166,8 +166,8 @@ function AuthPageContent() {
         isOtpSubmittingRef.current = false
         isVerifyingRef.current = false
       } else {
-        // Keep loading state and refs active during navigation to prevent race conditions and multiple clicks
-        router.push(searchParams.get("redirect") || "/")
+        // Hard redirect for existing users — same bulletproof approach as registration
+        window.location.href = searchParams.get("redirect") || "/"
       }
     } else {
       setError(result.error || "Invalid OTP")
@@ -218,7 +218,6 @@ function AuthPageContent() {
       }
 
       // Directly update the user in auth context with the response data
-      // This avoids a separate refreshUser() call that could fail/hang
       if (data.user) {
         updateUser(data.user)
       }
@@ -232,16 +231,12 @@ function AuthPageContent() {
         }).catch(() => { }) // non-critical
       }
 
-      // Let the global useEffect handle the redirect.
-      // We drop the lock but KEEP isLoading=true so the spinner stays visible during Next.js navigation.
-      if (data.user) {
-        updateUser(data.user)
-        isRegisteringRef.current = false
-      } else {
-        // Fallback navigation just in case data.user was missing
-        isRegisteringRef.current = false
-        router.push(searchParams.get("redirect") || "/")
-      }
+      // Use window.location.href for a hard redirect that CANNOT be swallowed
+      // by React 18 transitions, Google Maps API scripts, or any other interference.
+      // router.push() is unreliable here because context updates trigger re-renders
+      // that abort the soft navigation on mobile browsers.
+      const redirect = searchParams.get("redirect") || "/"
+      window.location.href = redirect
     } catch (err) {
       console.error("Registration error:", err)
       setIsLoading(false)
