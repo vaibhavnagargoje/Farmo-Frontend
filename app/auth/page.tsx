@@ -164,10 +164,7 @@ function AuthPageContent() {
         isOtpSubmittingRef.current = false
         isVerifyingRef.current = false
       } else {
-        // Reset refs and loading BEFORE navigation to prevent redirect useEffect race
-        setIsLoading(false)
-        isOtpSubmittingRef.current = false
-        isVerifyingRef.current = false
+        // Keep loading state and refs active during navigation to prevent race conditions and multiple clicks
         router.push(searchParams.get("redirect") || "/")
       }
     } else {
@@ -233,9 +230,7 @@ function AuthPageContent() {
         }).catch(() => { }) // non-critical
       }
 
-      // Reset state BEFORE navigation to prevent redirect useEffect race
-      setIsLoading(false)
-      isRegisteringRef.current = false
+      // Keep loading state and refs active during navigation to prevent redirect useEffect race and double clicks
       const redirect = searchParams.get("redirect") || "/"
       router.push(redirect)
     } catch (err) {

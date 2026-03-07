@@ -76,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user)
       } else if (response.status === 401) {
         // Only clear user on explicit 401 (truly not authenticated)
-        setUser(null)
+        // AND if we do not have a valid user cookie (prevents aggressive logouts on mobile network delays)
+        if (!cookieUser) {
+          setUser(null)
+        }
       }
       // On other errors (500, 502, etc.), keep the cookie-based user
       // This prevents transient backend issues from logging users out
