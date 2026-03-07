@@ -53,7 +53,51 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
         onChange({ ...data, partnerType: value })
     }
 
-    const handleFileChange = (
+    /**
+     * Compress an image file using Canvas API.
+     * Resizes to max 1200px and re-encodes as JPEG at 70% quality.
+     * This keeps each file well under ~500KB, preventing Vercel's 4.5MB body limit.
+     */
+    const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const img = new window.Image()
+            img.onload = () => {
+                let { width, height } = img
+                // Scale down if needed, preserving aspect ratio
+                if (width > maxSize || height > maxSize) {
+                    if (width > height) {
+                        height = Math.round((height * maxSize) / width)
+                        width = maxSize
+                    } else {
+                        width = Math.round((width * maxSize) / height)
+                        height = maxSize
+                    }
+                }
+                const canvas = document.createElement("canvas")
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext("2d")
+                if (!ctx) { resolve(file); return }
+                ctx.drawImage(img, 0, 0, width, height)
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { resolve(file); return }
+                        const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+                            type: "image/jpeg",
+                            lastModified: Date.now(),
+                        })
+                        resolve(compressed)
+                    },
+                    "image/jpeg",
+                    quality
+                )
+            }
+            img.onerror = () => reject(new Error("Failed to load image"))
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
+    const handleFileChange = async (
         side: "front" | "back",
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
@@ -63,18 +107,19 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
         // Validate file type
         if (!file.type.startsWith("image/")) return
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) return
+        // Validate file size (max 10MB raw — will be compressed)
+        if (file.size > 10 * 1024 * 1024) return
 
-        const previewUrl = URL.createObjectURL(file)
+        // Compress image to stay under Vercel's 4.5MB body limit
+        const compressed = await compressImage(file)
+        const previewUrl = URL.createObjectURL(compressed)
 
         if (side === "front") {
-            // Revoke previous URL to prevent memory leaks
             if (data.aadharFrontPreview) URL.revokeObjectURL(data.aadharFrontPreview)
-            onChange({ ...data, aadharFront: file, aadharFrontPreview: previewUrl })
+            onChange({ ...data, aadharFront: compressed, aadharFrontPreview: previewUrl })
         } else {
             if (data.aadharBackPreview) URL.revokeObjectURL(data.aadharBackPreview)
-            onChange({ ...data, aadharBack: file, aadharBackPreview: previewUrl })
+            onChange({ ...data, aadharBack: compressed, aadharBackPreview: previewUrl })
         }
     }
 
