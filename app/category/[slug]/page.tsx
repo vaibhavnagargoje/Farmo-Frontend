@@ -642,17 +642,46 @@ export default function CategoryServicesPage() {
                     <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
                   </div>
 
-                  {/* Estimated Area */}
-                  <div className="flex-1">
-                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated Area</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-navy/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Enter area"
-                    />
+                  {/* Estimated */}
+                  <div className={`flex-1 ${priceUnits.length > 0 ? "mb-1 grid grid-cols-2 gap-3" : "mb-1"}`}>
+                    {/* Quantity */}
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated</label>
+                      <div className="flex items-center w-full h-11 border border-border rounded-lg bg-background overflow-hidden">
+                        <button
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          className="h-full px-3 text-foreground/70 active:text-foreground active:bg-muted/50 transition-colors border-r border-border shrink-0 flex items-center justify-center font-medium focus:outline-none text-lg select-none"
+                          aria-label="Decrease quantity"
+                        >
+                          -
+                        </button>
+                        <div className="flex-1 text-center font-medium text-foreground bg-transparent w-full text-sm">
+                          {quantity}
+                        </div>
+                        <button
+                          onClick={() => setQuantity(quantity + 1)}
+                          className="h-full px-3 text-foreground/70 active:text-foreground active:bg-muted/50 transition-colors border-l border-border shrink-0 flex items-center justify-center font-medium focus:outline-none text-lg select-none"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Unit Display */}
+                    {priceUnits.length > 0 && (
+                      <div>
+                        <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit</label>
+                        <div className="relative">
+                          <div className="w-full h-11 pl-3 pr-8 border border-border rounded-lg bg-muted/30 font-medium text-foreground flex items-center text-sm cursor-not-allowed select-none">
+                            {priceUnitLabel}
+                          </div>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground opacity-50">
+                            <span className="material-symbols-outlined text-[18px]">lock</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Estimated Total */}
