@@ -59,18 +59,20 @@ function AuthPageContent() {
     useRef<HTMLInputElement>(null),
   ]
 
-  // Redirect if already authenticated (skip when OTP verification or registration is in progress)
+  // Redirect if already authenticated (skip when OTP verification or registration is in flight)
+  // Let this single useEffect handle all successful auth navigation
   useEffect(() => {
     if (isVerifyingRef.current || isRegisteringRef.current) return
     if (!authLoading && isAuthenticated) {
       if (user && !user.full_name) {
         setStep("register")
-      } else if (step !== "register") {
+      } else {
+        // User is authenticated and has a full name. They should be redirected no matter what step they are on.
         const redirect = searchParams.get("redirect") || "/"
         router.push(redirect)
       }
     }
-  }, [isAuthenticated, authLoading, router, searchParams, step, user])
+  }, [isAuthenticated, authLoading, router, searchParams, user])
 
   // Scroll to error when it changes
   useEffect(() => {
@@ -230,9 +232,16 @@ function AuthPageContent() {
         }).catch(() => { }) // non-critical
       }
 
-      // Keep loading state and refs active during navigation to prevent redirect useEffect race and double clicks
-      const redirect = searchParams.get("redirect") || "/"
-      router.push(redirect)
+      // Let the global useEffect handle the redirect.
+      // We drop the lock but KEEP isLoading=true so the spinner stays visible during Next.js navigation.
+      if (data.user) {
+        updateUser(data.user)
+        isRegisteringRef.current = false
+      } else {
+        // Fallback navigation just in case data.user was missing
+        isRegisteringRef.current = false
+        router.push(searchParams.get("redirect") || "/")
+      }
     } catch (err) {
       console.error("Registration error:", err)
       setIsLoading(false)
