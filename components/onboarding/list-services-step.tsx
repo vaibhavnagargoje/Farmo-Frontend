@@ -78,21 +78,71 @@ export function ListServicesStep({
         fetchCategories()
     }, [])
 
-    const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /**
+     * Compress an image file using Canvas API.
+     * Resizes to max 1200px and re-encodes as JPEG at 70% quality.
+     * This keeps each file well under ~500KB, preventing Vercel's 4.5MB body limit.
+     */
+    const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const img = new window.Image()
+            img.onload = () => {
+                let { width, height } = img
+                if (width > maxSize || height > maxSize) {
+                    if (width > height) {
+                        height = Math.round((height * maxSize) / width)
+                        width = maxSize
+                    } else {
+                        width = Math.round((width * maxSize) / height)
+                        height = maxSize
+                    }
+                }
+                const canvas = document.createElement("canvas")
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext("2d")
+                if (!ctx) { resolve(file); return }
+                ctx.drawImage(img, 0, 0, width, height)
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { resolve(file); return }
+                        const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+                            type: "image/jpeg",
+                            lastModified: Date.now(),
+                        })
+                        resolve(compressed)
+                    },
+                    "image/jpeg",
+                    quality
+                )
+            }
+            img.onerror = () => reject(new Error("Failed to load image"))
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
+    const handleImageAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
         if (!files) return
 
         const newImages: ServiceImageItem[] = []
-        Array.from(files).forEach((file) => {
-            if (!file.type.startsWith("image/")) return
-            if (file.size > 5 * 1024 * 1024) return
+        for (const file of Array.from(files)) {
+            if (!file.type.startsWith("image/")) continue
+            // Allow up to 15MB raw — will be compressed down
+            if (file.size > 15 * 1024 * 1024) continue
 
-            newImages.push({
-                file,
-                preview: URL.createObjectURL(file),
-                id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            })
-        })
+            try {
+                const compressed = await compressImage(file)
+                newImages.push({
+                    file: compressed,
+                    preview: URL.createObjectURL(compressed),
+                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                })
+            } catch {
+                // If compression fails, skip the image
+                console.warn("Failed to compress image:", file.name)
+            }
+        }
 
         onChange({ ...data, images: [...data.images, ...newImages] })
         // Reset the input so the same file can be selected again
@@ -307,7 +357,7 @@ export function ListServicesStep({
                     </p>
                 )}
                 <p className="text-[11px] text-muted">
-                    Add photos of your equipment, machinery, or work samples. Max 5MB each.
+                    Add photos of your equipment, machinery, or work samples. Max 15MB each (auto-compressed).
                 </p>
             </div>
         </div>
