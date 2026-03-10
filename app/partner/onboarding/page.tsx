@@ -213,6 +213,8 @@ export default function OnboardingPage() {
       }
 
       // Step 3: Create the first service with images
+      // Uses retry logic because the partner profile may not be
+      // fully propagated in Django right after registration.
       const serviceFormData = new FormData()
       serviceFormData.append("category", serviceData.category)
       serviceFormData.append("title", serviceData.title)
@@ -225,23 +227,40 @@ export default function OnboardingPage() {
         serviceFormData.append("images", image.file)
       }
 
-      const serviceRes = await fetch("/api/partner/services", {
-        method: "POST",
-        body: serviceFormData,
-      })
-
-      if (!serviceRes.ok) {
-        const err = await serviceRes.json()
-        let baseMsg = err.message;
-        if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ");
-
-        let errorMsg = baseMsg || "Failed to create service";
-        if (!baseMsg && err.errors && typeof err.errors === 'object') {
-          const firstKey = Object.keys(err.errors)[0];
-          const firstError = (err.errors as Record<string, any>)[firstKey];
-          errorMsg = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`;
+      let serviceRes: Response | null = null
+      let lastServiceError = "Failed to create service"
+      const MAX_RETRIES = 3
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        if (attempt > 0) {
+          // Wait before retrying — gives Django time to propagate partner profile
+          await new Promise((r) => setTimeout(r, 2000))
         }
-        throw new Error(errorMsg)
+        serviceRes = await fetch("/api/partner/services", {
+          method: "POST",
+          body: serviceFormData,
+        })
+        if (serviceRes.ok) break
+
+        // Parse error for the last attempt's message
+        try {
+          const err = await serviceRes.json()
+          let baseMsg = err.message
+          if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ")
+
+          lastServiceError = baseMsg || "Failed to create service"
+          if (!baseMsg && err.errors && typeof err.errors === "object") {
+            const firstKey = Object.keys(err.errors)[0]
+            const firstError = (err.errors as Record<string, any>)[firstKey]
+            lastServiceError = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`
+          }
+        } catch {
+          lastServiceError = "Failed to create service"
+        }
+        console.warn(`Service creation attempt ${attempt + 1}/${MAX_RETRIES} failed, ${attempt < MAX_RETRIES - 1 ? "retrying..." : "giving up."}`)
+      }
+
+      if (!serviceRes || !serviceRes.ok) {
+        throw new Error(lastServiceError)
       }
 
       // All steps succeeded — move to verification

@@ -71,6 +71,17 @@ export async function POST(request: NextRequest) {
             body: djangoFormData,
         })
 
+        // Safety: check that the response is JSON before trying to parse
+        const contentType = response.headers.get("content-type") || ""
+        if (!contentType.includes("application/json")) {
+            const text = await response.text()
+            console.error("Service creation returned non-JSON:", response.status, text.slice(0, 200))
+            return NextResponse.json(
+                { message: `Server error (${response.status}). Please try again.` },
+                { status: response.status || 500 }
+            )
+        }
+
         const data = await response.json()
 
         if (!response.ok) {
