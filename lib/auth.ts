@@ -119,11 +119,14 @@ export async function isAuthenticated(): Promise<boolean> {
 
 // Get current user (server-side)
 export async function getCurrentUser(): Promise<User | null> {
-  const { user, accessToken } = await getTokensFromCookies()
+  // Use dynamic import to avoid circular dependency with api-server.ts
+  const { getValidToken } = await import("./api-server")
+  const token = await getValidToken()
 
-  if (!accessToken || isTokenExpired(accessToken)) {
+  if (!token) {
     return null
   }
 
+  const { user } = await getTokensFromCookies()
   return user
 }

@@ -70,14 +70,18 @@ export async function getValidToken(): Promise<string | null> {
 
                 return newToken
             }
+
+            if (res.status === 401) {
+                // Refresh token is truly invalid/expired — clear everything
+                cookieStore.delete(AUTH_COOKIE_NAME)
+                cookieStore.delete(REFRESH_COOKIE_NAME)
+                cookieStore.delete(USER_COOKIE_NAME)
+            }
+            // On other errors (500, 502, etc.) — keep cookies for retry
         } catch (err) {
+            // Network error — don't delete cookies, keep refresh token for retry
             console.error("Token refresh failed:", err)
         }
-
-        // Refresh failed — clear stale cookies
-        cookieStore.delete(AUTH_COOKIE_NAME)
-        cookieStore.delete(REFRESH_COOKIE_NAME)
-        cookieStore.delete(USER_COOKIE_NAME)
     }
 
     return null
