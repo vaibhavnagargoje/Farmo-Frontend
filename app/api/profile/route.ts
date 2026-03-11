@@ -79,6 +79,18 @@ export async function PATCH(request: NextRequest) {
       })
     }
 
+    // 1b. Save coordinates to UserLocation if provided
+    if (default_lat != null && default_lng != null) {
+      await apiRequest(API_ENDPOINTS.USER_LOCATION, {
+        method: "POST",
+        body: JSON.stringify({
+          latitude: default_lat,
+          longitude: default_lng,
+          address: address || "",
+        }),
+      })
+    }
+
     // 2. Update Partner Profile (Address/City) if exists
     let partnerData = null
     const partnerPayload: Record<string, unknown> = { ...otherData }

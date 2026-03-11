@@ -140,8 +140,7 @@ export interface Service {
   partner?: PartnerProfile
   is_available: boolean
   thumbnail?: string
-  location_lat?: string
-  location_lng?: string
+  partner_location?: { latitude: string; longitude: string; address: string } | null
   service_radius_km?: number
   specifications?: Record<string, string>
   images?: { id: number; image: string; is_thumbnail: boolean }[]

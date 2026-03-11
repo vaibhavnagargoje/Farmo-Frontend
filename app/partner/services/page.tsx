@@ -13,7 +13,7 @@ import {
 interface ServiceItem {
     id: number; title: string; description: string; price: string; price_unit: string
     category: number; category_name?: string; status: string; is_available: boolean
-    service_radius_km: number; location_lat: string | null; location_lng: string | null
+    service_radius_km: number
     images: { id: number; image: string; is_thumbnail: boolean }[]; created_at: string
 }
 interface CategoryOption { id: number; name: string; slug: string }

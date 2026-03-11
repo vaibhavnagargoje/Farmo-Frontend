@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         // Text fields
         const textFields = [
             "category", "title", "description", "price", "price_unit",
-            "location_lat", "location_lng", "service_radius_km"
+            "service_radius_km"
         ]
         for (const field of textFields) {
             const value = formData.get(field)

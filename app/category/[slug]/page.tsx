@@ -310,11 +310,11 @@ export default function CategoryServicesPage() {
 
   // ── Build service markers for the map ──
   const serviceMarkers: ServiceMarker[] = services
-    .filter((s) => s.location_lat && s.location_lng)
+    .filter((s) => s.partner_location?.latitude && s.partner_location?.longitude)
     .map((s) => ({
       id: s.id,
-      lat: parseFloat(s.location_lat!),
-      lng: parseFloat(s.location_lng!),
+      lat: parseFloat(s.partner_location!.latitude),
+      lng: parseFloat(s.partner_location!.longitude),
       title: s.title,
       partnerName: s.partner_name,
     }))
