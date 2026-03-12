@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
 const sidebarNavItems = [
     { icon: "dashboard", label: "Dashboard", href: "/partner", key: "dashboard" },
     { icon: "construction", label: "Manage Services", href: "/partner/services", key: "services" },
-    { icon: "account_balance_wallet", label: "Earnings", href: "/partner/earnings", key: "earnings" },
+    { icon: "account_balance_wallet", label: "Earnings", href: "/partner/earnings", key: "earnings", disabled: true },
     { icon: "person", label: "Profile", href: "/partner/profile", key: "profile" },
 ]
 
@@ -171,13 +171,21 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                     return (
                         <Link
                             key={item.key}
-                            href={item.href}
-                            onClick={onNavClick}
+                            href={item.disabled ? "#" : item.href}
+                            onClick={(e) => {
+                                if (item.disabled) {
+                                    e.preventDefault()
+                                    alert("Earnings feature is coming soon!")
+                                    return
+                                }
+                                onNavClick?.()
+                            }}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all group",
                                 active
                                     ? "text-navy bg-white shadow-md"
-                                    : "text-muted hover:bg-white hover:text-navy hover:shadow-md"
+                                    : "text-muted hover:bg-white hover:text-navy hover:shadow-md",
+                                item.disabled && "opacity-50 cursor-not-allowed"
                             )}
                         >
                             <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">

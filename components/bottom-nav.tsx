@@ -8,6 +8,7 @@ interface NavItem {
   href: string
   icon: string
   label: string
+  disabled?: boolean
 }
 
 const farmerNavItems: NavItem[] = [
@@ -20,7 +21,7 @@ const farmerNavItems: NavItem[] = [
 const partnerNavItems: NavItem[] = [
   { href: "/partner", icon: "dashboard", label: "Dashboard" },
   { href: "/partner/services", icon: "construction", label: "Services" },
-  { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings" },
+  { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings", disabled: true },
   { href: "/partner/profile", icon: "person", label: "Profile" },
 ]
 
@@ -42,10 +43,12 @@ export function BottomNav({ variant = "farmer" }: BottomNavProps) {
           return (
             <li key={item.href}>
               <Link
-                href={item.href}
+                href={item.disabled ? "#" : item.href}
+                onClick={item.disabled ? (e) => { e.preventDefault(); alert("Earnings feature is coming soon!"); } : undefined}
                 className={cn(
                   "flex flex-col items-center gap-1 w-16 transition-colors",
                   isActive ? "text-primary" : "text-muted hover:text-foreground",
+                  item.disabled && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <div className={cn("px-4 py-1 rounded-full transition-colors", isActive && "bg-primary/10")}>

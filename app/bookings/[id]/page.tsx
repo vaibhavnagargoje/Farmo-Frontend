@@ -15,10 +15,12 @@ import { cn } from "@/lib/utils"
 interface BookingDetail {
   id: number
   booking_id: string
-  booking_type: "SCHEDULED"
+  booking_type: "SCHEDULED" | "INSTANT"
   order_number: string | null
   status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
   payment_status: "PENDING" | "PAID" | "REFUNDED"
+  category_name?: string
+  price_unit: string
   service: {
     id: number
     title: string
@@ -27,14 +29,14 @@ interface BookingDetail {
     price_unit: string
     thumbnail?: string
     category_name?: string
-  }
+  } | null
   provider: {
     id: number
     full_name: string
     rating: string
     jobs_completed: number
     user_phone?: string
-  }
+  } | null
   scheduled_date: string
   scheduled_time: string
   work_started_at?: string
@@ -251,7 +253,7 @@ export default function BookingDetailsPage() {
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
               <div className="flex gap-6">
                 <div className="size-32 rounded-xl overflow-hidden shrink-0 bg-muted">
-                  {booking.service.thumbnail ? (
+                  {booking.service?.thumbnail ? (
                     <Image
                       src={booking.service.thumbnail}
                       alt={booking.service.title}
@@ -266,12 +268,14 @@ export default function BookingDetailsPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-primary font-semibold mb-1">{booking.service.category_name}</p>
-                  <h2 className="text-2xl font-bold text-foreground">{booking.service.title}</h2>
-                  <p className="text-muted mt-1">by {booking.provider.full_name}</p>
+                  <p className="text-sm text-primary font-semibold mb-1">{booking.service?.category_name || booking.category_name}</p>
+                  <h2 className="text-2xl font-bold text-foreground">{booking.service?.title || booking.category_name || "Instant Booking"}</h2>
+                  <p className="text-muted mt-1">
+                    by {booking.provider ? booking.provider.full_name : "Searching Provider..."}
+                  </p>
                   <div className="flex items-center gap-2 mt-3">
-                    <span className="text-2xl font-bold text-navy">₹{booking.service.price}</span>
-                    <span className="text-muted">{getPriceUnit(booking.service.price_unit)}</span>
+                    <span className="text-2xl font-bold text-navy">₹{booking.unit_price}</span>
+                    <span className="text-muted">{getPriceUnit(booking.price_unit)}</span>
                   </div>
                 </div>
               </div>
@@ -288,7 +292,7 @@ export default function BookingDetailsPage() {
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-background rounded-xl">
                   <span className="text-muted">Quantity</span>
-                  <span className="font-semibold text-foreground">{booking.quantity} {booking.service.price_unit === "HOUR" ? "Hours" : booking.service.price_unit === "ACRE" ? "Acres" : "Units"}</span>
+                  <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? "Hours" : booking.price_unit === "ACRE" ? "Acres" : "Units"}</span>
                 </div>
                 <div className="col-span-2 flex justify-between items-center py-3 px-4 bg-background rounded-xl">
                   <span className="text-muted">Location</span>
@@ -342,28 +346,35 @@ export default function BookingDetailsPage() {
             {/* Partner Info */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
               <h3 className="font-bold text-lg text-foreground mb-4">Service Provider</h3>
-              <div className="flex flex-col items-center gap-4">
-                <div className="size-20 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
-                  <span className="material-symbols-outlined text-3xl text-muted-foreground">person</span>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-foreground text-lg">{booking.provider.full_name}</p>
-                  <div className="flex items-center justify-center gap-1 mt-2">
-                    <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-sm font-bold">{booking.provider.rating || "New"}</span>
-                    <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+              {booking.provider ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="size-20 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
+                    <span className="material-symbols-outlined text-3xl text-muted-foreground">person</span>
                   </div>
+                  <div className="text-center">
+                    <p className="font-bold text-foreground text-lg">{booking.provider.full_name}</p>
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                      <span className="text-sm font-bold">{booking.provider.rating || "New"}</span>
+                      <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+                    </div>
+                  </div>
+                  {booking.provider.user_phone && (
+                    <a
+                      href={`tel:${booking.provider.user_phone}`}
+                      className="w-full h-11 rounded-xl bg-success/10 text-success flex items-center justify-center gap-2 font-medium hover:bg-success/20 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">call</span>
+                      Call Provider
+                    </a>
+                  )}
                 </div>
-                {booking.provider.user_phone && (
-                  <a
-                    href={`tel:${booking.provider.user_phone}`}
-                    className="w-full h-11 rounded-xl bg-success/10 text-success flex items-center justify-center gap-2 font-medium hover:bg-success/20 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">call</span>
-                    Call Provider
-                  </a>
-                )}
-              </div>
+              ) : (
+                <div className="text-center py-4">
+                  <span className="material-symbols-outlined text-3xl text-muted/50 mb-2">person_search</span>
+                  <p className="text-muted text-sm border border-dashed border-border rounded-xl py-3 bg-muted/10">We are finding the best provider near you.</p>
+                </div>
+              )}
             </div>
 
             {/* Payment Status */}
@@ -407,7 +418,7 @@ export default function BookingDetailsPage() {
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
           <div className="flex gap-4">
             <div className="size-20 rounded-xl overflow-hidden shrink-0 bg-muted">
-              {booking.service.thumbnail ? (
+              {booking.service?.thumbnail ? (
                 <Image
                   src={booking.service.thumbnail}
                   alt={booking.service.title}
@@ -422,9 +433,9 @@ export default function BookingDetailsPage() {
               )}
             </div>
             <div className="flex-1">
-              <p className="text-xs text-primary font-semibold">{booking.service.category_name}</p>
-              <h2 className="text-lg font-bold text-foreground">{booking.service.title}</h2>
-              <p className="text-sm text-muted">by {booking.provider.full_name}</p>
+              <p className="text-xs text-primary font-semibold">{booking.service?.category_name || booking.category_name}</p>
+              <h2 className="text-lg font-bold text-foreground">{booking.service?.title || booking.category_name || "Instant Booking"}</h2>
+              <p className="text-sm text-muted">by {booking.provider ? booking.provider.full_name : "Searching Provider..."}</p>
             </div>
           </div>
         </div>
@@ -439,7 +450,7 @@ export default function BookingDetailsPage() {
           </div>
           <div className="flex justify-between items-center py-2 border-b border-border">
             <span className="text-muted text-sm">Quantity</span>
-            <span className="font-semibold text-foreground">{booking.quantity} {booking.service.price_unit === "HOUR" ? "Hours" : "Units"}</span>
+            <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? "Hours" : "Units"}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-border">
             <span className="text-muted text-sm">Location</span>
@@ -472,27 +483,33 @@ export default function BookingDetailsPage() {
         {/* Provider Info */}
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
           <h3 className="font-bold text-foreground mb-3">Service Provider</h3>
-          <div className="flex items-center gap-4">
-            <div className="size-14 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
-              <span className="material-symbols-outlined text-2xl text-muted-foreground">person</span>
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-foreground">{booking.provider.full_name}</p>
-              <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                <span className="text-sm font-semibold">{booking.provider.rating || "New"}</span>
-                <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+          {booking.provider ? (
+            <div className="flex items-center gap-4">
+              <div className="size-14 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
+                <span className="material-symbols-outlined text-2xl text-muted-foreground">person</span>
               </div>
+              <div className="flex-1">
+                <p className="font-bold text-foreground">{booking.provider.full_name}</p>
+                <div className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                  <span className="text-sm font-semibold">{booking.provider.rating || "New"}</span>
+                  <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+                </div>
+              </div>
+              {booking.provider.user_phone && (
+                <a
+                  href={`tel:${booking.provider.user_phone}`}
+                  className="size-12 rounded-full bg-success/10 text-success flex items-center justify-center"
+                >
+                  <span className="material-symbols-outlined">call</span>
+                </a>
+              )}
             </div>
-            {booking.provider.user_phone && (
-              <a
-                href={`tel:${booking.provider.user_phone}`}
-                className="size-12 rounded-full bg-success/10 text-success flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined">call</span>
-              </a>
-            )}
-          </div>
+          ) : (
+            <div className="text-center py-2">
+              <p className="text-muted text-sm">Searching for a provider...</p>
+            </div>
+          )}
         </div>
       </main>
 

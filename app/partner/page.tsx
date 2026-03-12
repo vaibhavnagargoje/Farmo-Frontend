@@ -692,7 +692,7 @@ function BookingDetailModal({
     : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
@@ -893,11 +893,12 @@ function BookingDetailModal({
               </button>
             </div>
           )}
+          <div className="h-6 sm:h-0" /> {/* Extra spacing for mobile */}
         </div>
 
         {/* ─── Footer Actions ─── */}
         {isWaiting && (
-          <div className="sticky bottom-0 bg-card border-t border-border px-4 sm:px-5 py-3">
+          <div className="sticky bottom-0 bg-card border-t border-border px-4 sm:px-5 py-3 pb-8 sm:pb-3">
             <div className="flex gap-3">
               {booking.type === "instant" && booking.instant_request_id ? (
                 <>

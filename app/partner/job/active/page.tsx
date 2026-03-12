@@ -357,7 +357,7 @@ export default function ActiveJobPage() {
           </div>
 
           {/* Slide to End */}
-          <div className="pt-2 pb-4">
+          <div className="pt-2 pb-8 sm:pb-4">
             <Link
               href="/partner"
               className="relative w-full h-16 bg-primary rounded-full overflow-hidden shadow-lg shadow-primary/30 group cursor-pointer select-none flex items-center"
