@@ -43,8 +43,14 @@ export async function getValidToken(): Promise<string | null> {
     const accessToken = cookieStore.get(AUTH_COOKIE_NAME)?.value
     const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value
 
-    // No tokens at all
-    if (!accessToken && !refreshToken) return null
+    // No tokens at all — clean up stale user cookie if it exists
+    if (!accessToken && !refreshToken) {
+        const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
+        if (userCookie) {
+            cookieStore.delete(USER_COOKIE_NAME)
+        }
+        return null
+    }
 
     // Access token is still valid
     if (accessToken && !isTokenExpired(accessToken)) return accessToken

@@ -64,6 +64,13 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
         }
     }, [isAuthenticated, authLoading, fetchProfile])
 
+    // Redirect unauthenticated users (must be in useEffect, not during render)
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push("/auth?redirect=/partner")
+        }
+    }, [authLoading, isAuthenticated, router])
+
     // Switch online status toggle to API
 
 
@@ -101,9 +108,8 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
         )
     }
 
-    // Not authenticated
+    // Not authenticated — useEffect above handles the redirect
     if (!isAuthenticated) {
-        router.push("/auth?redirect=/partner")
         return null
     }
 

@@ -5,7 +5,8 @@ export const API_ENDPOINTS = {
   // Auth
   SEND_OTP: `${API_BASE_URL}/users/auth/send-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/users/auth/verify-otp/`,
-  TOKEN_REFRESH: `${API_BASE_URL}/users/auth/token/refresh/`,
+  // Token refresh is at /api/token/refresh/ (not under /api/v1/)
+  TOKEN_REFRESH: `${API_BASE_URL?.replace('/api/v1', '/api')}/token/refresh/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
 
   // Location (moved to locations app)

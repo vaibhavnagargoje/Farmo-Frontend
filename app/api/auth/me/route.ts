@@ -8,6 +8,11 @@ export async function GET() {
     const token = await getValidToken()
 
     if (!token) {
+      // No valid token — clean up the stale farmo_user cookie so the client
+      // doesn't show a "ghost" logged-in state.
+      const cookieStore = await cookies()
+      cookieStore.delete(USER_COOKIE_NAME)
+
       return NextResponse.json(
         { message: "Not authenticated", user: null },
         { status: 401 }

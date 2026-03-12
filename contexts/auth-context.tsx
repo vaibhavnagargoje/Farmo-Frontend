@@ -75,21 +75,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json()
         setUser(data.user)
       } else if (response.status === 401) {
-        // Only clear user on explicit 401 (truly not authenticated)
-        // AND if we do not have a valid user cookie (prevents aggressive logouts on mobile network delays)
-        if (!cookieUser) {
-          setUser(null)
-        }
+        // Server explicitly says not authenticated — clear user state.
+        // The farmo_user cookie is just a UI cache; the server is the source of truth.
+        setUser(null)
       }
-      // On other errors (500, 502, etc.), keep the cookie-based user
-      // This prevents transient backend issues from logging users out
+      // On other errors (500, 502, etc.), keep the cookie-based user.
+      // This prevents transient backend issues from logging users out.
     } catch (error) {
       // Network error / timeout — keep cookie-based user if we have one
       // Only clear if we never had a user at all
       if (!userRef.current) {
         setUser(null)
       }
-      console.error("Auth check failed:", error)
+      // Don't log abort errors (normal when component unmounts or timeout)
+      if (error instanceof DOMException && error.name === "AbortError") {
+        // Silently ignore — the request was intentionally cancelled
+      } else {
+        console.warn("Auth check failed:", error)
+      }
     } finally {
       setIsLoading(false)
     }

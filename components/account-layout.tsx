@@ -56,6 +56,13 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
         }
     }, [isAuthenticated, authLoading])
 
+    // Redirect unauthenticated users (must be in useEffect, not during render)
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push(`/auth?redirect=${pathname}`)
+        }
+    }, [authLoading, isAuthenticated, router, pathname])
+
 
 
     const handleLogout = async () => {
@@ -77,8 +84,8 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
     }
 
     // Not authenticated
+    // Not authenticated — useEffect above handles the redirect
     if (!isAuthenticated) {
-        router.push(`/auth?redirect=${pathname}`)
         return null
     }
 
