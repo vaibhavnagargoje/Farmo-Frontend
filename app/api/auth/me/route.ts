@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { USER_COOKIE_NAME } from "@/lib/auth"
-import { getValidToken } from "@/lib/api-server"
+import { USER_COOKIE_NAME, cookieOptions } from "@/lib/auth"
+import { getValidToken, apiRequest } from "@/lib/api-server"
+import { API_ENDPOINTS } from "@/lib/api"
 
 export async function GET() {
   try {
@@ -19,22 +20,42 @@ export async function GET() {
       )
     }
 
-    // Parse user from cookie
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
-
-    let user = null
-    if (userCookie) {
-      try {
-        user = JSON.parse(userCookie)
-      } catch {
-        user = null
-      }
+    // Actually fetch from Django backend
+    const { response } = await apiRequest(API_ENDPOINTS.USER_PROFILE)
+    
+    if (!response || !response.ok) {
+       const cookieStore = await cookies()
+       cookieStore.delete(USER_COOKIE_NAME)
+       return NextResponse.json(
+          { message: "Not authenticated", user: null },
+          { status: 401 }
+       )
     }
+
+    const data = await response.json()
+    const user = data.user || data // depending on how your backend serializes it
+
+    // Map common fields correctly from DRF
+    const normalizedUser = {
+      id: user.id || user.user_id,
+      phone_number: user.phone_number || user.phone,
+      email: user.email,
+      role: user.role,
+      full_name: user.full_name || user.name,
+      is_active: user.is_active,
+    }
+
+    // Refresh the local cookie with fresh data from backend
+    const cookieStore = await cookies()
+    cookieStore.set(USER_COOKIE_NAME, JSON.stringify(normalizedUser), {
+        ...cookieOptions,
+        httpOnly: false, // Allow client to read user info
+        maxAge: 7 * 24 * 60 * 60, // Match REFRESH_TOKEN_MAX_AGE
+    })
 
     return NextResponse.json({
       message: "Authenticated",
-      user,
+      user: normalizedUser,
     })
   } catch (error) {
     console.error("Auth check error:", error)

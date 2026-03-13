@@ -7,7 +7,7 @@ import { API_ENDPOINTS, type Category } from "@/lib/api"
 async function getCategories(): Promise<Category[]> {
   try {
     const res = await fetch(API_ENDPOINTS.CATEGORIES, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     })
     if (!res.ok) return []
     const data = await res.json()

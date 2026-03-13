@@ -120,6 +120,16 @@ export async function apiRequest(
         },
     })
 
+    // If backend rejects the token even after getValidToken allowed it,
+    // explicitly clear the cookies so the user is logged out.
+    if (response.status === 401) {
+        const cookieStore = await cookies()
+        cookieStore.delete(AUTH_COOKIE_NAME)
+        cookieStore.delete(REFRESH_COOKIE_NAME)
+        cookieStore.delete(USER_COOKIE_NAME)
+        return { response: null, token: null }
+    }
+
     return { response, token }
 }
 
@@ -131,6 +141,7 @@ export async function publicApiRequest(
     options: RequestInit = {}
 ): Promise<Response> {
     return fetch(url, {
+        cache: "no-store",
         ...options,
         headers: {
             "Content-Type": "application/json",
