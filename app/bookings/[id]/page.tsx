@@ -81,41 +81,84 @@ export default function BookingDetailsPage() {
   const [error, setError] = useState<string | null>(null)
   const [showOTP, setShowOTP] = useState(false)
 
+  // Cancel state
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
+  const isCancellable = booking?.status === "PENDING" || booking?.status === "SEARCHING" || booking?.status === "CONFIRMED"
+
   // Fetch booking details
-  useEffect(() => {
-    const fetchBooking = async () => {
-      if (!bookingId) return
+  const fetchBooking = async () => {
+    if (!bookingId) return
 
-      setIsLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
-      try {
-        const res = await fetch(`/api/bookings/${bookingId}`, {
-          method: "GET",
-          credentials: "include",
-        })
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}`, {
+        method: "GET",
+        credentials: "include",
+      })
 
-        const data = await res.json()
+      const data = await res.json()
 
-        if (res.ok && data.success) {
-          setBooking(data.booking)
-        } else if (res.status === 401) {
-          setError("Please login to view this booking")
-        } else {
-          setError(data.message || "Booking not found")
-        }
-      } catch (err) {
-        console.error("Error fetching booking:", err)
-        setError("Unable to load booking details")
-      } finally {
-        setIsLoading(false)
+      if (res.ok && data.success) {
+        setBooking(data.booking)
+      } else if (res.status === 401) {
+        setError("Please login to view this booking")
+      } else {
+        setError(data.message || "Booking not found")
       }
+    } catch (err) {
+      console.error("Error fetching booking:", err)
+      setError("Unable to load booking details")
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     if (!authLoading) {
       fetchBooking()
     }
   }, [bookingId, authLoading])
+
+  // Cancel booking handler
+  const handleCancelBooking = async () => {
+    if (cancelReason.trim().length < 10) {
+      setCancelError("Please provide a reason (at least 10 characters)")
+      return
+    }
+
+    setIsCancelling(true)
+    setCancelError(null)
+
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        setShowCancelModal(false)
+        setCancelReason("")
+        fetchBooking() // Refresh booking data
+      } else {
+        setCancelError(data.message || "Failed to cancel booking")
+      }
+    } catch (err) {
+      console.error("Cancel error:", err)
+      setCancelError("Something went wrong. Please try again.")
+    } finally {
+      setIsCancelling(false)
+    }
+  }
 
   // Format date for display
   const formatDate = (dateStr: string, timeStr?: string) => {
@@ -329,15 +372,33 @@ export default function BookingDetailsPage() {
               </div>
             )}
 
-            {/* Completion OTP for In-Progress */}
-            {booking.status === "IN_PROGRESS" && (
+            {/* End OTP for In-Progress */}
+            {booking.status === "IN_PROGRESS" && booking.end_job_otp && booking.end_job_otp !== "****" && (
               <div className="bg-success/5 border-2 border-success/20 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="material-symbols-outlined text-success text-2xl">verified</span>
-                  <h3 className="font-bold text-lg text-foreground">Job In Progress</h3>
+                  <h3 className="font-bold text-lg text-foreground">End OTP — Job In Progress</h3>
                 </div>
-                <p className="text-muted text-sm">The service provider has started working on your booking. You will receive a completion OTP when the job is done.</p>
+                <p className="text-muted text-sm mb-3">Share this OTP with the service provider to mark the job as completed</p>
+                <div className="flex justify-center gap-2">
+                  {booking.end_job_otp.split("").map((digit, i) => (
+                    <div key={i} className="size-14 bg-white rounded-xl flex items-center justify-center text-2xl font-bold text-success border border-success/20">
+                      {digit}
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Cancel Button — Desktop */}
+            {isCancellable && (
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="w-full py-3 rounded-xl border-2 border-destructive/30 text-destructive font-semibold hover:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px]">cancel</span>
+                Cancel Booking
+              </button>
             )}
           </div>
 
@@ -462,7 +523,7 @@ export default function BookingDetailsPage() {
           </div>
         </div>
 
-        {/* OTP Section */}
+        {/* Start OTP Section */}
         {booking.status === "CONFIRMED" && booking.start_job_otp && (
           <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -478,6 +539,35 @@ export default function BookingDetailsPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* End OTP Section — Mobile */}
+        {booking.status === "IN_PROGRESS" && booking.end_job_otp && booking.end_job_otp !== "****" && (
+          <div className="bg-success/5 border-2 border-success/20 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-success">verified</span>
+              <h3 className="font-bold text-foreground">End OTP — Job In Progress</h3>
+            </div>
+            <p className="text-muted text-xs mb-3">Share with provider to complete the job</p>
+            <div className="flex justify-center gap-2">
+              {booking.end_job_otp.split("").map((digit, i) => (
+                <div key={i} className="size-12 bg-white rounded-xl flex items-center justify-center text-xl font-bold text-success border border-success/20">
+                  {digit}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cancel Button — Mobile */}
+        {isCancellable && (
+          <button
+            onClick={() => setShowCancelModal(true)}
+            className="w-full py-3 rounded-xl border-2 border-destructive/30 text-destructive font-semibold active:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[20px]">cancel</span>
+            Cancel Booking
+          </button>
         )}
 
         {/* Provider Info */}
@@ -517,6 +607,75 @@ export default function BookingDetailsPage() {
 
       {showOTP && booking.start_job_otp && (
         <OTPModal code={booking.start_job_otp} isOpen={showOTP} onDismiss={() => setShowOTP(false)} />
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="size-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-destructive text-2xl">warning</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-foreground">Cancel Booking?</h3>
+                <p className="text-sm text-muted">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm font-medium text-foreground mb-2 block">Reason for cancellation</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => {
+                  setCancelReason(e.target.value)
+                  if (cancelError) setCancelError(null)
+                }}
+                placeholder="Please tell us why you want to cancel (min 10 characters)..."
+                className="w-full h-24 px-4 py-3 bg-background border border-border rounded-xl text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+              {cancelError && (
+                <p className="text-destructive text-xs mt-1.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">error</span>
+                  {cancelError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false)
+                  setCancelReason("")
+                  setCancelError(null)
+                }}
+                disabled={isCancelling}
+                className="flex-1 py-3 rounded-xl border border-border text-foreground font-semibold hover:bg-muted/50 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={isCancelling || cancelReason.trim().length < 10}
+                className={cn(
+                  "flex-1 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2",
+                  cancelReason.trim().length >= 10
+                    ? "bg-destructive text-white hover:bg-destructive/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {isCancelling ? (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    Cancelling...
+                  </>
+                ) : (
+                  "Confirm Cancel"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

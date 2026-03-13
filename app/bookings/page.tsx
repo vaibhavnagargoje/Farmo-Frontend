@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
+
 // Booking type from backend
 interface BookingItem {
   id: number
@@ -66,6 +67,13 @@ function BookingsPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [searchingToast, setSearchingToast] = useState(false)
 
+  // Cancel state
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
   const isNewBooking = searchParams.get("success") === "true"
   const newBookingId = searchParams.get("booking_id")
 
@@ -115,6 +123,54 @@ function BookingsPageContent() {
     }
     router.push(`/bookings/${booking.booking_id}`)
   }
+
+  // Open cancel modal
+  const openCancelModal = (e: React.MouseEvent, bookingId: string) => {
+    e.stopPropagation()
+    setCancelBookingId(bookingId)
+    setCancelReason("")
+    setCancelError(null)
+    setShowCancelModal(true)
+  }
+
+  // Cancel booking handler
+  const handleCancelBooking = async () => {
+    if (!cancelBookingId || cancelReason.trim().length < 10) {
+      setCancelError("Please provide a reason (at least 10 characters)")
+      return
+    }
+
+    setIsCancelling(true)
+    setCancelError(null)
+
+    try {
+      const res = await fetch(`/api/bookings/${cancelBookingId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        setShowCancelModal(false)
+        setCancelBookingId(null)
+        setCancelReason("")
+        fetchBookings() // Refresh list
+      } else {
+        setCancelError(data.message || "Failed to cancel booking")
+      }
+    } catch (err) {
+      console.error("Cancel error:", err)
+      setCancelError("Something went wrong. Please try again.")
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
+  const isCancellable = (status: string) =>
+    status === "PENDING" || status === "SEARCHING" || status === "CONFIRMED"
 
   // Format date
   const formatDate = (dateStr: string, timeStr?: string) => {
@@ -263,25 +319,106 @@ function BookingsPageContent() {
                   <span className="text-xs text-muted">
                     {booking.order_number ? booking.order_number : `#${booking.booking_id}`}
                   </span>
-                  {booking.status === "SEARCHING" ? (
-                    <div className="flex items-center gap-1 text-muted text-sm">
-                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                      <span>Processing</span>
-                    </div>
-                  ) : isBlocked ? (
-                    <div className="flex items-center gap-1 text-muted text-sm">
-                      <span>{status.label}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-primary text-sm font-medium">
-                      <span>View Details</span>
-                      <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isCancellable(booking.status) && (
+                      <button
+                        onClick={(e) => openCancelModal(e, booking.booking_id)}
+                        className="flex items-center gap-1 text-destructive/70 hover:text-destructive text-xs font-medium px-2 py-1 rounded-lg hover:bg-destructive/5 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">close</span>
+                        Cancel
+                      </button>
+                    )}
+                    {booking.status === "SEARCHING" ? (
+                      <div className="flex items-center gap-1 text-muted text-sm">
+                        <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        <span>Processing</span>
+                      </div>
+                    ) : isBlocked ? (
+                      <div className="flex items-center gap-1 text-muted text-sm">
+                        <span>{status.label}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-primary text-sm font-medium">
+                        <span>View Details</span>
+                        <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="size-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-destructive text-2xl">warning</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-foreground">Cancel Booking?</h3>
+                <p className="text-sm text-muted">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm font-medium text-foreground mb-2 block">Reason for cancellation</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => {
+                  setCancelReason(e.target.value)
+                  if (cancelError) setCancelError(null)
+                }}
+                placeholder="Please tell us why you want to cancel (min 10 characters)..."
+                className="w-full h-24 px-4 py-3 bg-background border border-border rounded-xl text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+              {cancelError && (
+                <p className="text-destructive text-xs mt-1.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">error</span>
+                  {cancelError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false)
+                  setCancelBookingId(null)
+                  setCancelReason("")
+                  setCancelError(null)
+                }}
+                disabled={isCancelling}
+                className="flex-1 py-3 rounded-xl border border-border text-foreground font-semibold hover:bg-muted/50 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={isCancelling || cancelReason.trim().length < 10}
+                className={cn(
+                  "flex-1 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2",
+                  cancelReason.trim().length >= 10
+                    ? "bg-destructive text-white hover:bg-destructive/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {isCancelling ? (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    Cancelling...
+                  </>
+                ) : (
+                  "Confirm Cancel"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AccountLayout>
