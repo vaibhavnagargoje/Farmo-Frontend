@@ -45,6 +45,51 @@ export default function ManageServicesPage() {
     const [newService, setNewService] = useState({ category: "", title: "", description: "", price: "", price_unit: "HOUR", service_radius_km: "10" })
     const [newImages, setNewImages] = useState<File[]>([])
 
+    // Image compression utility (same as onboarding)
+    const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            // If already small enough, skip compression
+            if (file.size <= 500 * 1024) {
+                resolve(file)
+                return
+            }
+
+            const img = new window.Image()
+            img.onload = () => {
+                const canvas = document.createElement("canvas")
+                let { width, height } = img
+                if (width > maxSize || height > maxSize) {
+                    if (width > height) {
+                        height = Math.round((height * maxSize) / width)
+                        width = maxSize
+                    } else {
+                        width = Math.round((width * maxSize) / height)
+                        height = maxSize
+                    }
+                }
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext("2d")
+                if (!ctx) { resolve(file); return }
+                ctx.drawImage(img, 0, 0, width, height)
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { resolve(file); return }
+                        const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+                            type: "image/jpeg",
+                            lastModified: Date.now(),
+                        })
+                        resolve(compressed)
+                    },
+                    "image/jpeg",
+                    quality
+                )
+            }
+            img.onerror = () => resolve(file)
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
     useEffect(() => { fetchServices(); fetchCategories() }, [])
     useEffect(() => { if (message) { const t = setTimeout(() => setMessage(null), 4000); return () => clearTimeout(t) } }, [message])
 
@@ -71,9 +116,45 @@ export default function ManageServicesPage() {
         if (!newService.category || !newService.title || !newService.price) { setMessage({ type: "error", text: "Fill required fields" }); return }
         setActionLoading(true)
         try {
-            const fd = new FormData(); fd.append("category", newService.category); fd.append("title", newService.title); fd.append("description", newService.description); fd.append("price", newService.price); fd.append("price_unit", newService.price_unit); fd.append("service_radius_km", newService.service_radius_km); for (const img of newImages) fd.append("images", img)
-            const r = await fetch("/api/partner/services", { method: "POST", body: fd }); if (r.ok) { setMessage({ type: "success", text: "Added" }); setShowAddForm(false); setNewService({ category: "", title: "", description: "", price: "", price_unit: "HOUR", service_radius_km: "10" }); setNewImages([]); fetchServices() } else { const e = await r.json(); setMessage({ type: "error", text: e.message || "Failed" }) }
-        } catch { setMessage({ type: "error", text: "Failed" }) } finally { setActionLoading(false) }
+            const fd = new FormData()
+            fd.append("category", newService.category)
+            fd.append("title", newService.title)
+            fd.append("description", newService.description)
+            fd.append("price", newService.price)
+            fd.append("price_unit", newService.price_unit)
+            fd.append("service_radius_km", newService.service_radius_km)
+
+            // Compress images before uploading
+            for (const img of newImages) {
+                try {
+                    const compressed = await compressImage(img)
+                    fd.append("images", compressed)
+                } catch {
+                    fd.append("images", img) // fallback to original
+                }
+            }
+
+            const r = await fetch("/api/partner/services", { method: "POST", body: fd })
+            if (r.ok) {
+                setMessage({ type: "success", text: "Service added successfully!" })
+                setShowAddForm(false)
+                setNewService({ category: "", title: "", description: "", price: "", price_unit: "HOUR", service_radius_km: "10" })
+                setNewImages([])
+                fetchServices()
+            } else {
+                const e = await r.json().catch(() => ({ message: "Server error" }))
+                // Surface actual validation errors from backend
+                let errorText = e.message || "Failed to add service"
+                if (e.errors && typeof e.errors === "object") {
+                    const firstError = Object.entries(e.errors).find(([k]) => k !== "message")
+                    if (firstError) {
+                        const [field, msgs] = firstError
+                        errorText = `${field}: ${Array.isArray(msgs) ? msgs[0] : msgs}`
+                    }
+                }
+                setMessage({ type: "error", text: errorText })
+            }
+        } catch { setMessage({ type: "error", text: "Network error. Please try again." }) } finally { setActionLoading(false) }
     }
     const getPriceUnitLabel = (u: string) => priceUnits.find(x => x.value === u)?.label || u
 

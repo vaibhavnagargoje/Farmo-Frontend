@@ -528,7 +528,7 @@ function WaitingBookingCard({
                 ? "bg-purple-100 text-purple-700"
                 : "bg-blue-100 text-blue-700"
                 }`}>
-                {booking.booking_type === "INSTANT" ? "⚡ Instant" : "📅 Scheduled"}
+                {/* {booking.booking_type === "INSTANT" ? "Instant" : "📅 Scheduled"} */}
               </span>
             </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -612,7 +612,7 @@ function AcceptedBookingCard({
             )}
             {booking.booking_type === "INSTANT" && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 shrink-0">
-                ⚡ Instant
+                 Instant
               </span>
             )}
           </div>
@@ -718,7 +718,7 @@ function BookingDetailModal({
                     ? "bg-purple-100 text-purple-700"
                     : "bg-blue-100 text-blue-700"
                     }`}>
-                    {booking.booking_type === "INSTANT" ? "⚡ Instant" : "📅 Scheduled"}
+                    {booking.booking_type === "INSTANT" ? "Instant" : "📅 Scheduled"}
                   </span>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isWaiting ? "bg-amber-100 text-amber-700" :
                     isConfirmed ? "bg-green-100 text-green-700" :
