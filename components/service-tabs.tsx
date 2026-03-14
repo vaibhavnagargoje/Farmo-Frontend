@@ -75,7 +75,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                     <section className="pb-6">
                         {categories.length > 0 ? (
                             <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
-                                {categories.slice(0, 6).map((category) => {
+                                {categories.slice(0, 9).map((category) => {
                                     const image = getCategoryImage(category.slug)
                                     return (
                                         <Link
