@@ -67,24 +67,21 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
             {activeTab === "equipment" && (
                 <>
                     {/* Section Header */}
-                    <div className="flex items-center justify-between px-4 lg:px-6 pb-3">
+                    <div className="flex items-center justify-between px-4 lg:px-6 pb-4">
                         <h2 className="text-base lg:text-xl font-bold text-foreground">All Categories</h2>
-                        <Link href="/categories" className="text-primary text-sm font-semibold hover:underline">
-                            View All
-                        </Link>
                     </div>
 
-                    {/* Equipment Categories Row */}
+                    {/* Equipment Categories Grid */}
                     <section className="pb-6">
                         {categories.length > 0 ? (
-                            <div className="flex overflow-x-auto gap-3 lg:gap-4 px-4 lg:px-6 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                {categories.map((category) => {
+                            <div className="grid grid-cols-3 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
+                                {categories.slice(0, 9).map((category) => {
                                     const image = getCategoryImage(category.slug)
                                     return (
                                         <Link
                                             key={category.id}
                                             href={`/category/${category.slug}`}
-                                            className="flex-none w-[130px] sm:w-[150px] lg:w-[180px] group flex flex-col overflow-hidden rounded-sm bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                                            className="group flex flex-col overflow-hidden rounded-md bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                                         >
                                             <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted/20">
                                                 <Image
@@ -94,8 +91,8 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             </div>
-                                            <div className="px-3 py-2.5 lg:px-4 lg:py-3 flex flex-col justify-center">
-                                                <h3 className="text-foreground text-[13px] lg:text-sm font-semibold leading-tight truncate text-left w-full pl-0.5">
+                                            <div className="px-2 py-2.5 lg:px-4 lg:py-3 flex flex-col justify-center items-center">
+                                                <h3 className="text-foreground text-[12px] md:text-sm font-semibold leading-tight text-center w-full">
                                                     {category.name}
                                                 </h3>
                                             </div>
@@ -104,17 +101,23 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                 })}
                             </div>
                         ) : (
-                            <div className="flex overflow-x-auto gap-3 lg:gap-4 px-4 lg:px-6 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                {[1, 2, 3, 4, 5, 6].map((i) => (
-                                    <div key={i} className="flex-none w-[130px] sm:w-[150px] lg:w-[180px] rounded-sm overflow-hidden bg-card border border-border animate-pulse">
+                            <div className="grid grid-cols-3 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="rounded-md overflow-hidden bg-card border border-border animate-pulse">
                                         <div className="w-full aspect-[4/3] bg-muted/30" />
                                         <div className="px-3 py-2.5 lg:px-4 lg:py-3">
-                                            <div className="h-4 bg-muted/30 rounded w-3/4 ml-0.5" />
+                                            <div className="h-4 bg-muted/30 rounded w-3/4 mx-auto" />
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
+                        
+                        <div className="flex items-center justify-center mt-6">
+                            <Link href="/categories" className="px-8 py-2.5 rounded-lg border border-border text-sm font-bold text-foreground hover:bg-muted/50 transition-colors shadow-sm">
+                                View All
+                            </Link>
+                        </div>
                     </section>
 
                     {/* How It Works */}
