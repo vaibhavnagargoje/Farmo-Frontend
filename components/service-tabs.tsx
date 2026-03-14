@@ -74,8 +74,8 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                     {/* Equipment Categories Grid */}
                     <section className="pb-6">
                         {categories.length > 0 ? (
-                            <div className="grid grid-cols-3 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
-                                {categories.slice(0, 9).map((category) => {
+                            <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
+                                {categories.slice(0, 6).map((category) => {
                                     const image = getCategoryImage(category.slug)
                                     return (
                                         <Link
@@ -101,8 +101,8 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                 })}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-3 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
-                                {[1, 2, 3].map((i) => (
+                            <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
+                                {[1, 2, 3, 4, 5, 6].map((i) => (
                                     <div key={i} className="rounded-md overflow-hidden bg-card border border-border animate-pulse">
                                         <div className="w-full aspect-[4/3] bg-muted/30" />
                                         <div className="px-3 py-2.5 lg:px-4 lg:py-3">
