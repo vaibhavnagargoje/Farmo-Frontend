@@ -1,62 +1,80 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
 
-interface Notification {
-  id: string
+interface ApiNotification {
+  id: number
   title: string
   message: string
-  time: string
-  read: boolean
-  type: "booking" | "payment" | "system" | "promo"
+  is_read: boolean
+  booking_id: string | null
+  created_at: string
 }
 
-const farmerNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Welcome to Farmo!",
-    message: "We're glad to have you here. Explore services and start booking today.",
-    time: "Just now",
-    read: false,
-    type: "system",
-  },
-]
+function timeAgo(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-const partnerNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Welcome to Farmo!",
-    message: "We're glad to have you here. Manage your services and start earning.",
-    time: "Just now",
-    read: false,
-    type: "system",
-  },
-]
-
-const getIconForType = (type: Notification["type"]) => {
-  switch (type) {
-    case "booking":
-      return { icon: "calendar_month", bg: "bg-blue-50", color: "text-blue-600" }
-    case "payment":
-      return { icon: "account_balance_wallet", bg: "bg-green-50", color: "text-green-600" }
-    case "system":
-      return { icon: "info", bg: "bg-gray-50", color: "text-gray-600" }
-    case "promo":
-      return { icon: "local_offer", bg: "bg-orange-50", color: "text-orange-600" }
-  }
+  if (seconds < 60) return "Just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
 }
 
-interface NotificationDropdownProps {
-  variant?: "farmer" | "partner"
+function getIconForTitle(title: string) {
+  const lower = title.toLowerCase()
+  if (lower.includes("confirm") || lower.includes("accept"))
+    return { icon: "check_circle", bg: "bg-green-50", color: "text-green-600" }
+  if (lower.includes("payment") || lower.includes("paid"))
+    return { icon: "account_balance_wallet", bg: "bg-blue-50", color: "text-blue-600" }
+  if (lower.includes("job") || lower.includes("booking") || lower.includes("new"))
+    return { icon: "work", bg: "bg-orange-50", color: "text-orange-600" }
+  if (lower.includes("cancel"))
+    return { icon: "cancel", bg: "bg-red-50", color: "text-red-600" }
+  if (lower.includes("complete"))
+    return { icon: "task_alt", bg: "bg-emerald-50", color: "text-emerald-600" }
+  return { icon: "notifications", bg: "bg-gray-50", color: "text-gray-600" }
 }
 
-export function NotificationDropdown({ variant = "farmer" }: NotificationDropdownProps) {
+export function NotificationDropdown() {
+  const { isAuthenticated } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<ApiNotification[]>([])
+  const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const notifications = variant === "partner" ? partnerNotifications : farmerNotifications
-  const unreadCount = notifications.filter((n) => !n.read).length
 
+  const unreadCount = notifications.filter((n) => !n.is_read).length
+
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) return
+    setIsLoading(true)
+    try {
+      const res = await fetch("/api/notifications", { credentials: "include" })
+      if (res.ok) {
+        const data = await res.json()
+        setNotifications(Array.isArray(data) ? data : data.results ?? [])
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [isAuthenticated])
+
+  // Fetch when dropdown opens
+  useEffect(() => {
+    if (isOpen) fetchNotifications()
+  }, [isOpen, fetchNotifications])
+
+  // Close on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -66,6 +84,37 @@ export function NotificationDropdown({ variant = "farmer" }: NotificationDropdow
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  const markAllRead = async () => {
+    try {
+      const res = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+        credentials: "include",
+      })
+      if (res.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+      }
+    } catch (err) {
+      console.error("Failed to mark all as read:", err)
+    }
+  }
+
+  const markSingleRead = async (id: number) => {
+    try {
+      await fetch(`/api/notifications/${id}/read`, {
+        method: "POST",
+        credentials: "include",
+      })
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      )
+    } catch (err) {
+      console.error("Failed to mark notification read:", err)
+    }
+  }
+
+  // Show max 5 notifications in dropdown
+  const displayNotifications = notifications.slice(0, 5)
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -77,7 +126,7 @@ export function NotificationDropdown({ variant = "farmer" }: NotificationDropdow
         <span className="material-symbols-outlined text-[20px]">notifications</span>
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 size-5 bg-destructive text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            {unreadCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
@@ -95,44 +144,69 @@ export function NotificationDropdown({ variant = "farmer" }: NotificationDropdow
                 </span>
               )}
             </div>
-            <button className="text-primary text-sm font-semibold hover:underline">Mark all read</button>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                className="text-primary text-sm font-semibold hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
           </div>
 
           {/* Notifications List */}
           <div className="max-h-[60vh] lg:max-h-[400px] overflow-y-auto">
-            {notifications.map((notification) => {
-              const { icon, bg, color } = getIconForType(notification.type)
-              return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "flex gap-4 px-5 py-4 hover:bg-muted/30 transition-colors cursor-pointer border-b border-border last:border-0",
-                    !notification.read && "bg-primary/5"
-                  )}
-                >
-                  <div className={cn("size-10 rounded-full flex items-center justify-center shrink-0", bg, color)}>
-                    <span className="material-symbols-outlined text-[20px]">{icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={cn("font-semibold text-sm", !notification.read ? "text-foreground" : "text-muted-foreground")}>
-                        {notification.title}
-                      </p>
-                      {!notification.read && <span className="size-2 bg-primary rounded-full shrink-0 mt-1.5"></span>}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="material-symbols-outlined text-3xl text-muted animate-spin">progress_activity</span>
+              </div>
+            ) : displayNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center px-5">
+                <span className="material-symbols-outlined text-4xl text-muted mb-2">notifications_off</span>
+                <p className="text-sm text-muted">No notifications yet</p>
+              </div>
+            ) : (
+              displayNotifications.map((notification) => {
+                const { icon, bg, color } = getIconForTitle(notification.title)
+                return (
+                  <div
+                    key={notification.id}
+                    onClick={() => {
+                      if (!notification.is_read) markSingleRead(notification.id)
+                    }}
+                    className={cn(
+                      "flex gap-4 px-5 py-4 hover:bg-muted/30 transition-colors cursor-pointer border-b border-border last:border-0",
+                      !notification.is_read && "bg-primary/5"
+                    )}
+                  >
+                    <div className={cn("size-10 rounded-full flex items-center justify-center shrink-0", bg, color)}>
+                      <span className="material-symbols-outlined text-[20px]">{icon}</span>
                     </div>
-                    <p className="text-xs text-muted mt-0.5 line-clamp-2">{notification.message}</p>
-                    <p className="text-[10px] text-muted/70 mt-1">{notification.time}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={cn("font-semibold text-sm", !notification.is_read ? "text-foreground" : "text-muted-foreground")}>
+                          {notification.title}
+                        </p>
+                        {!notification.is_read && <span className="size-2 bg-primary rounded-full shrink-0 mt-1.5"></span>}
+                      </div>
+                      <p className="text-xs text-muted mt-0.5 line-clamp-2">{notification.message}</p>
+                      <p className="text-[10px] text-muted/70 mt-1">{timeAgo(notification.created_at)}</p>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-border bg-muted/20">
-            <button className="w-full text-center text-primary text-sm font-semibold hover:underline">
+            <Link
+              href="/notifications"
+              onClick={() => setIsOpen(false)}
+              className="w-full block text-center text-primary text-sm font-semibold hover:underline"
+            >
               View all notifications
-            </button>
+            </Link>
           </div>
         </div>
       )}

@@ -31,3 +31,31 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+// Handle notification click — open the app and navigate to the relevant page
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const data = event.notification.data || {};
+  let targetUrl = '/notifications'; // default fallback
+
+  // If we have a booking_id, navigate to that booking's detail page
+  if (data.booking_id) {
+    targetUrl = `/bookings/${data.booking_id}`;
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If a window is already open, focus it and navigate
+      for (const client of windowClients) {
+        if ('focus' in client) {
+          client.focus();
+          client.navigate(targetUrl);
+          return;
+        }
+      }
+      // Otherwise open a new window/tab
+      return clients.openWindow(targetUrl);
+    })
+  );
+});

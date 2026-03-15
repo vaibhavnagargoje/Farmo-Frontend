@@ -105,7 +105,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
             "transition-all duration-300 ease-in-out",
             isSearchExpanded ? "opacity-0 scale-95 pointer-events-none absolute right-4" : "opacity-100 scale-100"
           )}>
-            <NotificationDropdown variant="farmer" />
+            <NotificationDropdown />
           </div>
         </div>
 

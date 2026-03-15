@@ -89,7 +89,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               </div>
             </div>
             {/* Notifications based on auth */}
-            {isAuthenticated && <NotificationDropdown variant={variant} />}
+            {isAuthenticated && <NotificationDropdown />}
 
             {/* Profile or Login */}
             {isLoading ? (
