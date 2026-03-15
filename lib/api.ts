@@ -53,6 +53,10 @@ export const API_ENDPOINTS = {
   // Price Units
   PRICE_UNITS: `${API_BASE_URL}/services/price-units/`,
 
+  // Notifications
+  REGISTER_DEVICE: `${API_BASE_URL}/notifications/register-device/`,
+  NOTIFICATIONS: `${API_BASE_URL}/notifications/`,
+
 } as const
 
 // Types for API responses

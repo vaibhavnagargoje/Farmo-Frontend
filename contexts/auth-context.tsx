@@ -12,6 +12,7 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 import type { User } from "@/lib/api"
+import { requestFcmToken } from "@/lib/firebase"
 
 interface AuthContextType {
   user: User | null
@@ -46,6 +47,24 @@ function getUserFromCookie(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+
+  // 1. Sync FCM Token Helper
+  const syncDeviceToken = async () => {
+    try {
+      const token = await requestFcmToken();
+      if (token) {
+        await fetch("/api/notifications/register-device", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ token })
+        });
+        console.log("FCM Token synced successfully.");
+      }
+    } catch (e) {
+      console.warn("Failed to sync FCM Token: ", e);
+    }
+  };
   const [isLoading, setIsLoading] = useState(true)
   // Keep a ref to the latest user so memoized callbacks don't need user as a dep
   const userRef = useRef<User | null>(null)
@@ -74,6 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
+
+        // SYNC TOKEN ON FRESH LOAD IF WE GRABBED USER
+        if (data.user) {
+          syncDeviceToken();
+        }
+
       } else if (response.status === 401) {
         // Server explicitly says not authenticated — clear user state.
         // The farmo_user cookie is just a UI cache; the server is the source of truth.
@@ -161,6 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Update user state
       setUser(data.user)
+
+      // SYNC TOKEN ON EXPLICIT LOGIN
+      if (data.user) {
+        syncDeviceToken();
+      }
 
       return {
         success: true,
