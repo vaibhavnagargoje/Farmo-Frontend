@@ -57,6 +57,8 @@ export const API_ENDPOINTS = {
   REGISTER_DEVICE: `${API_BASE_URL}/notifications/register-device/`,
   NOTIFICATIONS: `${API_BASE_URL}/notifications/`,
 
+  // Search
+  SEARCH: (query: string) => `${API_BASE_URL}/search/?q=${encodeURIComponent(query)}`,
 } as const
 
 // Types for API responses
@@ -225,6 +227,13 @@ export interface InstantBookingStatus {
     jobs_completed: number
     phone: string
   }
+}
+
+export interface SearchResponse {
+  query: string
+  categories: Category[]
+  services: Service[]
+  total_services: number
 }
 
 // Helper to make API calls from server-side with auth token

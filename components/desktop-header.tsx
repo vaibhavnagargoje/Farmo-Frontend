@@ -4,10 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { API_ENDPOINTS, SearchResponse, fetchPublic } from "@/lib/api"
 
 interface NavItem {
   href: string
@@ -30,10 +32,56 @@ interface DesktopHeaderProps {
 
 export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, isAuthenticated, isLoading } = useAuth()
   const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
   const [locationName, setLocationName] = useState<string>("India")
+  
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true)
+        fetchPublic(API_ENDPOINTS.SEARCH(searchQuery.trim()))
+          .then(res => res.json())
+          .then(data => {
+            setSearchResults(data)
+            setIsDropdownOpen(true)
+            setIsSearching(false)
+          })
+          .catch(() => setIsSearching(false))
+      } else {
+        setSearchResults(null)
+        setIsDropdownOpen(false)
+      }
+    }, 300)
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery])
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (searchQuery.trim()) {
+      setIsDropdownOpen(false)
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -73,20 +121,77 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
           {/* Right Section */}
           <div className="flex items-center gap-4">
             {/* Search Bar */}
-            <div className="w-[280px]">
-              <div className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">
+            <div className="w-[320px] relative" ref={dropdownRef}>
+              <form onSubmit={handleSearchSubmit} className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">
                 <div className="pl-3 pr-2 text-muted-foreground group-focus-within:text-primary transition-colors">
                   <span className="material-symbols-outlined text-[20px]">search</span>
                 </div>
                 <input
                   type="text"
-                  placeholder="Search for tractors..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => { if (searchQuery.length >= 2) setIsDropdownOpen(true) }}
+                  placeholder="Search for tractors, labors..."
                   className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70 h-full w-full"
                 />
-                <button className="mr-1 p-1.5 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">tune</span>
-                </button>
-              </div>
+                {searchQuery && (
+                   <button type="button" onClick={() => { setSearchQuery(''); setIsDropdownOpen(false); }} className="mr-2 p-1 rounded-full text-muted-foreground hover:text-foreground">
+                      <span className="material-symbols-outlined text-[16px] block">close</span>
+                   </button>
+                )}
+              </form>
+              
+              {/* Dropdown */}
+              {isDropdownOpen && searchResults && (
+                 <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden max-h-[400px] overflow-y-auto">
+                   {/* Categories */}
+                   {searchResults.categories?.length > 0 && (
+                     <div className="p-2 border-b border-border/50">
+                       <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Categories</div>
+                       {searchResults.categories.slice(0, 3).map(cat => (
+                          <button key={cat.id} type="button" onClick={() => { setSearchQuery(cat.name); handleSearchSubmit(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 rounded-lg flex items-center gap-2 transition-colors">
+                             <span className="material-symbols-outlined text-[18px] text-muted-foreground">category</span>
+                             {cat.name}
+                          </button>
+                       ))}
+                     </div>
+                   )}
+                   
+                   {/* Services */}
+                   {searchResults.services?.length > 0 ? (
+                      <div className="p-2">
+                         <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Services</div>
+                         {searchResults.services.slice(0, 5).map(srv => (
+                            <Link key={srv.id} href={`/booking/new/${srv.id}`} onClick={() => setIsDropdownOpen(false)} className="px-3 py-2 hover:bg-muted/50 rounded-lg flex gap-3 items-center transition-colors">
+                               {srv.thumbnail ? (
+                                 <img src={srv.thumbnail} alt={srv.title} className="w-10 h-10 rounded object-cover border border-border/50" />
+                               ) : (
+                                 <div className="w-10 h-10 rounded bg-muted flex items-center justify-center border border-border/50">
+                                   <span className="material-symbols-outlined text-muted-foreground">image</span>
+                                 </div>
+                               )}
+                               <div className="flex-1 min-w-0">
+                                 <div className="text-sm font-medium truncate">{srv.title}</div>
+                                 <div className="text-xs text-muted-foreground truncate">{srv.category_name || srv.category?.name} • ₹{srv.price}/{srv.price_unit}</div>
+                               </div>
+                            </Link>
+                         ))}
+                      </div>
+                   ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                         {isSearching ? "Searching..." : "No matching services found"}
+                      </div>
+                   )}
+                   
+                   {searchResults.total_services > 5 && (
+                      <div className="p-2 border-t border-border/50 bg-muted/10">
+                         <button type="button" onClick={() => handleSearchSubmit()} className="w-full py-2 text-sm text-primary font-bold hover:bg-primary/5 rounded-lg transition-colors">
+                            View all {searchResults.total_services} results
+                         </button>
+                      </div>
+                   )}
+                 </div>
+              )}
             </div>
             {/* Notifications based on auth */}
             {isAuthenticated && <NotificationDropdown />}
