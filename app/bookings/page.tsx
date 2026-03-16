@@ -38,7 +38,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   EXPIRED: { label: "Expired", color: "text-orange-600", bgColor: "bg-orange-100" },
   IN_PROGRESS: { label: "In Progress", color: "text-blue-600", bgColor: "bg-blue-100" },
   COMPLETED: { label: "Completed", color: "text-success", bgColor: "bg-success/10" },
-  CANCELLED: { label: "Cancelled", color: "text-muted", bgColor: "bg-muted" },
+  CANCELLED: { label: "Cancelled", color: "text-muted-foreground", bgColor: "bg-yellow-200" },
 }
 
 

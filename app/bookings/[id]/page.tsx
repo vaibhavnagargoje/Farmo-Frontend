@@ -67,7 +67,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   EXPIRED: { label: "Expired", color: "text-orange-600", bgColor: "bg-orange-100", icon: "timer_off" },
   IN_PROGRESS: { label: "In Progress", color: "text-blue-600", bgColor: "bg-blue-100", icon: "sync" },
   COMPLETED: { label: "Completed", color: "text-success", bgColor: "bg-success/10", icon: "task_alt" },
-  CANCELLED: { label: "Cancelled", color: "text-muted", bgColor: "bg-muted", icon: "block" },
+  CANCELLED: { label: "Cancelled", color: "text-muted-foreground", bgColor: "bg-gray-200", icon: "block" },
 }
 
 export default function BookingDetailsPage() {
