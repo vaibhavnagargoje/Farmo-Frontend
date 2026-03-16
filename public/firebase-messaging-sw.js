@@ -32,17 +32,11 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification click — open the app and navigate to the relevant page
+// Handle notification click — always open the app home page
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const data = event.notification.data || {};
-  let targetUrl = '/notifications'; // default fallback
-
-  // If we have a booking_id, navigate to that booking's detail page
-  if (data.booking_id) {
-    targetUrl = `/bookings/${data.booking_id}`;
-  }
+  const targetUrl = '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

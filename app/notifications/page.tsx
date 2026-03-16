@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { AccountLayout } from "@/components/account-layout"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ApiNotification {
   id: number
@@ -50,9 +52,11 @@ function getIconForTitle(title: string) {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "unread">("all")
+  const router = useRouter()
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true)
@@ -90,20 +94,29 @@ export default function NotificationsPage() {
     }
   }
 
-  const toggleRead = async (id: number, currentlyRead: boolean) => {
-    if (currentlyRead) return // Already read, no action needed
-    try {
-      const res = await fetch(`/api/notifications/${id}/read`, {
-        method: "POST",
-        credentials: "include",
-      })
-      if (res.ok) {
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-        )
+  const handleClick = async (notification: ApiNotification) => {
+    if (!notification.is_read) {
+      try {
+        const res = await fetch(`/api/notifications/${notification.id}/read`, {
+          method: "POST",
+          credentials: "include",
+        })
+        if (res.ok) {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n))
+          )
+        }
+      } catch (err) {
+        console.error("Failed to mark notification read:", err)
       }
-    } catch (err) {
-      console.error("Failed to mark notification read:", err)
+    }
+
+    if (notification.booking_id) {
+      if (user?.role === "PARTNER") {
+        router.push('/partner')
+      } else {
+        router.push(`/bookings/${notification.booking_id}`)
+      }
     }
   }
 
@@ -194,7 +207,7 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={notification.id}
-                  onClick={() => toggleRead(notification.id, notification.is_read)}
+                  onClick={() => handleClick(notification)}
                   className={cn(
                     "flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer group",
                     notification.is_read

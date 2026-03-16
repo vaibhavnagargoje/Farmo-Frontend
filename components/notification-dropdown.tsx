@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { onForegroundMessage } from "@/lib/firebase"
 
 interface ApiNotification {
   id: number
@@ -50,6 +52,7 @@ export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
@@ -69,10 +72,43 @@ export function NotificationDropdown() {
     }
   }, [isAuthenticated])
 
-  // Fetch when dropdown opens
+  // Fetch on mount (and auth change), plus when opened if needed
   useEffect(() => {
-    if (isOpen) fetchNotifications()
-  }, [isOpen, fetchNotifications])
+    if (isAuthenticated) fetchNotifications()
+  }, [isAuthenticated, fetchNotifications])
+
+  // Setup foreground listener
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    let unsubscribe: (() => void) | undefined;
+    const setupListener = async () => {
+      const unsub = await onForegroundMessage((payload) => {
+        const title = payload.notification?.title || "New Notification"
+        const message = payload.notification?.body || ""
+        const booking_id = payload.data?.booking_id || null
+        
+        const newNotif: ApiNotification = {
+          id: Date.now(), // Fallback ID for optimistic UI until refresh
+          title,
+          message,
+          is_read: false,
+          booking_id,
+          created_at: new Date().toISOString()
+        }
+
+        setNotifications(prev => [newNotif, ...prev])
+      })
+
+      if (unsub) unsubscribe = unsub;
+    }
+
+    setupListener()
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    }
+  }, [isAuthenticated])
 
   // Close on outside click
   useEffect(() => {
@@ -173,6 +209,8 @@ export function NotificationDropdown() {
                     key={notification.id}
                     onClick={() => {
                       if (!notification.is_read) markSingleRead(notification.id)
+                      setIsOpen(false)
+                      router.push('/')
                     }}
                     className={cn(
                       "flex gap-4 px-5 py-4 hover:bg-muted/30 transition-colors cursor-pointer border-b border-border last:border-0",

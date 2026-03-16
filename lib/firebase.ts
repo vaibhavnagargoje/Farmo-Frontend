@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
+import { getMessaging, getToken, isSupported, onMessage, MessagePayload } from "firebase/messaging";
 
 // We require NEXT_PUBLIC_ variables so they are baked into the frontend build.
 const firebaseConfig = {
@@ -43,6 +43,22 @@ export const requestFcmToken = async (): Promise<string | null> => {
     return token;
   } catch (err) {
     console.error("An error occurred while retrieving FCM token. ", err);
+    return null;
+  }
+};
+
+/**
+ * Listens for foreground messages.
+ */
+export const onForegroundMessage = async (callback: (payload: MessagePayload) => void) => {
+  try {
+    const supported = await isSupported();
+    if (!supported) return null;
+
+    const messaging = getMessaging(app);
+    return onMessage(messaging, callback);
+  } catch (err) {
+    console.error("Error setting up foreground message listener:", err);
     return null;
   }
 };
