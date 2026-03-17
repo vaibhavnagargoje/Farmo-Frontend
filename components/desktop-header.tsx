@@ -44,6 +44,25 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const [isSearching, setIsSearching] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  const [hasPartnerAccount, setHasPartnerAccount] = useState<boolean>(false)
+  const isPartnerView = pathname?.startsWith('/partner')
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch partner status
+      fetch("/api/profile")
+        .then(res => res.json())
+        .then(data => {
+          if (data.partner) {
+            setHasPartnerAccount(true)
+          }
+        })
+        .catch(() => { })
+    } else {
+      setHasPartnerAccount(false)
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -194,7 +213,21 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               )}
             </div>
             {/* Notifications based on auth */}
-            {isAuthenticated && <NotificationDropdown />}
+            {isAuthenticated && (
+              <div className="flex items-center gap-2">
+                <NotificationDropdown />
+                {hasPartnerAccount && (
+                  <Link
+                    href={isPartnerView ? "/profile" : "/partner"}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted font-medium text-xs text-muted-foreground hover:text-navy transition-colors border border-transparent hover:border-border"
+                    title={isPartnerView ? "Switch to Farmer" : "Switch to Partner"}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                    {isPartnerView ? "Farmer" : "Partner"}
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Profile or Login */}
             {isLoading ? (

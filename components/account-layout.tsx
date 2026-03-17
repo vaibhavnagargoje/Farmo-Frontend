@@ -208,6 +208,12 @@ export function AccountLayout({ children, pageTitle = "Account Settings" }: Acco
                             <Link href="/notifications" className="p-2 rounded-full hover:bg-gray-50 transition-colors text-gray-400">
                                 <span className="material-symbols-outlined">notifications</span>
                             </Link>
+                            {partner && (
+                                <Link href="/partner" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 font-medium text-xs text-gray-600 hover:text-navy transition-colors border border-transparent">
+                                    <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                                    Partner
+                                </Link>
+                            )}
                         </div>
                     </header>
 

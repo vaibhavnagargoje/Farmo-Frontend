@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
 import { useAuth } from "@/contexts/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { API_ENDPOINTS, SearchResponse, fetchPublic } from "@/lib/api"
 
 interface MobileHeaderProps {
@@ -25,10 +25,15 @@ export function MobileHeader({ className }: MobileHeaderProps) {
   
   const { isAuthenticated } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [locationName, setLocationName] = useState<string>("India")
+  const [hasPartnerAccount, setHasPartnerAccount] = useState<boolean>(false)
+
+  const isPartnerView = pathname?.startsWith('/partner')
 
   useEffect(() => {
     if (isAuthenticated) {
+      // Fetch location
       fetch("/api/auth/location")
         .then(res => res.json())
         .then(data => {
@@ -39,8 +44,19 @@ export function MobileHeader({ className }: MobileHeaderProps) {
           }
         })
         .catch(() => { })
+
+      // Fetch partner status
+      fetch("/api/profile")
+        .then(res => res.json())
+        .then(data => {
+          if (data.partner) {
+            setHasPartnerAccount(true)
+          }
+        })
+        .catch(() => { })
     } else {
       setLocationName("Set your location")
+      setHasPartnerAccount(false)
     }
   }, [isAuthenticated])
 
@@ -195,10 +211,20 @@ export function MobileHeader({ className }: MobileHeaderProps) {
 
           {/* Notification Icon (Hidden when searching to give space) */}
           <div className={cn(
-            "transition-all duration-300 ease-in-out",
+            "flex items-center gap-1 transition-all duration-300 ease-in-out",
             isSearchExpanded ? "opacity-0 scale-95 pointer-events-none absolute right-4" : "opacity-100 scale-100"
           )}>
             <NotificationDropdown />
+            {hasPartnerAccount && (
+              <Link
+                href={isPartnerView ? "/" : "/partner"}
+                className="flex flex-col items-center justify-center size-10 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-navy transition-colors"
+                title={isPartnerView ? "Switch to Farmer" : "Switch to Partner"}
+              >
+                <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                <span className="text-[8px] font-bold leading-none mt-0.5">{isPartnerView ? "Farmer" : "Partner"}</span>
+              </Link>
+            )}
           </div>
         </div>
 

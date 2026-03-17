@@ -103,6 +103,22 @@ export function ProfileContent({ isPartnerView = false }: { isPartnerView?: bool
                         </div>
                         <span className="material-symbols-outlined text-muted group-hover:text-navy transition-colors flex-shrink-0">arrow_forward</span>
                     </Link>
+                ) : partner ? (
+                    <Link
+                        href="/partner"
+                        className="flex items-center justify-between p-4 lg:p-5 bg-navy/5 hover:bg-navy/10 transition-colors rounded-2xl lg:rounded-3xl border border-navy/10 group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-navy group-hover:scale-105 transition-transform flex-shrink-0">
+                                <span className="material-symbols-outlined text-xl lg:text-2xl">swap_horiz</span>
+                            </div>
+                            <div>
+                                <h3 className="text-base lg:text-lg font-bold text-foreground">Switch to Partner Dashboard</h3>
+                                <p className="text-xs lg:text-sm text-muted mt-0.5 pr-2">Manage your equipment listings and bookings</p>
+                            </div>
+                        </div>
+                        <span className="material-symbols-outlined text-muted group-hover:text-navy transition-colors flex-shrink-0">arrow_forward</span>
+                    </Link>
                 ) : (
                     <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-navy to-[#2a6dc0] shadow-xl group">
                         <div className="absolute -right-16 -top-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
@@ -111,29 +127,21 @@ export function ProfileContent({ isPartnerView = false }: { isPartnerView?: bool
                             <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
                                     <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-md border border-white/10">
-                                        {partner ? "Partner Access" : "Join as Partner"}
+                                        Join as Partner
                                     </span>
-                                    {partner && (
-                                        <span className="flex h-2 w-2 relative">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                        </span>
-                                    )}
                                 </div>
                                 <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2 leading-tight">
-                                    {partner ? "Partner Dashboard" : "Become a Partner"}
+                                    Become a Partner
                                 </h2>
                                 <p className="text-blue-100 text-sm lg:text-base max-w-lg leading-relaxed opacity-90">
-                                    {partner
-                                        ? "Switch to partner view to manage your equipment listings, track earnings, and respond to bookings instantly."
-                                        : "List your equipment and start earning extra income by renting out your farm machinery."}
+                                    List your equipment and start earning extra income by renting out your farm machinery.
                                 </p>
                             </div>
                             <Link
-                                href={partner ? "/partner" : "/partner/onboarding"}
+                                href="/partner/onboarding"
                                 className="px-5 py-2.5 lg:px-6 lg:py-3 bg-white text-navy font-bold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 text-sm lg:text-base whitespace-nowrap"
                             >
-                                {partner ? "Go to Dashboard" : "Get Started"}
+                                Get Started
                                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
                             </Link>
                         </div>

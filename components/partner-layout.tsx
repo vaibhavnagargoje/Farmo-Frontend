@@ -274,6 +274,10 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                                     type="text"
                                 />
                             </div>
+                            <Link href="/profile" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 font-medium text-xs text-gray-600 hover:text-navy transition-colors border border-transparent">
+                                <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                                Farmer
+                            </Link>
                             <Link href="/partner/profile" className="p-2 rounded-full hover:bg-gray-50 transition-colors text-gray-400">
                                 <span className="material-symbols-outlined">person</span>
                             </Link>

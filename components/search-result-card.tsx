@@ -26,10 +26,6 @@ export function SearchResultCard({ id, name, image, price, rating, location, dis
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-700"
         />
-        <div className="absolute top-3 right-3 bg-card/95 backdrop-blur shadow-sm px-3 py-1.5 rounded-lg flex items-center gap-1 z-10 border border-border">
-          <span className="text-navy font-bold text-sm lg:text-base">₹{price}</span>
-          <span className="text-muted text-[10px] lg:text-xs font-medium">/hr</span>
-        </div>
         <button className="absolute top-3 left-3 size-9 lg:size-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-destructive hover:text-white transition-all active:scale-90">
           <span className="material-symbols-outlined text-[20px]">favorite</span>
         </button>
@@ -58,13 +54,8 @@ export function SearchResultCard({ id, name, image, price, rating, location, dis
 
         <div className="flex items-center gap-3 lg:gap-4 py-2 lg:py-3 border-t border-b border-border/50">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-muted text-[18px]">speed</span>
-            <span className="text-xs lg:text-sm font-medium text-muted-foreground">{specs.power}</span>
-          </div>
-          <div className="w-px h-3 lg:h-4 bg-border"></div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-muted text-[18px]">local_gas_station</span>
-            <span className="text-xs lg:text-sm font-medium text-muted-foreground">{specs.fuel}</span>
+            <span className="material-symbols-outlined text-muted text-[18px]">payments</span>
+            <span className="text-xs lg:text-sm font-medium text-muted-foreground">₹{price}/hr</span>
           </div>
           <div className="w-px h-3 lg:h-4 bg-border"></div>
           <div className="flex items-center gap-1.5">

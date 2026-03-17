@@ -51,9 +51,9 @@ function SearchContent() {
         </div>
         {!loading && results && results.total_services > 0 && (
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
-              <span>Sort by: Recommended</span>
-              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            <button className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              <span>Filter</span>
             </button>
             <div className="hidden lg:flex border border-border rounded-xl overflow-hidden">
               <button className="size-10 flex items-center justify-center bg-navy text-white">
