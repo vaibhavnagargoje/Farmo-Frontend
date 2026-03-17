@@ -211,8 +211,8 @@ export function MobileHeader({ className }: MobileHeaderProps) {
 
           {/* Notification Icon (Hidden when searching to give space) */}
           <div className={cn(
-            "flex items-center gap-1 transition-all duration-300 ease-in-out",
-            isSearchExpanded ? "opacity-0 scale-95 pointer-events-none absolute right-4" : "opacity-100 scale-100"
+            "flex items-center gap-1 transition-opacity duration-300 ease-in-out",
+            isSearchExpanded ? "opacity-0 pointer-events-none absolute right-4" : "opacity-100"
           )}>
             <NotificationDropdown />
             {hasPartnerAccount && (
