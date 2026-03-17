@@ -70,6 +70,28 @@ export default function CategoryServicesPage() {
     return `/category/${slug}/providers`
   }, [slug])
 
+  // ── Client-side Geocoding Helper ──
+  const reverseGeocodeClient = async (lat: number, lng: number): Promise<string | null> => {
+    if (typeof window === "undefined") return null
+    let retries = 30
+    // Wait up to 3 seconds for Google Maps API to initialize via APIProvider
+    while (!(window as any).google?.maps?.Geocoder && retries > 0) {
+      await new Promise((r) => setTimeout(r, 100))
+      retries--
+    }
+    if (!(window as any).google?.maps?.Geocoder) return null
+    try {
+      const geocoder = new (window as any).google.maps.Geocoder()
+      const response = await geocoder.geocode({ location: { lat, lng } })
+      if (response.results?.[0]?.formatted_address) {
+        return response.results[0].formatted_address
+      }
+    } catch (e) {
+      console.warn("Client geocode error", e)
+    }
+    return null
+  }
+
   // ── Fetch saved location from profile, fallback to GPS ──
   useEffect(() => {
     const initLocation = async () => {
@@ -102,18 +124,9 @@ export default function CategoryServicesPage() {
           const { latitude, longitude } = position.coords
           let address = "Current location"
 
-          try {
-            const geocodeRes = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-            )
-            if (geocodeRes.ok) {
-              const geocodeData = await geocodeRes.json()
-              if (geocodeData.results?.[0]?.formatted_address) {
-                address = geocodeData.results[0].formatted_address
-              }
-            }
-          } catch {
-            // Geocode failed — use raw coords as address
+          const clientAddress = await reverseGeocodeClient(latitude, longitude)
+          if (clientAddress) {
+            address = clientAddress
           }
 
           const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
@@ -237,18 +250,9 @@ export default function CategoryServicesPage() {
     const onSuccess = async (position: GeolocationPosition) => {
       const { latitude, longitude } = position.coords
       let address = "Current location"
-      try {
-        const geocodeRes = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-        )
-        if (geocodeRes.ok) {
-          const geocodeData = await geocodeRes.json()
-          if (geocodeData.results?.[0]?.formatted_address) {
-            address = geocodeData.results[0].formatted_address
-          }
-        }
-      } catch {
-        // Geocode failed — use raw coords
+      const clientAddress = await reverseGeocodeClient(latitude, longitude)
+      if (clientAddress) {
+        address = clientAddress
       }
       const loc: SelectedLocation = { lat: latitude, lng: longitude, address }
       setSelectedLocation(loc)
