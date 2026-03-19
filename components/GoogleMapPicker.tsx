@@ -147,7 +147,7 @@ function MapContent({
             <Map
                 defaultCenter={defaultCenter}
                 defaultZoom={defaultZoom}
-                mapId="farmo-location-picker"
+                mapId="1b8a96c4f5eb4a462d71c36a"
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 zoomControl={false}
