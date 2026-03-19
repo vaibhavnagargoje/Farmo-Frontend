@@ -121,6 +121,7 @@ export default function NewBookingPage() {
         lat: profileLat || 0,
         lng: profileLng || 0,
         quantity: quantity,
+        price_unit: selectedUnit || service.price_unit,
         note: note || undefined,
       }
 
@@ -373,19 +374,14 @@ export default function NewBookingPage() {
                     <label className="text-sm font-medium text-foreground mb-2 block">Unit</label>
                     <div className="relative">
                       <select
-                        value={selectedUnit}
-                        onChange={(e) => setSelectedUnit(e.target.value)}
-                        className="w-full h-11 pl-4 pr-10 border border-border rounded-xl bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        value={selectedUnit || service.price_unit}
+                        disabled
+                        className="w-full h-11 pl-4 pr-10 border border-border rounded-xl bg-muted/30 font-medium appearance-none text-foreground cursor-not-allowed"
                       >
-                        <option value="" disabled>Select unit</option>
-                        {priceUnits.map((u) => (
-                          <option key={u.value} value={u.value}>
-                            {u.label}
-                          </option>
-                        ))}
+                        <option value={service.price_unit}>{getPriceUnitLabel(service.price_unit).replace("/", "")}</option>
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
-                        <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground opacity-60">
+                        <span className="material-symbols-outlined text-[20px]">lock</span>
                       </div>
                     </div>
                   </div>
@@ -609,19 +605,14 @@ export default function NewBookingPage() {
                   <label className="text-sm text-muted mb-2 block">Unit</label>
                   <div className="relative">
                     <select
-                      value={selectedUnit}
-                      onChange={(e) => setSelectedUnit(e.target.value)}
-                      className="w-full h-11 pl-3 pr-8 border border-border rounded-xl bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                      value={selectedUnit || service.price_unit}
+                      disabled
+                      className="w-full h-11 pl-3 pr-8 border border-border rounded-xl bg-muted/30 font-medium appearance-none text-foreground text-sm cursor-not-allowed"
                     >
-                      <option value="" disabled>Select unit</option>
-                      {priceUnits.map((u) => (
-                        <option key={u.value} value={u.value}>
-                          {u.label}
-                        </option>
-                      ))}
+                      <option value={service.price_unit}>{getPriceUnitLabel(service.price_unit).replace("/", "")}</option>
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground">
-                      <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground opacity-60">
+                      <span className="material-symbols-outlined text-[18px]">lock</span>
                     </div>
                   </div>
                 </div>

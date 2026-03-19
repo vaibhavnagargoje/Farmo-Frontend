@@ -18,9 +18,10 @@ import { apiRequest, unauthenticatedResponse, extractErrorMessage } from "@/lib/
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const allowedPriceUnits = ["HOUR", "DAY", "KM", "ACRE", "FIXED"]
 
     // Validate required fields
-    const { category_id, quantity, address, lat, lng } = body
+    const { category_id, quantity, address, lat, lng, price_unit } = body
 
     if (!category_id) {
       return NextResponse.json(
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (price_unit && !allowedPriceUnits.includes(String(price_unit).toUpperCase())) {
+      return NextResponse.json(
+        { message: "Invalid price unit" },
+        { status: 400 }
+      )
+    }
+
     // Round lat/lng to 6 decimal places to fit Django DecimalField(max_digits=9, decimal_places=6)
     const roundedLat = parseFloat(Number(lat).toFixed(6))
     const roundedLng = parseFloat(Number(lng).toFixed(6))
@@ -55,6 +63,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           category_id,
           quantity,
+          price_unit: price_unit ? String(price_unit).toUpperCase() : undefined,
           address,
           lat: roundedLat,
           lng: roundedLng,

@@ -20,9 +20,10 @@ import { apiRequest, unauthenticatedResponse, extractErrorMessage } from "@/lib/
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const allowedPriceUnits = ["HOUR", "DAY", "KM", "ACRE", "FIXED"]
 
     // Validate required fields
-    const { service_id, scheduled_date, scheduled_time, address, lat, lng, quantity } = body
+    const { service_id, scheduled_date, scheduled_time, address, lat, lng, quantity, price_unit } = body
 
     if (!service_id) {
       return NextResponse.json(
@@ -52,6 +53,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (price_unit && !allowedPriceUnits.includes(String(price_unit).toUpperCase())) {
+      return NextResponse.json(
+        { message: "Invalid price unit" },
+        { status: 400 }
+      )
+    }
+
     // Create booking via Django API
     const { response } = await apiRequest(
       API_ENDPOINTS.CUSTOMER_BOOKINGS,
@@ -65,6 +73,7 @@ export async function POST(request: NextRequest) {
           lat,
           lng,
           quantity,
+          price_unit: price_unit ? String(price_unit).toUpperCase() : undefined,
           note: body.note || "",
         }),
       }

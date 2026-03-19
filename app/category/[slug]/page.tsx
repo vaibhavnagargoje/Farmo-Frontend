@@ -49,6 +49,7 @@ export default function CategoryServicesPage() {
   // ── Instant Booking ──
   const [priceUnits, setPriceUnits] = useState<PriceUnit[]>([])
   const [quantity, setQuantity] = useState(1)
+  const [selectedUnit, setSelectedUnit] = useState("")
   const [bookingNote, setBookingNote] = useState("")
   const [bookingStatus, setBookingStatus] = useState<"idle" | "creating" | "created" | "active_exists" | "error">("idle")
   const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null)
@@ -329,8 +330,17 @@ export default function CategoryServicesPage() {
   const instantPrice = category ? Math.round(parseFloat(category.instant_price || "0")) : 0
   const estimatedTotal = instantPrice * quantity
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
-  const priceUnitLabel = priceUnits.find((u) => u.value === category?.instant_price_unit)?.label || category?.instant_price_unit || "Per unit"
+  const resolvedUnit = selectedUnit || category?.instant_price_unit || ""
+  const priceUnitLabel = priceUnits.find((u) => u.value === resolvedUnit)?.label || resolvedUnit || "Per unit"
   const isInstantEnabled = category?.instant_enabled !== false
+  const topProviderAvatars = services.filter((s) => s.is_available).slice(0, 3)
+  const remainingProviderCount = Math.max(availableProviders - topProviderAvatars.length, 0)
+
+  useEffect(() => {
+    if (category?.instant_price_unit && !selectedUnit) {
+      setSelectedUnit(category.instant_price_unit)
+    }
+  }, [category?.instant_price_unit, selectedUnit])
 
   // ── Instant Booking: Create ──
   const handleInstantBooking = useCallback(async () => {
@@ -359,6 +369,7 @@ export default function CategoryServicesPage() {
         body: JSON.stringify({
           category_id: category.id,
           quantity,
+          price_unit: selectedUnit || category.instant_price_unit,
           note: bookingNote,
           address: selectedLocation.address,
           lat: selectedLocation.lat,
@@ -397,7 +408,7 @@ export default function CategoryServicesPage() {
     }
     setSliderProgress(0)
     isSubmittingRef.current = false
-  }, [bookingStatus, isAuthenticated, selectedLocation, category, quantity, bookingNote])
+  }, [bookingStatus, isAuthenticated, selectedLocation, category, quantity, selectedUnit, bookingNote])
 
   // ── Slider handlers ──
   const onSliderTouchStart = (e: React.TouchEvent) => {
@@ -458,7 +469,7 @@ export default function CategoryServicesPage() {
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border/50">
         <div className="max-w-6xl mx-auto">
           {/* Back + Title */}
-          <div className="flex items-center gap-3 px-4 lg:px-6 pt-3 pb-2">
+          <div className="flex items-start gap-3 px-4 lg:px-6 pt-3 pb-2">
             <Link
               href="/"
               className="size-9 lg:size-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground shadow-sm active:scale-95 transition-transform"
@@ -467,10 +478,39 @@ export default function CategoryServicesPage() {
             </Link>
             <div className="flex-1 min-w-0">
               <h1 className="text-base lg:text-lg font-bold text-foreground truncate">{categoryName}</h1>
-              <p className="text-[11px] lg:text-xs text-muted-foreground">
-                {availableProviders > 0
-                  ? `${availableProviders} providers Available`
-                  : "Find Available Providers"}
+              <div className="mt-0.5 flex items-center gap-2">
+                <p className="text-[11px] lg:text-xs text-muted-foreground">
+                  {availableProviders > 0
+                    ? `${availableProviders} Available`
+                    : "Find Available Providers"}
+                </p>
+                {topProviderAvatars.length > 0 && (
+                  <div className="flex items-center -space-x-1.5">
+                    {topProviderAvatars.map((s) => (
+                      <div key={s.id} className="size-5 rounded-full bg-muted/50 overflow-hidden relative border border-background shrink-0 shadow-sm">
+                        <Image src={s.thumbnail || "/placeholder.svg"} alt="" fill className="object-cover" />
+                      </div>
+                    ))}
+                    {remainingProviderCount > 0 && (
+                      <div className="size-5 rounded-full bg-muted text-[9px] font-bold text-muted-foreground border border-background shrink-0 shadow-sm flex items-center justify-center">
+                        +{remainingProviderCount}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0 text-right lg:hidden">
+              <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Starting at</p>
+              <p className="text-2xl font-bold text-navy leading-none">
+                {instantPrice ? (
+                  <>
+                    ₹{instantPrice}
+                    <span className="text-[10px] font-medium text-navy/70 ml-0.5">/{priceUnitLabel}</span>
+                  </>
+                ) : (
+                  "\u2014"
+                )}
               </p>
             </div>
           </div>
@@ -596,7 +636,7 @@ export default function CategoryServicesPage() {
             <div className="px-4 lg:px-6 pb-3 lg:pt-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
               {/* ── Providers & Price Row ── */}
-              <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+              <div className="hidden lg:flex bg-card border border-border rounded-xl p-4 items-center justify-between shadow-sm">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className="relative flex h-2 w-2 shrink-0">
@@ -672,16 +712,27 @@ export default function CategoryServicesPage() {
                       </div>
                     </div>
 
-                    {/* Unit Display */}
+                    {/* Unit Selector */}
                     {priceUnits.length > 0 && (
                       <div>
                         <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit</label>
                         <div className="relative">
-                          <div className="w-full h-11 pl-3 pr-8 border border-border rounded-lg bg-muted/30 font-medium text-foreground flex items-center text-sm cursor-not-allowed select-none">
-                            {priceUnitLabel}
-                          </div>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground opacity-50">
-                            <span className="material-symbols-outlined text-[18px]">lock</span>
+                          <select
+                            value={selectedUnit || category?.instant_price_unit || ""}
+                            onChange={(e) => setSelectedUnit(e.target.value)}
+                            className="w-full h-11 pl-3 pr-8 border border-border rounded-lg bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-navy/20 text-sm"
+                          >
+                            <option value="" disabled>
+                              Select unit
+                            </option>
+                            {priceUnits.map((u) => (
+                              <option key={u.value} value={u.value}>
+                                {u.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground">
+                            <span className="material-symbols-outlined text-[18px]">expand_more</span>
                           </div>
                         </div>
                       </div>

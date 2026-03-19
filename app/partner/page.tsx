@@ -544,9 +544,11 @@ function WaitingBookingCard({
             </div>
             {/* Compact pricing row */}
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-primary font-bold text-sm">{formatAmount(booking.amount)}</span>
+              <span className="text-primary font-bold text-sm">
+                {formatAmount(booking.unit_price)} x {booking.quantity} {PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit}
+              </span>
               <span className="text-[10px] text-muted">
-                {PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit}
+                Total {formatAmount(booking.amount)}
               </span>
               {expiry && expiry !== "Expired" && (
                 <span className="text-[10px] text-amber-600 font-medium ml-auto">⏱ {expiry}</span>
