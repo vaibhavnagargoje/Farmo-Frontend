@@ -7,6 +7,7 @@ interface VerificationStepProps {
     category: string
     price: string
     priceUnit: string
+    isLabor?: boolean
 }
 
 const priceUnitLabels: Record<string, string> = {
@@ -22,6 +23,7 @@ export function VerificationStep({
     category,
     price,
     priceUnit,
+    isLabor = false,
 }: VerificationStepProps) {
     return (
         <div className="flex flex-col items-center gap-6 py-4">
@@ -62,6 +64,7 @@ export function VerificationStep({
                             <p className="text-xs text-muted">Personal info & KYC uploaded</p>
                         </div>
                     </div>
+                    {!isLabor && (
                     <div className="flex items-center gap-3">
                         <div className="size-8 rounded-full bg-success flex items-center justify-center text-white shrink-0">
                             <span className="material-symbols-outlined text-base">check</span>
@@ -71,6 +74,7 @@ export function VerificationStep({
                             <p className="text-xs text-muted">Your service is saved and queued</p>
                         </div>
                     </div>
+                    )}
                     <div className="flex items-center gap-3">
                         <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                             <div className="size-3 rounded-full bg-primary animate-pulse" />
@@ -93,6 +97,7 @@ export function VerificationStep({
             </div>
 
             {/* Submission Summary Card */}
+            {!isLabor && (
             <div className="w-full max-w-sm bg-navy/5 rounded-2xl border border-navy/10 p-5">
                 <h3 className="text-sm font-bold text-navy uppercase tracking-wider mb-3">
                     Submission Summary
@@ -122,6 +127,7 @@ export function VerificationStep({
                     )}
                 </div>
             </div>
+            )}
 
             {/* Info Note */}
             <div className="w-full max-w-sm flex items-start gap-3 p-4 bg-primary/5 border border-primary/10 rounded-xl">

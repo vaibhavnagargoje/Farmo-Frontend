@@ -21,7 +21,7 @@ import { VerificationStep } from "@/components/onboarding/verification-step"
 import { APIProvider } from "@vis.gl/react-google-maps"
 
 // Step metadata for progress display
-const steps = [
+const allSteps = [
   { id: 1, label: "Personal Info", icon: "person", description: "Your basic details" },
   { id: 2, label: "KYC Details", icon: "verified_user", description: "Verification documents" },
   { id: 3, label: "List Service", icon: "add_business", description: "Add your first service" },
@@ -124,6 +124,11 @@ export default function OnboardingPage() {
     checkPartnerStatus()
   }, [router])
 
+  // Visible steps based on selected partner type
+  const visibleSteps = kycDetails.partnerType === "LABOR" 
+    ? allSteps.filter(s => s.id !== 3) 
+    : allSteps;
+
   // Validation for each step
   const validateStep = useCallback(
     (step: number): boolean => {
@@ -145,7 +150,7 @@ export default function OnboardingPage() {
           newErrors.aadharBack = "Please upload Aadhar back side"
       }
 
-      if (step === 3) {
+      if (step === 3 && kycDetails.partnerType !== "LABOR") {
         if (!serviceData.category) newErrors.category = "Please select a category"
         if (!serviceData.title.trim()) newErrors.title = "Service title is required"
         if (!serviceData.price || Number(serviceData.price) <= 0)
@@ -213,54 +218,55 @@ export default function OnboardingPage() {
       }
 
       // Step 3: Create the first service with images
-      // Uses retry logic because the partner profile may not be
-      // fully propagated in Django right after registration.
-      const serviceFormData = new FormData()
-      serviceFormData.append("category", serviceData.category)
-      serviceFormData.append("title", serviceData.title)
-      if (serviceData.description) {
-        serviceFormData.append("description", serviceData.description)
-      }
-      serviceFormData.append("price", serviceData.price)
-      serviceFormData.append("price_unit", serviceData.priceUnit)
-      for (const image of serviceData.images) {
-        serviceFormData.append("images", image.file)
-      }
-
-      let serviceRes: Response | null = null
-      let lastServiceError = "Failed to create service"
-      const MAX_RETRIES = 3
-      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        if (attempt > 0) {
-          // Wait before retrying — gives Django time to propagate partner profile
-          await new Promise((r) => setTimeout(r, 2000))
+      // (Skip for LABOR)
+      if (kycDetails.partnerType !== "LABOR") {
+        const serviceFormData = new FormData()
+        serviceFormData.append("category", serviceData.category)
+        serviceFormData.append("title", serviceData.title)
+        if (serviceData.description) {
+          serviceFormData.append("description", serviceData.description)
         }
-        serviceRes = await fetch("/api/partner/services", {
-          method: "POST",
-          body: serviceFormData,
-        })
-        if (serviceRes.ok) break
+        serviceFormData.append("price", serviceData.price)
+        serviceFormData.append("price_unit", serviceData.priceUnit)
+        for (const image of serviceData.images) {
+          serviceFormData.append("images", image.file)
+        }
 
-        // Parse error for the last attempt's message
-        try {
-          const err = await serviceRes.json()
-          let baseMsg = err.message
-          if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ")
-
-          lastServiceError = baseMsg || "Failed to create service"
-          if (!baseMsg && err.errors && typeof err.errors === "object") {
-            const firstKey = Object.keys(err.errors)[0]
-            const firstError = (err.errors as Record<string, any>)[firstKey]
-            lastServiceError = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`
+        let serviceRes: Response | null = null
+        let lastServiceError = "Failed to create service"
+        const MAX_RETRIES = 3
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            // Wait before retrying — gives Django time to propagate partner profile
+            await new Promise((r) => setTimeout(r, 2000))
           }
-        } catch {
-          lastServiceError = "Failed to create service"
-        }
-        console.warn(`Service creation attempt ${attempt + 1}/${MAX_RETRIES} failed, ${attempt < MAX_RETRIES - 1 ? "retrying..." : "giving up."}`)
-      }
+          serviceRes = await fetch("/api/partner/services", {
+            method: "POST",
+            body: serviceFormData,
+          })
+          if (serviceRes.ok) break
 
-      if (!serviceRes || !serviceRes.ok) {
-        throw new Error(lastServiceError)
+          // Parse error for the last attempt's message
+          try {
+            const err = await serviceRes.json()
+            let baseMsg = err.message
+            if (Array.isArray(baseMsg)) baseMsg = baseMsg.join(", ")
+
+            lastServiceError = baseMsg || "Failed to create service"
+            if (!baseMsg && err.errors && typeof err.errors === "object") {
+              const firstKey = Object.keys(err.errors)[0]
+              const firstError = (err.errors as Record<string, any>)[firstKey]
+              lastServiceError = `${String(firstKey).toUpperCase()}: ${Array.isArray(firstError) ? firstError[0] : firstError}`
+            }
+          } catch {
+            lastServiceError = "Failed to create service"
+          }
+          console.warn(`Service creation attempt ${attempt + 1}/${MAX_RETRIES} failed, ${attempt < MAX_RETRIES - 1 ? "retrying..." : "giving up."}`)
+        }
+
+        if (!serviceRes || !serviceRes.ok) {
+          throw new Error(lastServiceError)
+        }
       }
 
       // All steps succeeded — move to verification
@@ -276,7 +282,10 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      if (currentStep === 3) {
+      if (currentStep === 2 && kycDetails.partnerType === "LABOR") {
+        // Skip exactly from step 2 to submission for LABOR
+        handleSubmitOnboarding()
+      } else if (currentStep === 3) {
         // On the last input step, submit everything to the backend
         handleSubmitOnboarding()
       } else {
@@ -444,11 +453,11 @@ export default function OnboardingPage() {
             </Link>
           )}
           <h1 className="text-navy text-lg font-bold">
-            {steps[currentStep - 1].label}
+            {allSteps.find(s => s.id === currentStep)?.label}
           </h1>
           <div className="w-10 h-10 flex items-center justify-center">
             <span className="text-xs font-bold text-muted bg-muted/10 px-2 py-1 rounded-md">
-              {currentStep}/4
+              {visibleSteps.findIndex(s => s.id === currentStep) + 1}/{visibleSteps.length}
             </span>
           </div>
         </header>
@@ -462,7 +471,7 @@ export default function OnboardingPage() {
                 Onboarding Progress
               </h2>
               <div className="flex flex-col gap-1">
-                {steps.map((step, index) => {
+                {visibleSteps.map((step, index) => {
                   const status = getStepStatus(step.id)
                   return (
                     <div key={step.id}>
@@ -504,7 +513,7 @@ export default function OnboardingPage() {
                         </div>
                       </div>
                       {/* Connector line */}
-                      {index < steps.length - 1 && (
+                      {index < visibleSteps.length - 1 && (
                         <div className="ml-5 h-4 w-px bg-border" />
                       )}
                     </div>
@@ -519,16 +528,16 @@ export default function OnboardingPage() {
             {/* Desktop Title */}
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                {steps[currentStep - 1].label}
+                {allSteps.find(s => s.id === currentStep)?.label}
               </h1>
               <p className="text-muted mt-1">
-                Step {currentStep} of 4 — {steps[currentStep - 1].description}
+                Step {visibleSteps.findIndex(s => s.id === currentStep) + 1} of {visibleSteps.length} — {allSteps.find(s => s.id === currentStep)?.description}
               </p>
             </div>
 
             {/* Desktop Progress Bar */}
             <div className="flex items-center gap-2">
-              {steps.map((step) => (
+              {visibleSteps.map((step) => (
                 <div
                   key={step.id}
                   className={`h-2 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
@@ -568,6 +577,7 @@ export default function OnboardingPage() {
                   category={serviceData.category}
                   price={serviceData.price}
                   priceUnit={serviceData.priceUnit}
+                  isLabor={kycDetails.partnerType === "LABOR"}
                 />
               )}
             </div>
@@ -591,9 +601,9 @@ export default function OnboardingPage() {
                   disabled={isSubmitting}
                   className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
+                  <span>{(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "Submit & Verify" : "Save & Continue"}</span>
                   <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                    {currentStep === 3 ? "check_circle" : "arrow_forward"}
+                    {(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "check_circle" : "arrow_forward"}
                   </span>
                 </button>
               </div>
@@ -606,7 +616,7 @@ export default function OnboardingPage() {
           <div className="w-full max-w-[420px] flex flex-col gap-6 pb-24">
             {/* Mobile Progress Bar */}
             <div className="flex items-center gap-2 px-1">
-              {steps.map((step) => (
+              {visibleSteps.map((step) => (
                 <div
                   key={step.id}
                   className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step.id <= currentStep ? "bg-primary" : "bg-muted/20"
@@ -645,6 +655,7 @@ export default function OnboardingPage() {
                 category={serviceData.category}
                 price={serviceData.price}
                 priceUnit={serviceData.priceUnit}
+                isLabor={kycDetails.partnerType === "LABOR"}
               />
             )}
           </div>
@@ -667,9 +678,9 @@ export default function OnboardingPage() {
                 disabled={isSubmitting}
                 className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
+                <span>{(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "Submit & Verify" : "Save & Continue"}</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                  {currentStep === 3 ? "check_circle" : "arrow_forward"}
+                  {(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "check_circle" : "arrow_forward"}
                 </span>
               </button>
             </div>

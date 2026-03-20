@@ -37,12 +37,12 @@ const partnerTypes = [
         icon: "local_shipping",
         description: "Tempo, truck, goods transport",
     },
-    {
-        value: "AGENCY",
-        label: "Agency",
-        icon: "business",
-        description: "Multiple services provider",
-    },
+    // {
+    //     value: "AGENCY",
+    //     label: "Agency",
+    //     icon: "business",
+    //     description: "Multiple services provider",
+    // },
 ]
 
 export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) {
