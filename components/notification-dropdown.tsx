@@ -13,6 +13,7 @@ interface ApiNotification {
   message: string
   is_read: boolean
   booking_id: string | null
+  notification_type: 'CUSTOMER_BOOKING' | 'PROVIDER_JOB' | 'GENERAL'
   created_at: string
 }
 
@@ -87,13 +88,19 @@ export function NotificationDropdown() {
         const title = payload.notification?.title || "New Notification"
         const message = payload.notification?.body || ""
         const booking_id = payload.data?.booking_id || null
+        const notification_type = (payload.data?.type === 'new_job' || payload.data?.type === 'direct_booking'
+          ? 'PROVIDER_JOB'
+          : payload.data?.type === 'booking_confirmed' || payload.data?.type === 'booking_cancelled' || payload.data?.type === 'booking_expired'
+            ? 'CUSTOMER_BOOKING'
+            : 'GENERAL') as ApiNotification['notification_type']
 
         const newNotif: ApiNotification = {
-          id: Date.now(), // Fallback ID for optimistic UI until refresh
+          id: Date.now(),
           title,
           message,
           is_read: false,
           booking_id,
+          notification_type,
           created_at: new Date().toISOString()
         }
 
@@ -210,7 +217,13 @@ export function NotificationDropdown() {
                     onClick={() => {
                       if (!notification.is_read) markSingleRead(notification.id)
                       setIsOpen(false)
-                      router.push('/')
+                      if (notification.notification_type === 'PROVIDER_JOB') {
+                        router.push('/partner')
+                      } else if (notification.notification_type === 'CUSTOMER_BOOKING' && notification.booking_id) {
+                        router.push(`/bookings/${notification.booking_id}`)
+                      } else {
+                        router.push('/')
+                      }
                     }}
                     className={cn(
                       "flex gap-4 px-5 py-4 hover:bg-muted/30 transition-colors cursor-pointer border-b border-border last:border-0",

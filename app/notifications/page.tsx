@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react"
 import { AccountLayout } from "@/components/account-layout"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
 
 interface ApiNotification {
   id: number
@@ -12,6 +11,7 @@ interface ApiNotification {
   message: string
   is_read: boolean
   booking_id: string | null
+  notification_type: 'CUSTOMER_BOOKING' | 'PROVIDER_JOB' | 'GENERAL'
   created_at: string
 }
 
@@ -52,7 +52,6 @@ function getIconForTitle(title: string) {
 }
 
 export default function NotificationsPage() {
-  const { user } = useAuth()
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "unread">("all")
@@ -111,12 +110,12 @@ export default function NotificationsPage() {
       }
     }
 
-    if (notification.booking_id) {
-      if (user?.role === "PARTNER") {
-        router.push('/partner')
-      } else {
-        router.push(`/bookings/${notification.booking_id}`)
-      }
+    if (notification.notification_type === 'PROVIDER_JOB') {
+      router.push('/partner')
+    } else if (notification.notification_type === 'CUSTOMER_BOOKING' && notification.booking_id) {
+      router.push(`/bookings/${notification.booking_id}`)
+    } else {
+      router.push('/')
     }
   }
 
