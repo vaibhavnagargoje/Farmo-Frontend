@@ -22,6 +22,8 @@ export const API_ENDPOINTS = {
   PARTNER_PROFILE: `${API_BASE_URL}/partners/profile/`,
   PARTNER_DASHBOARD: `${API_BASE_URL}/partners/dashboard/`,
   PARTNER_PUBLIC: (id: number) => `${API_BASE_URL}/partners/${id}/`,
+  LABOR_DETAILS: `${API_BASE_URL}/partners/labor-details/`,
+  NEARBY_LABORS: `${API_BASE_URL}/partners/nearby-labors/`,
 
   // Services
   CATEGORIES: `${API_BASE_URL}/services/categories/`,

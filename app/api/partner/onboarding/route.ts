@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         const djangoFormData = new FormData()
 
         // Text fields — forward all partner registration fields
-        const textFields = ["partner_type", "about"]
+        const textFields = ["partner_type", "about", "skills", "daily_wage_estimate", "is_migrant_worker"]
         for (const field of textFields) {
             const value = formData.get(field)
             if (value && typeof value === "string") {
@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // File fields (KYC documents)
-        const fileFields = ["aadhar_card_front", "aadhar_card_back", "pan_card"]
+        // File fields (KYC documents + optional skill card)
+        const fileFields = ["aadhar_card_front", "aadhar_card_back", "pan_card", "skill_card_photo"]
         for (const field of fileFields) {
             const file = formData.get(field)
             if (file instanceof File) {

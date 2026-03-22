@@ -17,6 +17,10 @@ import {
   ListServicesStep,
   type ListServicesData,
 } from "@/components/onboarding/list-services-step"
+import {
+  LaborDetailsStep,
+  type LaborDetailsData,
+} from "@/components/onboarding/labor-details-step"
 import { VerificationStep } from "@/components/onboarding/verification-step"
 import { APIProvider } from "@vis.gl/react-google-maps"
 
@@ -67,6 +71,15 @@ export default function OnboardingPage() {
     price: "",
     priceUnit: "",
     images: [],
+  })
+
+  // Step 3 (Labor): Labor Details
+  const [laborDetails, setLaborDetails] = useState<LaborDetailsData>({
+    skills: "",
+    dailyWage: "",
+    isMigrant: false,
+    skillCardPhoto: null,
+    skillCardPhotoPreview: "",
   })
 
   // Check partner status on mount
@@ -125,8 +138,8 @@ export default function OnboardingPage() {
   }, [router])
 
   // Visible steps based on selected partner type
-  const visibleSteps = kycDetails.partnerType === "LABOR" 
-    ? allSteps.filter(s => s.id !== 3) 
+  const visibleSteps = kycDetails.partnerType === "LABOR"
+    ? allSteps.map(s => s.id === 3 ? { ...s, label: "Labor Details", icon: "engineering", description: "Your skills & work info" } : s)
     : allSteps;
 
   // Validation for each step
@@ -150,18 +163,26 @@ export default function OnboardingPage() {
           newErrors.aadharBack = "Please upload Aadhar back side"
       }
 
-      if (step === 3 && kycDetails.partnerType !== "LABOR") {
-        if (!serviceData.category) newErrors.category = "Please select a category"
-        if (!serviceData.title.trim()) newErrors.title = "Service title is required"
-        if (!serviceData.price || Number(serviceData.price) <= 0)
-          newErrors.price = "Enter a valid price"
-        if (!serviceData.priceUnit) newErrors.priceUnit = "Select a price unit"
+      if (step === 3) {
+        if (kycDetails.partnerType === "LABOR") {
+          // Validate labor details
+          if (!laborDetails.skills.trim())
+            newErrors.skills = "Please select at least one skill"
+          if (!laborDetails.dailyWage || Number(laborDetails.dailyWage) <= 0)
+            newErrors.dailyWage = "Enter a valid daily wage"
+        } else {
+          if (!serviceData.category) newErrors.category = "Please select a category"
+          if (!serviceData.title.trim()) newErrors.title = "Service title is required"
+          if (!serviceData.price || Number(serviceData.price) <= 0)
+            newErrors.price = "Enter a valid price"
+          if (!serviceData.priceUnit) newErrors.priceUnit = "Select a price unit"
+        }
       }
 
       setErrors(newErrors)
       return Object.keys(newErrors).length === 0
     },
-    [personalInfo, kycDetails, serviceData]
+    [personalInfo, kycDetails, serviceData, laborDetails]
   )
 
   // Submit all onboarding data to backend
@@ -195,6 +216,16 @@ export default function OnboardingPage() {
       }
       if (kycDetails.aadharBack) {
         partnerFormData.append("aadhar_card_back", kycDetails.aadharBack)
+      }
+
+      // Append labor details if LABOR partner
+      if (kycDetails.partnerType === "LABOR") {
+        partnerFormData.append("skills", laborDetails.skills)
+        partnerFormData.append("daily_wage_estimate", laborDetails.dailyWage)
+        partnerFormData.append("is_migrant_worker", laborDetails.isMigrant ? "true" : "false")
+        if (laborDetails.skillCardPhoto) {
+          partnerFormData.append("skill_card_photo", laborDetails.skillCardPhoto)
+        }
       }
 
       const partnerRes = await fetch("/api/partner/onboarding", {
@@ -282,11 +313,8 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      if (currentStep === 2 && kycDetails.partnerType === "LABOR") {
-        // Skip exactly from step 2 to submission for LABOR
-        handleSubmitOnboarding()
-      } else if (currentStep === 3) {
-        // On the last input step, submit everything to the backend
+      if (currentStep === 3) {
+        // On the last input step (service or labor details), submit everything
         handleSubmitOnboarding()
       } else {
         setCurrentStep((prev) => Math.min(prev + 1, 4))
@@ -564,7 +592,14 @@ export default function OnboardingPage() {
                   errors={errors}
                 />
               )}
-              {currentStep === 3 && (
+              {currentStep === 3 && kycDetails.partnerType === "LABOR" && (
+                <LaborDetailsStep
+                  data={laborDetails}
+                  onChange={setLaborDetails}
+                  errors={errors}
+                />
+              )}
+              {currentStep === 3 && kycDetails.partnerType !== "LABOR" && (
                 <ListServicesStep
                   data={serviceData}
                   onChange={setServiceData}
@@ -601,9 +636,9 @@ export default function OnboardingPage() {
                   disabled={isSubmitting}
                   className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span>{(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "Submit & Verify" : "Save & Continue"}</span>
+                  <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
                   <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                    {(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "check_circle" : "arrow_forward"}
+                    {currentStep === 3 ? "check_circle" : "arrow_forward"}
                   </span>
                 </button>
               </div>
@@ -642,7 +677,14 @@ export default function OnboardingPage() {
                 errors={errors}
               />
             )}
-            {currentStep === 3 && (
+            {currentStep === 3 && kycDetails.partnerType === "LABOR" && (
+              <LaborDetailsStep
+                data={laborDetails}
+                onChange={setLaborDetails}
+                errors={errors}
+              />
+            )}
+            {currentStep === 3 && kycDetails.partnerType !== "LABOR" && (
               <ListServicesStep
                 data={serviceData}
                 onChange={setServiceData}
@@ -678,9 +720,9 @@ export default function OnboardingPage() {
                 disabled={isSubmitting}
                 className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span>{(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "Submit & Verify" : "Save & Continue"}</span>
+                <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                  {(currentStep === 3 || (currentStep === 2 && kycDetails.partnerType === "LABOR")) ? "check_circle" : "arrow_forward"}
+                  {currentStep === 3 ? "check_circle" : "arrow_forward"}
                 </span>
               </button>
             </div>

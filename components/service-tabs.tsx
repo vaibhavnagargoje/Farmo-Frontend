@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import type { Category } from "@/lib/api"
+import { LaborListingSection } from "@/components/labor-listing-section"
 
 // Map category slugs to available images
 const categoryImages: Record<string, string> = {
@@ -144,36 +145,9 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                 </>
             )}
 
-            {/* Labors Content — Coming Soon */}
+            {/* Labors Content — Live Listing */}
             {activeTab === "labors" && (
-                <section className="px-4 lg:px-6 pb-6">
-                    <div className="flex flex-col items-center justify-center py-20 lg:py-32">
-                        {/* Icon */}
-                        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-5">
-                            <span className="material-symbols-outlined text-primary text-[40px]">engineering</span>
-                        </div>
-
-                        {/* Badge */}
-                        <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-wider mb-4">
-                            Coming Soon
-                        </span>
-
-                        {/* Text */}
-                        <h2 className="text-xl lg:text-2xl font-bold text-foreground text-center mb-2">
-                            Hire Farm Workers
-                        </h2>
-                        <p className="text-sm text-muted-foreground text-center max-w-sm leading-relaxed">
-                            Book skilled farm laborers for planting, harvesting, weeding, and more.
-                            We&apos;re working hard to bring this to you.
-                        </p>
-
-                        {/* Notify Button */}
-                        <button className="mt-6 px-6 py-2.5 bg-navy text-white text-sm font-semibold rounded-md hover:bg-navy/90 transition-colors flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[18px]">notifications</span>
-                            Notify Me
-                        </button>
-                    </div>
-                </section>
+                <LaborListingSection />
             )}
         </>
     )

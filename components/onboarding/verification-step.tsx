@@ -64,7 +64,17 @@ export function VerificationStep({
                             <p className="text-xs text-muted">Personal info & KYC uploaded</p>
                         </div>
                     </div>
-                    {!isLabor && (
+                    {isLabor ? (
+                    <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-full bg-success flex items-center justify-center text-white shrink-0">
+                            <span className="material-symbols-outlined text-base">check</span>
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-foreground">Labor Details Submitted</p>
+                            <p className="text-xs text-muted">Your skills & work info saved</p>
+                        </div>
+                    </div>
+                    ) : (
                     <div className="flex items-center gap-3">
                         <div className="size-8 rounded-full bg-success flex items-center justify-center text-white shrink-0">
                             <span className="material-symbols-outlined text-base">check</span>

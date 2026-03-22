@@ -87,7 +87,7 @@ export function NotificationDropdown() {
         const title = payload.notification?.title || "New Notification"
         const message = payload.notification?.body || ""
         const booking_id = payload.data?.booking_id || null
-        
+
         const newNotif: ApiNotification = {
           id: Date.now(), // Fallback ID for optimistic UI until refresh
           title,

@@ -17,6 +17,12 @@ interface ServiceItem {
     images: { id: number; image: string; is_thumbnail: boolean }[]; created_at: string
 }
 interface CategoryOption { id: number; name: string; slug: string }
+interface LaborDetailsData {
+    skills: string
+    daily_wage_estimate: string
+    is_migrant_worker: boolean
+    skill_card_photo: string | null
+}
 
 const priceUnits = [
     { value: "HOUR", label: "Per Hour" }, { value: "DAY", label: "Per Day" },
@@ -44,6 +50,15 @@ export default function ManageServicesPage() {
     const imageInputRef = useRef<HTMLInputElement>(null)
     const [newService, setNewService] = useState({ category: "", title: "", description: "", price: "", price_unit: "HOUR", service_radius_km: "10" })
     const [newImages, setNewImages] = useState<File[]>([])
+
+    // Labor profile state
+    const [partnerType, setPartnerType] = useState<string | null>(null)
+    const [laborDetails, setLaborDetails] = useState<LaborDetailsData | null>(null)
+    const [editingLabor, setEditingLabor] = useState(false)
+    const [laborEditForm, setLaborEditForm] = useState({ skills: "", dailyWage: "", isMigrant: false })
+    const [laborSaving, setLaborSaving] = useState(false)
+
+    const SKILL_OPTIONS = ["Mason", "Helper", "Harvester", "Plougher", "Weeder", "Sprayer", "Loader", "Driver", "Carpenter", "Painter", "Electrician", "Plumber"]
 
     // Image compression utility (same as onboarding)
     const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File> => {
@@ -90,8 +105,55 @@ export default function ManageServicesPage() {
         })
     }
 
-    useEffect(() => { fetchServices(); fetchCategories() }, [])
+    useEffect(() => { fetchServices(); fetchCategories(); fetchPartnerType() }, [])
     useEffect(() => { if (message) { const t = setTimeout(() => setMessage(null), 4000); return () => clearTimeout(t) } }, [message])
+
+    const fetchPartnerType = async () => {
+        try {
+            const res = await fetch("/api/partner/services")
+            // Also fetch partner profile to get partner_type
+            const profileRes = await fetch("/api/partner/labor-details")
+            if (profileRes.ok) {
+                const d = await profileRes.json()
+                setPartnerType("LABOR")
+                setLaborDetails(d.labor_details || null)
+                if (d.labor_details) {
+                    setLaborEditForm({
+                        skills: d.labor_details.skills || "",
+                        dailyWage: d.labor_details.daily_wage_estimate || "",
+                        isMigrant: d.labor_details.is_migrant_worker || false,
+                    })
+                }
+            }
+        } catch { /* Not a labor partner or not authenticated */ }
+    }
+
+    const handleSaveLabor = async () => {
+        setLaborSaving(true)
+        try {
+            const res = await fetch("/api/partner/labor-details", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    skills: laborEditForm.skills,
+                    daily_wage_estimate: laborEditForm.dailyWage,
+                    is_migrant_worker: laborEditForm.isMigrant,
+                }),
+            })
+            if (res.ok) {
+                const d = await res.json()
+                setLaborDetails(d.labor_details)
+                setEditingLabor(false)
+                setMessage({ type: "success", text: "Labor details updated" })
+            } else {
+                setMessage({ type: "error", text: "Failed to update labor details" })
+            }
+        } catch {
+            setMessage({ type: "error", text: "Network error" })
+        } finally {
+            setLaborSaving(false)
+        }
+    }
 
     const fetchServices = async () => {
         try { const res = await fetch("/api/partner/services"); if (res.ok) { const d = await res.json(); setServices(Array.isArray(d) ? d : d.results || []) } } catch (e) { console.error(e) } finally { setIsLoading(false) }
@@ -168,13 +230,96 @@ export default function ManageServicesPage() {
             )}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h2 className="text-xl lg:text-2xl font-bold text-foreground">My Services</h2>
+                    <h2 className="text-xl lg:text-2xl font-bold text-foreground">Manage Services</h2>
                     <p className="text-sm text-muted mt-1">{services.length} service{services.length !== 1 ? "s" : ""} listed</p>
                 </div>
                 <button onClick={() => setShowAddForm(true)} className="bg-primary text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg">
                     <span className="material-symbols-outlined text-lg">add</span>Add Service
                 </button>
             </div>
+
+            {/* ═══ Labor Profile Card (only for LABOR partners) ═══ */}
+            {partnerType === "LABOR" && (
+                <div className="bg-card rounded-2xl border-2 border-primary/20 p-5 lg:p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">engineering</span>
+                            My Labor Profile
+                        </h3>
+                        {!editingLabor && laborDetails && (
+                            <button onClick={() => { setEditingLabor(true); setLaborEditForm({ skills: laborDetails.skills || "", dailyWage: laborDetails.daily_wage_estimate || "", isMigrant: laborDetails.is_migrant_worker || false }) }} className="size-9 rounded-lg border border-border flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-colors">
+                                <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {editingLabor ? (
+                        <div className="flex flex-col gap-4">
+                            {/* Skills chips */}
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-sm font-semibold">Skills</Label>
+                                <div className="flex flex-wrap gap-2">
+                                    {SKILL_OPTIONS.map(skill => {
+                                        const selected = laborEditForm.skills.split(",").map(s => s.trim()).includes(skill)
+                                        return (
+                                            <button key={skill} type="button" onClick={() => {
+                                                const current = laborEditForm.skills.split(",").map(s => s.trim()).filter(Boolean)
+                                                const updated = selected ? current.filter(s => s !== skill) : [...current, skill]
+                                                setLaborEditForm(p => ({ ...p, skills: updated.join(", ") }))
+                                            }} className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${selected ? "bg-primary text-white border-primary" : "bg-background text-muted border-border hover:border-primary/50"}`}>
+                                                {skill}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                            {/* Daily Wage */}
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-sm font-semibold">Daily Wage (₹)</Label>
+                                <Input type="number" value={laborEditForm.dailyWage} onChange={e => setLaborEditForm(p => ({ ...p, dailyWage: e.target.value }))} placeholder="e.g. 500" className="h-11 rounded-xl bg-background" />
+                            </div>
+                            {/* Migrant */}
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-semibold">Migrant Worker</Label>
+                                <Switch checked={laborEditForm.isMigrant} onCheckedChange={v => setLaborEditForm(p => ({ ...p, isMigrant: v }))} />
+                            </div>
+                            <div className="flex gap-3 mt-2">
+                                <button onClick={() => setEditingLabor(false)} className="flex-1 h-10 rounded-xl border border-border text-muted text-sm font-semibold hover:bg-muted/10">Cancel</button>
+                                <button onClick={handleSaveLabor} disabled={laborSaving} className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">{laborSaving ? "Saving..." : "Save Changes"}</button>
+                            </div>
+                        </div>
+                    ) : laborDetails ? (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary text-sm">handyman</span>
+                                <span className="text-sm font-semibold text-foreground">Skills:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {laborDetails.skills?.split(",").map(s => s.trim()).filter(Boolean).map((skill, i) => (
+                                        <span key={i} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">{skill}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary text-sm">payments</span>
+                                <span className="text-sm font-semibold text-foreground">Daily Wage:</span>
+                                <span className="text-sm text-foreground">₹{Number(laborDetails.daily_wage_estimate).toLocaleString("en-IN")}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary text-sm">directions_walk</span>
+                                <span className="text-sm font-semibold text-foreground">Migrant Worker:</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${laborDetails.is_migrant_worker ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>{laborDetails.is_migrant_worker ? "Yes" : "No"}</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <p className="text-sm text-muted mb-3">No labor details found. Add your profile info.</p>
+                            <button onClick={() => setEditingLabor(true)} className="bg-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/90">
+                                <span className="material-symbols-outlined text-lg align-middle mr-1">add</span>Add Labor Details
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
             {isLoading ? (
                 <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
             ) : services.length === 0 && !showAddForm ? (
