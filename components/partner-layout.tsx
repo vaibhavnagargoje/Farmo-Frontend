@@ -229,11 +229,12 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
 
                 <div className="sticky top-16 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
                     <h1 className="text-base font-bold text-foreground">{pageTitle}</h1>
-                    <div className="flex items-center gap-1.5 ml-auto">
-                        <span className={cn(
-                            "w-2 h-2 rounded-full",
-                            isOnline ? "bg-green-500" : "bg-gray-400"
-                        )}></span>
+                    <div className="flex items-center gap-2 ml-auto px-3 py-1.5 bg-background rounded-full border border-border">
+                        <Switch
+                            checked={isOnline}
+                            onCheckedChange={handleToggleOnline}
+                            className="scale-90 data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300"
+                        />
                         <span className={cn(
                             "text-xs font-bold",
                             isOnline ? "text-green-600" : "text-muted"

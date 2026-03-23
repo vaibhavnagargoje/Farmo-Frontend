@@ -87,39 +87,8 @@ export function ProfileContent({ isPartnerView = false }: { isPartnerView?: bool
             </div>
 
             <div className="space-y-6 lg:space-y-8">
-                {isPartnerView ? (
-                    <Link
-                        href="/profile"
-                        className="flex items-center justify-between p-4 lg:p-5 bg-navy/5 hover:bg-navy/10 transition-colors rounded-2xl lg:rounded-3xl border border-navy/10 group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-navy group-hover:scale-105 transition-transform flex-shrink-0">
-                                <span className="material-symbols-outlined text-xl lg:text-2xl">swap_horiz</span>
-                            </div>
-                            <div>
-                                <h3 className="text-base lg:text-lg font-bold text-foreground">Switch to Farmer</h3>
-                                <p className="text-xs lg:text-sm text-muted mt-0.5 pr-2">Return to customer view to book services</p>
-                            </div>
-                        </div>
-                        <span className="material-symbols-outlined text-muted group-hover:text-navy transition-colors flex-shrink-0">arrow_forward</span>
-                    </Link>
-                ) : partner ? (
-                    <Link
-                        href="/partner"
-                        className="flex items-center justify-between p-4 lg:p-5 bg-navy/5 hover:bg-navy/10 transition-colors rounded-2xl lg:rounded-3xl border border-navy/10 group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-navy group-hover:scale-105 transition-transform flex-shrink-0">
-                                <span className="material-symbols-outlined text-xl lg:text-2xl">swap_horiz</span>
-                            </div>
-                            <div>
-                                <h3 className="text-base lg:text-lg font-bold text-foreground">Switch to Partner Dashboard</h3>
-                                <p className="text-xs lg:text-sm text-muted mt-0.5 pr-2">Manage your equipment listings and bookings</p>
-                            </div>
-                        </div>
-                        <span className="material-symbols-outlined text-muted group-hover:text-navy transition-colors flex-shrink-0">arrow_forward</span>
-                    </Link>
-                ) : (
+                {/* Become a Partner CTA — only shown for non-partner users on the farmer profile */}
+                {!isPartnerView && !partner && (
                     <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-navy to-[#2a6dc0] shadow-xl group">
                         <div className="absolute -right-16 -top-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
                         <div className="absolute left-10 bottom-[-40px] w-40 h-40 bg-blue-300 opacity-20 rounded-full blur-2xl"></div>

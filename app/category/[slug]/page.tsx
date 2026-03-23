@@ -165,11 +165,15 @@ export default function CategoryServicesPage() {
     initLocation()
   }, [])
 
-  // ── Fetch category data once ──
+  // ── Fetch category data (re-fetches when location changes for zone pricing) ──
   useEffect(() => {
     const fetchCategory = async () => {
       try {
-        const catRes = await fetch("/api/services/categories")
+        let catUrl = "/api/services/categories"
+        if (selectedLocation) {
+          catUrl += `?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`
+        }
+        const catRes = await fetch(catUrl)
         if (catRes.ok) {
           const catData = await catRes.json()
           const categories = catData.results || catData || []
@@ -180,7 +184,7 @@ export default function CategoryServicesPage() {
       }
     }
     if (slug) fetchCategory()
-  }, [slug])
+  }, [slug, selectedLocation])
 
   // ── Fetch services when location or distance changes ──
   useEffect(() => {
@@ -337,10 +341,10 @@ export default function CategoryServicesPage() {
   const remainingProviderCount = Math.max(availableProviders - topProviderAvatars.length, 0)
 
   useEffect(() => {
-    if (category?.instant_price_unit && !selectedUnit) {
+    if (category?.instant_price_unit) {
       setSelectedUnit(category.instant_price_unit)
     }
-  }, [category?.instant_price_unit, selectedUnit])
+  }, [category?.instant_price_unit])
 
   // ── Instant Booking: Create ──
   const handleInstantBooking = useCallback(async () => {

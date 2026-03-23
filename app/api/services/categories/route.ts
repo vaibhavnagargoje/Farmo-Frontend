@@ -2,10 +2,18 @@ import { NextResponse } from "next/server"
 import { API_ENDPOINTS } from "@/lib/api"
 import { publicApiRequest, rewriteMediaUrl } from "@/lib/api-server"
 
-// GET /api/services/categories
-export async function GET() {
+// GET /api/services/categories?lat=...&lng=...
+export async function GET(request: Request) {
     try {
-        const res = await publicApiRequest(API_ENDPOINTS.CATEGORIES)
+        // Forward lat/lng for zone pricing resolution
+        const { searchParams } = new URL(request.url)
+        let url = API_ENDPOINTS.CATEGORIES
+        const lat = searchParams.get('lat')
+        const lng = searchParams.get('lng')
+        if (lat && lng) {
+            url += `?lat=${lat}&lng=${lng}`
+        }
+        const res = await publicApiRequest(url)
         const data = await res.json()
 
         // Rewrite icon URLs in categories
