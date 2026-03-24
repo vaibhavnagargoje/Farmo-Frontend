@@ -12,6 +12,7 @@ import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
 import { APIProvider } from "@vis.gl/react-google-maps"
 import { type Service, type Category, type PriceUnit } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 
 // ── Constants ──
 const DISTANCE_OPTIONS = [
@@ -27,6 +28,7 @@ export default function CategoryServicesPage() {
   const slug = params.slug as string
   const router = useRouter()
   const { isAuthenticated } = useAuth()
+  const { lang, t } = useLanguage()
 
   // ── Data ──
   const [services, setServices] = useState<Service[]>([])
@@ -169,10 +171,14 @@ export default function CategoryServicesPage() {
   useEffect(() => {
     const fetchCategory = async () => {
       try {
-        let catUrl = "/api/services/categories"
+        const params = new URLSearchParams()
         if (selectedLocation) {
-          catUrl += `?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`
+          params.set('lat', String(selectedLocation.lat))
+          params.set('lng', String(selectedLocation.lng))
         }
+        if (lang !== 'en') params.set('lang', lang)
+        const qs = params.toString()
+        const catUrl = qs ? `/api/services/categories?${qs}` : '/api/services/categories'
         const catRes = await fetch(catUrl)
         if (catRes.ok) {
           const catData = await catRes.json()
@@ -184,7 +190,7 @@ export default function CategoryServicesPage() {
       }
     }
     if (slug) fetchCategory()
-  }, [slug, selectedLocation])
+  }, [slug, selectedLocation, lang])
 
   // ── Fetch services when location or distance changes ──
   useEffect(() => {
@@ -329,13 +335,18 @@ export default function CategoryServicesPage() {
     }))
 
   // ── Computed ──
-  const categoryName = category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  const categoryName = category?.name_translations?.[lang] || category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
   const availableProviders = services.filter((s) => s.is_available).length
   const instantPrice = category ? Math.round(parseFloat(category.instant_price || "0")) : 0
   const estimatedTotal = instantPrice * quantity
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
   const resolvedUnit = selectedUnit || category?.instant_price_unit || ""
-  const priceUnitLabel = priceUnits.find((u) => u.value === resolvedUnit)?.label || resolvedUnit || "Per unit"
+  
+  const tUnitKey = `unit.${resolvedUnit.toLowerCase()}`
+  const tUnit = resolvedUnit ? t(tUnitKey) : ""
+  const fallbackLabel = priceUnits.find((u) => u.value === resolvedUnit)?.label || resolvedUnit || "Per unit"
+  const priceUnitLabel = tUnit === tUnitKey ? fallbackLabel : tUnit
+
   const isInstantEnabled = category?.instant_enabled !== false
   const topProviderAvatars = services.filter((s) => s.is_available).slice(0, 3)
   const remainingProviderCount = Math.max(availableProviders - topProviderAvatars.length, 0)
@@ -485,8 +496,8 @@ export default function CategoryServicesPage() {
               <div className="mt-0.5 flex items-center gap-2">
                 <p className="text-[11px] lg:text-xs text-muted-foreground">
                   {availableProviders > 0
-                    ? `${availableProviders} Available`
-                    : "Find Available Providers"}
+                    ? `${availableProviders} ${t("common.available")}`
+                    : t("common.find_providers")}
                 </p>
                 {topProviderAvatars.length > 0 && (
                   <div className="flex items-center -space-x-1.5">
@@ -505,7 +516,7 @@ export default function CategoryServicesPage() {
               </div>
             </div>
             <div className="shrink-0 text-right lg:hidden">
-              <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Starting at</p>
+              <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{t("common.starting_at")}</p>
               <p className="text-2xl font-bold text-navy leading-none">
                 {instantPrice ? (
                   <>
@@ -648,7 +659,7 @@ export default function CategoryServicesPage() {
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${availableProviders > 0 ? "bg-green-500" : "bg-red-500"}`} />
                     </span>
                     <span className="text-[12px] font-medium text-foreground">
-                      {availableProviders} Provider{availableProviders !== 1 ? 's' : ''} Available
+                      {t("provider.available").replace("{count}", String(availableProviders)).replace("{plural}", availableProviders !== 1 ? "s" : "")}
                     </span>
                   </div>
                   {services.length > 0 && (
@@ -668,7 +679,7 @@ export default function CategoryServicesPage() {
                 </div>
 
                 <div className="text-right">
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Starting at</p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{t("common.starting_at")}</p>
                   <p className="text-2xl font-bold text-navy leading-none">
                     {instantPrice ? (
                       <>
@@ -686,15 +697,14 @@ export default function CategoryServicesPage() {
               {isInstantEnabled && availableProviders > 0 && (
                 <div className="bg-card border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="material-symbols-outlined text-navy text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>flash_on</span>
-                    <h3 className="text-sm font-bold text-foreground">Quick Book</h3>
+                    <h3 className="text-sm font-bold text-foreground">{t("booking.enter_estimated_detail")}</h3>
                   </div>
 
                   {/* Estimated */}
                   <div className={`flex-1 ${priceUnits.length > 0 ? "mb-1 grid grid-cols-2 gap-3" : "mb-1"}`}>
                     {/* Quantity */}
                     <div>
-                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estimated</label>
+                      {/* <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{t("booking.estimated")}</label> */}
                       <div className="flex items-center w-full h-11 border border-border rounded-lg bg-background overflow-hidden">
                         <button
                           onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -719,7 +729,7 @@ export default function CategoryServicesPage() {
                     {/* Unit Selector */}
                     {priceUnits.length > 0 && (
                       <div>
-                        <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unit</label>
+                        {/* <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{t("booking.unit")}</label> */}
                         <div className="relative">
                           <select
                             value={selectedUnit || category?.instant_price_unit || ""}
@@ -727,13 +737,18 @@ export default function CategoryServicesPage() {
                             className="w-full h-11 pl-3 pr-8 border border-border rounded-lg bg-background font-medium appearance-none text-foreground focus:outline-none focus:ring-2 focus:ring-navy/20 text-sm"
                           >
                             <option value="" disabled>
-                              Select unit
+                              {t("booking.select_unit")}
                             </option>
-                            {priceUnits.map((u) => (
-                              <option key={u.value} value={u.value}>
-                                {u.label}
-                              </option>
-                            ))}
+                            {priceUnits.map((u) => {
+                              const mkKey = `unit.${u.value.toLowerCase()}`
+                              const translated = t(mkKey)
+                              const optLabel = translated === mkKey ? u.label : translated
+                              return (
+                                <option key={u.value} value={u.value}>
+                                  {optLabel}
+                                </option>
+                              )
+                            })}
                           </select>
                           <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground">
                             <span className="material-symbols-outlined text-[18px]">expand_more</span>
@@ -743,7 +758,7 @@ export default function CategoryServicesPage() {
                     )}
                   </div>
 
-                  {/* Estimated Total */}
+                  {/* Estimated Total
                   {instantPrice > 0 && (
                     <div className="flex items-center justify-between bg-navy/5 rounded-lg px-3 py-2">
                       <span className="text-[11px] text-muted-foreground">
@@ -751,15 +766,15 @@ export default function CategoryServicesPage() {
                       </span>
                       <span className="text-sm font-bold text-navy">₹{estimatedTotal}</span>
                     </div>
-                  )}
+                  )} */}
 
                   {/* Note */}
                   <div>
-                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Additional Note</label>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{t("booking.additional_note")}</label>
                     <textarea
                       value={bookingNote}
                       onChange={(e) => setBookingNote(e.target.value)}
-                      placeholder="Any special instructions... (optional)"
+                      placeholder={t("booking.note_placeholder")}
                       rows={2}
                       className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
                     />
@@ -784,7 +799,7 @@ export default function CategoryServicesPage() {
                   >
                     <div className="absolute inset-0 flex items-center justify-center">
                       <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
-                        Swipe to Book Now
+                        {t("booking.swipe_to_book")}
                       </p>
                     </div>
                     <div
@@ -825,7 +840,7 @@ export default function CategoryServicesPage() {
                 className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 bg-card border-2 border-navy/15 rounded-xl text-sm font-semibold text-foreground hover:bg-navy/5 hover:border-navy/30 active:scale-[0.98] transition-all group"
               >
                 <span className="material-symbols-outlined text-[20px] text-navy" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
-                <span>Direct Providers</span>
+                <span>{t("common.direct_providers")}</span>
                 <span className="material-symbols-outlined text-[16px] text-muted-foreground group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
               </Link>
             </div>
@@ -872,7 +887,7 @@ export default function CategoryServicesPage() {
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
                 <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Order Created!</h2>
+              <h2 className="text-xl font-bold mb-1">{t("booking.order_created")}</h2>
               <p className="text-sm text-white/80">
                 {categoryName} • {quantity} {priceUnitLabel}
               </p>
@@ -881,21 +896,21 @@ export default function CategoryServicesPage() {
             <div className="p-6 space-y-4">
               <div className="bg-navy/5 rounded-xl p-3 space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Order</span>
+                  <span className="text-muted-foreground">{t("common.order")}</span>
                   <span className="font-semibold text-foreground">{createdOrderNumber || createdBookingId || "—"}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Quantity</span>
+                  <span className="text-muted-foreground">{t("common.quantity")}</span>
                   <span className="font-semibold text-foreground">{quantity} {priceUnitLabel}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Est. Total</span>
+                  <span className="text-muted-foreground">{t("booking.est_total")}</span>
                   <span className="font-bold text-navy">₹{quantity * instantPrice}</span>
                 </div>
               </div>
 
               <p className="text-xs text-muted-foreground text-center">
-                See status in Orders page
+                {t("booking.see_status")}
               </p>
 
               <button
@@ -906,7 +921,7 @@ export default function CategoryServicesPage() {
                 }}
                 className="w-full py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -922,17 +937,17 @@ export default function CategoryServicesPage() {
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
                 <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Active Order Exists</h2>
-              <p className="text-sm text-white/80">You already have an active order</p>
+              <h2 className="text-xl font-bold mb-1">{t("booking.active_exists_title")}</h2>
+              <p className="text-sm text-white/80">{t("booking.active_exists")}</p>
             </div>
 
             <div className="p-6 space-y-4">
               <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-xl p-4 flex items-start gap-3">
                 <span className="material-symbols-outlined text-orange-600 text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Cannot create a new order</p>
+                  <p className="text-sm font-semibold text-foreground">{t("booking.cannot_create")}</p>
                   <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
-                    Cancel your existing order or wait for it to expire before creating a new one.
+                    {t("booking.cancel_or_wait")}
                   </p>
                 </div>
               </div>
@@ -940,7 +955,7 @@ export default function CategoryServicesPage() {
               {activeExistingBookingId && (
                 <div className="bg-navy/5 rounded-xl p-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Active Order</span>
+                    <span className="text-muted-foreground">{t("booking.active_order")}</span>
                     <span className="font-semibold text-foreground">{activeExistingBookingId}</span>
                   </div>
                 </div>
@@ -951,7 +966,7 @@ export default function CategoryServicesPage() {
                   onClick={() => router.push("/orders")}
                   className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm"
                 >
-                  View Orders
+                  {t("booking.view_orders")}
                 </button>
                 <button
                   onClick={() => {
@@ -960,7 +975,7 @@ export default function CategoryServicesPage() {
                   }}
                   className="flex-1 py-3 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
                 >
-                  Close
+                  {t("common.close")}
                 </button>
               </div>
             </div>
@@ -977,8 +992,8 @@ export default function CategoryServicesPage() {
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
                 <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Login Required</h2>
-              <p className="text-sm text-white/80">Please login to create a booking</p>
+              <h2 className="text-xl font-bold mb-1">{t("login.required")}</h2>
+              <p className="text-sm text-white/80">{t("login.prompt")}</p>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex gap-3">
@@ -986,13 +1001,13 @@ export default function CategoryServicesPage() {
                   href="/auth"
                   className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm text-center"
                 >
-                  Login / Sign Up
+                  {t("login.login_signup")}
                 </Link>
                 <button
                   onClick={() => setShowLoginPrompt(false)}
                   className="py-3 px-4 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
                 >
-                  Close
+                  {t("common.close")}
                 </button>
               </div>
             </div>

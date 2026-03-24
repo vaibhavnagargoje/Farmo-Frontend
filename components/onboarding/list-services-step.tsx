@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useLanguage } from "@/contexts/language-context"
 
 export interface ServiceImageItem {
     file: File
@@ -54,6 +55,7 @@ export function ListServicesStep({
     onChange,
     errors,
 }: ListServicesStepProps) {
+    const { t, lang } = useLanguage()
     const imageInputRef = useRef<HTMLInputElement>(null)
     const [categories, setCategories] = useState<CategoryOption[]>([])
     const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
@@ -62,7 +64,7 @@ export function ListServicesStep({
     useEffect(() => {
         async function fetchCategories() {
             try {
-                const res = await fetch("/api/services/categories")
+                const res = await fetch(`/api/services/categories${lang === "mr" ? "?lang=mr" : ""}`)
                 if (res.ok) {
                     const data = await res.json()
                     // Handle both array response and paginated response
@@ -159,16 +161,16 @@ export function ListServicesStep({
         <div className="flex flex-col gap-6">
             {/* Section Header */}
             <div>
-                <h2 className="text-xl font-bold text-navy lg:text-2xl">List Your First Service</h2>
+                <h2 className="text-xl font-bold text-navy lg:text-2xl">{t("onboarding.step3.title")}</h2>
                 <p className="text-sm text-muted mt-1">
-                    Add the service you want to offer to customers
+                    {t("onboarding.step3.desc")}
                 </p>
             </div>
 
             {/* Category Selection */}
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-semibold text-foreground">
-                    Service Category <span className="text-destructive">*</span>
+                    {t("onboarding.step3.category")} <span className="text-destructive">*</span>
                 </Label>
                 <Select
                     value={data.category}
@@ -177,13 +179,13 @@ export function ListServicesStep({
                     <SelectTrigger
                         className={`h-12 rounded-xl bg-card w-full border ${errors.category ? "border-destructive" : "border-border"} focus:border-primary`}
                     >
-                        <SelectValue placeholder="Choose a category" />
+                        <SelectValue placeholder={t("onboarding.step3.choose_category")} />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border rounded-xl">
                         {isCategoriesLoading ? (
-                            <div className="p-3 text-sm text-muted text-center">Loading categories...</div>
+                            <div className="p-3 text-sm text-muted text-center">{t("onboarding.step3.loading_categories")}</div>
                         ) : categories.length === 0 ? (
-                            <div className="p-3 text-sm text-muted text-center">No categories available</div>
+                            <div className="p-3 text-sm text-muted text-center">{t("onboarding.step3.no_categories")}</div>
                         ) : (
                             categories.map((cat) => (
                                 <SelectItem key={cat.id} value={String(cat.id)} className="rounded-lg">
@@ -204,11 +206,11 @@ export function ListServicesStep({
             {/* Service Title */}
             <div className="flex flex-col gap-2">
                 <Label htmlFor="serviceTitle" className="text-sm font-semibold text-foreground">
-                    Service Title <span className="text-destructive">*</span>
+                    {t("onboarding.step3.service_title")} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                     id="serviceTitle"
-                    placeholder="e.g. Tractor Ploughing Service"
+                    placeholder={t("onboarding.step3.title_placeholder")}
                     value={data.title}
                     onChange={(e) => onChange({ ...data, title: e.target.value })}
                     className={`h-12 rounded-xl bg-card border ${errors.title ? "border-destructive ring-1 ring-destructive/30" : "border-border"} text-foreground placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all`}
@@ -224,11 +226,11 @@ export function ListServicesStep({
             {/* Description */}
             <div className="flex flex-col gap-2">
                 <Label htmlFor="serviceDescription" className="text-sm font-semibold text-foreground">
-                    Description
+                    {t("onboarding.step3.description")}
                 </Label>
                 <Textarea
                     id="serviceDescription"
-                    placeholder="Describe your service, equipment condition, experience..."
+                    placeholder={t("onboarding.step3.desc_placeholder")}
                     value={data.description}
                     onChange={(e) => onChange({ ...data, description: e.target.value })}
                     rows={3}
@@ -240,7 +242,7 @@ export function ListServicesStep({
             <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                     <Label htmlFor="price" className="text-sm font-semibold text-foreground">
-                        Price <span className="text-destructive">*</span>
+                        {t("onboarding.step3.price")} <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-muted">
@@ -265,7 +267,7 @@ export function ListServicesStep({
 
                 <div className="flex flex-col gap-2">
                     <Label className="text-sm font-semibold text-foreground">
-                        Price Unit <span className="text-destructive">*</span>
+                        {t("onboarding.step3.price_unit")} <span className="text-destructive">*</span>
                     </Label>
                     <Select
                         value={data.priceUnit}
@@ -274,12 +276,12 @@ export function ListServicesStep({
                         <SelectTrigger
                             className={`h-12 rounded-xl bg-card w-full border ${errors.priceUnit ? "border-destructive" : "border-border"} focus:border-primary`}
                         >
-                            <SelectValue placeholder="Select unit" />
+                            <SelectValue placeholder={t("onboarding.step3.select_unit")} />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border rounded-xl">
                             {priceUnits.map((unit) => (
                                 <SelectItem key={unit.value} value={unit.value} className="rounded-lg">
-                                    {unit.label}
+                                    {t(`unit.${unit.value}`) === `unit.${unit.value}` ? unit.label : t(`unit.${unit.value}`)}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -296,9 +298,9 @@ export function ListServicesStep({
             {/* Service Images */}
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold text-foreground">Service Images</Label>
+                    <Label className="text-sm font-semibold text-foreground">{t("onboarding.step3.images")}</Label>
                     <span className="text-xs text-muted font-medium">
-                        {data.images.length} uploaded
+                        {data.images.length} {t("onboarding.step3.uploaded")}
                     </span>
                 </div>
 
@@ -346,7 +348,7 @@ export function ListServicesStep({
                             add_photo_alternate
                         </span>
                         <span className="text-[11px] font-semibold text-muted group-hover:text-primary transition-colors">
-                            Add Photo
+                            {t("onboarding.step3.add_photo")}
                         </span>
                     </button>
                 </div>
@@ -357,7 +359,7 @@ export function ListServicesStep({
                     </p>
                 )}
                 <p className="text-[11px] text-muted">
-                    Add photos of your equipment, machinery, or work samples. Max 15MB each (auto-compressed).
+                    {t("onboarding.step3.images_desc")}
                 </p>
             </div>
         </div>

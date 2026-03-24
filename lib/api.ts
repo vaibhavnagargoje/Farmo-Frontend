@@ -60,7 +60,7 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: `${API_BASE_URL}/notifications/`,
 
   // Search
-  SEARCH: (query: string) => `${API_BASE_URL}/search/?q=${encodeURIComponent(query)}`,
+  SEARCH: (query: string, lang?: string) => `${API_BASE_URL}/search/?q=${encodeURIComponent(query)}${lang ? `&lang=${lang}` : ''}`,
 } as const
 
 // Types for API responses
@@ -70,6 +70,7 @@ export interface User {
   email: string | null
   role: "CUSTOMER" | "PARTNER" | "ADMIN" | "SUPERADMIN"
   full_name: string
+  profile_picture: string | null
   is_active: boolean
 }
 
@@ -101,6 +102,7 @@ export interface PartnerProfile {
   user: number
   user_phone: string
   full_name: string
+  profile_picture?: string | null
   partner_type: "LABOR" | "MACHINERY_OWNER" | "TRANSPORTER"
   about: string
   is_verified: boolean
@@ -125,6 +127,7 @@ export interface PartnerDashboard {
 export interface Category {
   id: number
   name: string
+  name_translations?: Record<string, string>
   slug: string
   icon: string
   is_active: boolean
@@ -146,6 +149,7 @@ export interface Service {
   category?: Category
   partner_name?: string
   partner_rating?: string
+  partner_profile_picture?: string | null
   partner?: PartnerProfile
   is_available: boolean
   thumbnail?: string

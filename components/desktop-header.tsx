@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -34,6 +35,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { t, lang } = useLanguage()
   const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
   const [locationName, setLocationName] = useState<string>("India")
@@ -78,7 +80,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery.trim().length >= 2) {
         setIsSearching(true)
-        fetchPublic(API_ENDPOINTS.SEARCH(searchQuery.trim()))
+        fetchPublic(API_ENDPOINTS.SEARCH(searchQuery.trim(), lang))
           .then(res => res.json())
           .then(data => {
             setSearchResults(data)
@@ -110,12 +112,12 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
           if (data.has_location && data.location?.address) {
             setLocationName(data.location.address.split(',')[0])
           } else {
-            setLocationName("Set your location")
+            setLocationName(t("location.set_location"))
           }
         })
         .catch(() => { })
     } else {
-      setLocationName("Set your location")
+      setLocationName(t("location.set_location"))
     }
   }, [isAuthenticated])
 
@@ -150,7 +152,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => { if (searchQuery.length >= 2) setIsDropdownOpen(true) }}
-                  placeholder="Search for tractors, labors..."
+                  placeholder={t("header.search_placeholder_desktop")}
                   className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70 h-full w-full"
                 />
                 {searchQuery && (
@@ -166,7 +168,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                    {/* Categories */}
                    {searchResults.categories?.length > 0 && (
                      <div className="p-2 border-b border-border/50">
-                       <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Categories</div>
+                       <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("common.categories")}</div>
                        {searchResults.categories.slice(0, 3).map(cat => (
                           <button key={cat.id} type="button" onClick={() => { setSearchQuery(cat.name); handleSearchSubmit(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 rounded-lg flex items-center gap-2 transition-colors">
                              <span className="material-symbols-outlined text-[18px] text-muted-foreground">category</span>
@@ -179,7 +181,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                    {/* Services */}
                    {searchResults.services?.length > 0 ? (
                       <div className="p-2">
-                         <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Services</div>
+                         <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.services")}</div>
                          {searchResults.services.slice(0, 5).map(srv => (
                             <Link key={srv.id} href={`/booking/new/${srv.id}`} onClick={() => setIsDropdownOpen(false)} className="px-3 py-2 hover:bg-muted/50 rounded-lg flex gap-3 items-center transition-colors">
                                {srv.thumbnail ? (
@@ -198,14 +200,14 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                       </div>
                    ) : (
                       <div className="p-4 text-center text-sm text-muted-foreground">
-                         {isSearching ? "Searching..." : "No matching services found"}
+                         {isSearching ? t("common.searching") : t("common.no_matching_services")}
                       </div>
                    )}
                    
                    {searchResults.total_services > 5 && (
                       <div className="p-2 border-t border-border/50 bg-muted/10">
                          <button type="button" onClick={() => handleSearchSubmit()} className="w-full py-2 text-sm text-primary font-bold hover:bg-primary/5 rounded-lg transition-colors">
-                            View all {searchResults.total_services} results
+                            {t("common.view_all_results").replace("{count}", String(searchResults.total_services))}
                          </button>
                       </div>
                    )}
@@ -220,10 +222,10 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                   <Link
                     href={isPartnerView ? "/profile" : "/partner"}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted font-medium text-xs text-muted-foreground hover:text-navy transition-colors border border-transparent hover:border-border"
-                    title={isPartnerView ? "Switch to Farmer" : "Switch to Partner"}
+                    title={isPartnerView ? t("header.switch_to_farmer") : t("header.switch_to_partner")}
                   >
                     <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
-                    {isPartnerView ? "Farmer" : "Partner"}
+                    {isPartnerView ? t("header.switch_farmer") : t("header.switch_partner")}
                   </Link>
                 )}
               </div>
@@ -246,7 +248,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             ) : (
               <Button asChild variant="default" className="rounded-full px-6">
                 <Link href="/auth">
-                  Login
+                  {t("common.login")}
                 </Link>
               </Button>
             )}

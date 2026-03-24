@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useMapsLibrary } from "@vis.gl/react-google-maps"
+import { useLanguage } from "@/contexts/language-context"
 
 export interface PersonalInfoData {
     fullName: string
@@ -21,6 +22,7 @@ interface PersonalInfoStepProps {
 }
 
 export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false, existingLocations = [] }: PersonalInfoStepProps) {
+    const { t } = useLanguage()
     const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [showExistingDropdown, setShowExistingDropdown] = useState(false)
@@ -123,19 +125,19 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
         <div className="flex flex-col gap-6">
             {/* Section Header */}
             <div>
-                <h2 className="text-xl font-bold text-navy lg:text-2xl">Personal Information</h2>
-                <p className="text-sm text-muted mt-1">Tell us about yourself to get started</p>
+                <h2 className="text-xl font-bold text-navy lg:text-2xl">{t("onboarding.step1.title")}</h2>
+                <p className="text-sm text-muted mt-1">{t("onboarding.step1.desc")}</p>
             </div>
 
             {/* Full Name Field */}
             <div className="flex flex-col gap-2">
                 <Label htmlFor="fullName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    Full Name <span className="text-destructive">*</span>
+                    {t("onboarding.step1.full_name")} <span className="text-destructive">*</span>
                     {nameReadOnly && <span className="material-symbols-outlined text-xs text-muted">lock</span>}
                 </Label>
                 <Input
                     id="fullName"
-                    placeholder="e.g. Rajesh Kumar"
+                    placeholder={t("onboarding.step1.name_placeholder")}
                     value={data.fullName}
                     onChange={(e) => onChange({ ...data, fullName: e.target.value })}
                     disabled={nameReadOnly}
@@ -152,7 +154,7 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
             {/* Address Field with Google Places + Existing Locations */}
             <div className="flex flex-col gap-2">
                 <Label htmlFor="address" className="text-sm font-semibold text-foreground">
-                    Full Address <span className="text-destructive">*</span>
+                    {t("onboarding.step1.address")} <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative" ref={searchRef}>
                     <div className={`flex items-center bg-card border rounded-xl shadow-sm overflow-hidden transition-all ${errors.address ? "border-destructive ring-1 ring-destructive/30" : "border-border"} focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20`}>
@@ -163,7 +165,7 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
                             value={data.address}
                             onChange={handleAddressChange}
                             onFocus={handleFocus}
-                            placeholder={existingLocations.length > 0 ? "Select saved address or type new..." : "e.g. Village Khurd, Taluka Baramati, Pune"}
+                            placeholder={existingLocations.length > 0 ? t("onboarding.step1.address_saved_placeholder") : t("onboarding.step1.address_placeholder")}
                             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground px-2.5 py-3 outline-none"
                         />
                         {data.address && (
@@ -187,7 +189,7 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
                     {showExistingDropdown && existingLocations.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                             <div className="px-3 py-2 text-[10px] font-bold text-muted uppercase tracking-wider bg-muted/5 border-b border-border/30">
-                                Saved Addresses
+                                {t("onboarding.step1.saved_addresses")}
                             </div>
                             {existingLocations.map((loc, idx) => (
                                 <button
@@ -209,7 +211,7 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
                                 className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 hover:bg-primary/5 transition-colors text-primary font-medium"
                             >
                                 <span className="material-symbols-outlined text-[16px] shrink-0">add_location</span>
-                                <span>Type a new address</span>
+                                <span>{t("onboarding.step1.type_new_address")}</span>
                             </button>
                         </div>
                     )}
@@ -243,9 +245,9 @@ export function PersonalInfoStep({ data, onChange, errors, nameReadOnly = false,
             <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/10 rounded-xl">
                 <span className="material-symbols-outlined text-primary text-xl mt-0.5">info</span>
                 <div>
-                    <p className="text-sm font-medium text-foreground">Why do we need this?</p>
+                    <p className="text-sm font-medium text-foreground">{t("onboarding.step1.why_need")}</p>
                     <p className="text-xs text-muted mt-0.5 leading-relaxed">
-                        Your name and location help customers find & trust local service providers. Your address helps us show your services to nearby farmers.
+                        {t("onboarding.step1.why_need_desc")}
                     </p>
                 </div>
             </div>

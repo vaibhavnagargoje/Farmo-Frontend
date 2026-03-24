@@ -3,14 +3,17 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
+import { useLanguage } from "@/contexts/language-context"
 
 interface LaborProfile {
     id: number
     user_phone: string
     full_name: string
+    profile_picture?: string | null
     partner_type: string
     about: string
     is_available: boolean
@@ -29,6 +32,7 @@ export default function LaborDetailPage() {
     const params = useParams()
     const router = useRouter()
     const id = params.id as string
+    const { t } = useLanguage()
 
     const [labor, setLabor] = useState<LaborProfile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -42,10 +46,10 @@ export default function LaborDetailPage() {
                     const data = await res.json()
                     setLabor(data)
                 } else {
-                    setError("Worker not found")
+                    setError(t("labor_detail.not_found"))
                 }
             } catch {
-                setError("Failed to load")
+                setError(t("labor_detail.failed_load"))
             } finally {
                 setIsLoading(false)
             }
@@ -55,8 +59,8 @@ export default function LaborDetailPage() {
 
     const skills = labor?.labor_details?.skills?.split(",").map(s => s.trim()).filter(Boolean) || []
     const statusInfo = labor?.is_available
-        ? { color: "bg-green-500", label: "Online", textColor: "text-green-700", bgColor: "bg-green-50", ringColor: "ring-green-500/20" }
-        : { color: "bg-gray-400", label: "Offline", textColor: "text-gray-600", bgColor: "bg-gray-50", ringColor: "ring-gray-400/20" }
+        ? { color: "bg-green-500", label: t("status.online"), textColor: "text-green-700", bgColor: "bg-green-50", ringColor: "ring-green-500/20" }
+        : { color: "bg-gray-400", label: t("status.offline"), textColor: "text-gray-600", bgColor: "bg-gray-50", ringColor: "ring-gray-400/20" }
 
     return (
         <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
@@ -81,9 +85,9 @@ export default function LaborDetailPage() {
                         <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
                             <span className="material-symbols-outlined text-red-500 text-[32px]">error</span>
                         </div>
-                        <h2 className="text-lg font-bold text-foreground mb-1">{error || "Not Found"}</h2>
-                        <p className="text-sm text-muted-foreground mb-4">This worker profile could not be loaded.</p>
-                        <Link href="/" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">Go Home</Link>
+                        <h2 className="text-lg font-bold text-foreground mb-1">{error || t("labor_detail.not_found_title")}</h2>
+                        <p className="text-sm text-muted-foreground mb-4">{t("labor_detail.not_found_desc")}</p>
+                        <Link href="/" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">{t("labor_detail.go_home")}</Link>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -92,8 +96,20 @@ export default function LaborDetailPage() {
                             <div className="flex items-start gap-4">
                                 {/* Avatar */}
                                 <div className="relative shrink-0">
-                                    <div className="w-16 h-16 rounded-2xl bg-navy/10 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-navy text-3xl">person</span>
+                                    <div className="w-16 h-16 rounded-2xl bg-navy/10 flex items-center justify-center overflow-hidden">
+                                        {labor.profile_picture ? (
+                                            <Image
+                                                src={labor.profile_picture}
+                                                alt={labor.full_name}
+                                                width={64}
+                                                height={64}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-navy text-3xl font-bold">
+                                                {labor.full_name?.charAt(0).toUpperCase() || "W"}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className={`absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full border-[2.5px] border-card ${statusInfo.color} ring-4 ${statusInfo.ringColor}`} />
                                 </div>
@@ -104,7 +120,7 @@ export default function LaborDetailPage() {
                                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusInfo.bgColor} ${statusInfo.textColor}`}>
                                             {statusInfo.label}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">Manual Worker</span>
+                                        <span className="text-xs text-muted-foreground">{t("partner_type.LABOR")}</span>
                                     </div>
                                     {/* Rating + Jobs */}
                                     <div className="flex items-center gap-3 mt-2">
@@ -115,7 +131,7 @@ export default function LaborDetailPage() {
                                             </div>
                                         )}
                                         {labor.jobs_completed > 0 && (
-                                            <span className="text-xs text-muted-foreground">{labor.jobs_completed} job{labor.jobs_completed !== 1 ? "s" : ""} done</span>
+                                            <span className="text-xs text-muted-foreground">{labor.jobs_completed} {t("labor.jobs")}</span>
                                         )}
                                     </div>
                                 </div>
@@ -131,19 +147,23 @@ export default function LaborDetailPage() {
                             <div className="bg-card rounded-2xl border border-border p-5 lg:p-6 space-y-4">
                                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary text-[18px]">handyman</span>
-                                    Skills & Details
+                                    {t("labor_detail.skills")}
                                 </h3>
 
                                 {/* Skills */}
                                 {skills.length > 0 && (
                                     <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-2">Skills</p>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2">{t("labor_detail.skills_label")}</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {skills.map((skill, i) => (
-                                                <span key={i} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium">
-                                                    {skill}
-                                                </span>
-                                            ))}
+                                            {skills.map((skill, i) => {
+                                                const key = `skills.${skill.toLowerCase()}`
+                                                const translated = t(key)
+                                                return (
+                                                    <span key={i} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium">
+                                                        {translated === key ? skill : translated}
+                                                    </span>
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -152,17 +172,17 @@ export default function LaborDetailPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     {labor.labor_details.daily_wage_estimate && (
                                         <div className="bg-background rounded-xl p-3 border border-border/50">
-                                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Daily Wage</p>
+                                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t("labor_detail.daily_wage")}</p>
                                             <p className="text-lg font-bold text-foreground">
                                                 ₹{Number(labor.labor_details.daily_wage_estimate).toLocaleString("en-IN")}
-                                                <span className="text-xs font-medium text-muted-foreground ml-1">/day</span>
+                                                <span className="text-xs font-medium text-muted-foreground ml-1">{t("labor.per_day")}</span>
                                             </p>
                                         </div>
                                     )}
                                     <div className="bg-background rounded-xl p-3 border border-border/50">
-                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Migrant Worker</p>
+                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t("labor_detail.migrant")}</p>
                                         <p className="text-lg font-bold text-foreground">
-                                            {labor.labor_details.is_migrant_worker ? "Yes" : "No"}
+                                            {labor.labor_details.is_migrant_worker ? t("labor_detail.yes") : t("labor_detail.no")}
                                         </p>
                                     </div>
                                 </div>
@@ -176,7 +196,7 @@ export default function LaborDetailPage() {
                                 className="w-full h-14 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-base flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all"
                             >
                                 <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>call</span>
-                                Call {labor.full_name.split(" ")[0]}
+                                {t("labor_detail.call").replace("{name}", labor.full_name.split(" ")[0])}
                             </a>
                         </div>
                     </div>

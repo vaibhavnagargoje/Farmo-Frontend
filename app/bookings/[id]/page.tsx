@@ -11,6 +11,8 @@ import { BottomNav } from "@/components/bottom-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 
+import { useLanguage } from "@/contexts/language-context"
+
 // Booking Detail Type
 interface BookingDetail {
   id: number
@@ -75,6 +77,7 @@ export default function BookingDetailsPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const bookingId = params.id as string
+  const { t } = useLanguage()
 
   const [booking, setBooking] = useState<BookingDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -107,13 +110,13 @@ export default function BookingDetailsPage() {
       if (res.ok && data.success) {
         setBooking(data.booking)
       } else if (res.status === 401) {
-        setError("Please login to view this booking")
+        setError(t("bookings.login_required"))
       } else {
-        setError(data.message || "Booking not found")
+        setError(data.message || t("bookings.not_found"))
       }
     } catch (err) {
       console.error("Error fetching booking:", err)
-      setError("Unable to load booking details")
+      setError(t("bookings.load_error"))
     } finally {
       setIsLoading(false)
     }
@@ -125,10 +128,9 @@ export default function BookingDetailsPage() {
     }
   }, [bookingId, authLoading])
 
-  // Cancel booking handler
   const handleCancelBooking = async () => {
     if (cancelReason.trim().length < 10) {
-      setCancelError("Please provide a reason (at least 10 characters)")
+      setCancelError(t("bookings.cancel_reason_error"))
       return
     }
 
@@ -150,11 +152,11 @@ export default function BookingDetailsPage() {
         setCancelReason("")
         fetchBooking() // Refresh booking data
       } else {
-        setCancelError(data.message || "Failed to cancel booking")
+        setCancelError(data.message || t("bookings.cancel_failed"))
       }
     } catch (err) {
       console.error("Cancel error:", err)
-      setCancelError("Something went wrong. Please try again.")
+      setCancelError(t("common.error_generic"))
     } finally {
       setIsCancelling(false)
     }
@@ -171,11 +173,11 @@ export default function BookingDetailsPage() {
 
     let dateDisplay = ""
     if (date.toDateString() === today.toDateString()) {
-      dateDisplay = "Today"
+      dateDisplay = t("time.today")
     } else if (date.toDateString() === yesterday.toDateString()) {
-      dateDisplay = "Yesterday"
+      dateDisplay = t("time.yesterday")
     } else if (date.toDateString() === tomorrow.toDateString()) {
-      dateDisplay = "Tomorrow"
+      dateDisplay = t("time.tomorrow")
     } else {
       dateDisplay = date.toLocaleDateString("en-IN", {
         weekday: "short",
@@ -196,13 +198,13 @@ export default function BookingDetailsPage() {
     return dateDisplay
   }
 
-  // Get price unit display
   const getPriceUnit = (unit: string) => {
     switch (unit) {
-      case "HOUR": return "/hr"
-      case "DAY": return "/day"
-      case "ACRE": return "/acre"
-      case "KM": return "/km"
+      case "HOUR": return `/${t("unit.hour")}`
+      case "DAY": return `/${t("unit.day")}`
+      case "ACRE": return `/${t("unit.acre")}`
+      case "KM": return `/${t("unit.km")}`
+      case "FIXED": return `/${t("unit.fixed")}`
       default: return ""
     }
   }
@@ -228,9 +230,9 @@ export default function BookingDetailsPage() {
         <MobileHeader />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <span className="material-symbols-outlined text-6xl text-muted mb-4">error</span>
-          <h2 className="text-xl font-bold text-foreground mb-2">{error || "Booking not found"}</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">{error || t("bookings.not_found")}</h2>
           <Link href="/bookings" className="text-primary font-semibold mt-4">
-            Back to Bookings
+            {t("bookings.back_to_bookings")}
           </Link>
         </div>
         <BottomNav variant="farmer" />
@@ -256,11 +258,11 @@ export default function BookingDetailsPage() {
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground">Booking Details</h1>
+            <h1 className="text-lg font-bold text-foreground">{t("bookings.details_title")}</h1>
             <p className="text-xs text-muted">{booking.order_number || `#${booking.booking_id}`}</p>
           </div>
           <div className={cn("px-3 py-1 rounded-full text-xs font-bold", status.bgColor, status.color)}>
-            {status.label}
+            {t(`status.${booking.status.toLowerCase()}`)}
           </div>
         </div>
       </header>
@@ -278,14 +280,14 @@ export default function BookingDetailsPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">
                 {booking.order_number
-                  ? `Order ${booking.order_number}`
-                  : `Booking #${booking.booking_id}`}
+                  ? t("bookings.order").replace("{id}", booking.order_number)
+                  : t("bookings.booking_hash").replace("{id}", booking.booking_id)}
               </h1>
               <span className={cn("px-3 py-1 rounded-full text-sm font-bold", status.bgColor, status.color)}>
-                {status.label}
+                {t(`status.${booking.status.toLowerCase()}`)}
               </span>
             </div>
-            <p className="text-muted">Created {formatDate(booking.created_at)}</p>
+            <p className="text-muted">{t("bookings.created_date").replace("{date}", formatDate(booking.created_at))}</p>
           </div>
         </div>
 
@@ -312,9 +314,9 @@ export default function BookingDetailsPage() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-primary font-semibold mb-1">{booking.service?.category_name || booking.category_name}</p>
-                  <h2 className="text-2xl font-bold text-foreground">{booking.service?.title || booking.category_name || "Instant Booking"}</h2>
+                  <h2 className="text-2xl font-bold text-foreground">{booking.service?.title || booking.category_name || t("bookings.instant_booking")}</h2>
                   <p className="text-muted mt-1">
-                    by {booking.provider ? booking.provider.full_name : "Searching Provider..."}
+                    {t("bookings.by_provider").replace("{name}", booking.provider ? booking.provider.full_name : t("bookings.finding_provider"))}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-2xl font-bold text-navy">₹{booking.unit_price}</span>
@@ -326,30 +328,30 @@ export default function BookingDetailsPage() {
 
             {/* Booking Details */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-              <h3 className="font-bold text-lg text-foreground mb-4">Booking Details</h3>
+              <h3 className="font-bold text-lg text-foreground mb-4">{t("bookings.details_title")}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between items-center py-3 px-4 bg-background rounded-xl">
-                  <span className="text-muted">Scheduled</span>
+                  <span className="text-muted">{t("bookings.scheduled")}</span>
                   <span className="font-semibold text-foreground">{formatDate(booking.scheduled_date, booking.scheduled_time)}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-background rounded-xl">
-                  <span className="text-muted">Quantity</span>
-                  <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? "Hours" : booking.price_unit === "ACRE" ? "Acres" : "Units"}</span>
+                  <span className="text-muted">{t("bookings.quantity")}</span>
+                  <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? t("bookings.hours") : booking.price_unit === "ACRE" ? t("bookings.acres") : t("bookings.units")}</span>
                 </div>
                 <div className="col-span-2 flex justify-between items-center py-3 px-4 bg-background rounded-xl">
-                  <span className="text-muted">Location</span>
+                  <span className="text-muted">{t("bookings.location")}</span>
                   <span className="font-semibold text-foreground text-right">{booking.address}</span>
                 </div>
                 {booking.note && (
                   <div className="col-span-2 flex flex-col gap-2 py-3 px-4 bg-background rounded-xl">
-                    <span className="text-muted text-sm">Note</span>
+                    <span className="text-muted text-sm">{t("bookings.note_label")}</span>
                     <span className="text-foreground">{booking.note}</span>
                   </div>
                 )}
               </div>
               <div className="flex justify-between items-center py-4 mt-4 border-t border-border">
-                <span className="text-lg font-medium text-foreground">Total Amount</span>
+                <span className="text-lg font-medium text-foreground">{t("bookings.total_amount")}</span>
                 <span className="font-bold text-2xl text-primary">₹{booking.total_amount}</span>
               </div>
             </div>
@@ -359,9 +361,9 @@ export default function BookingDetailsPage() {
               <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="material-symbols-outlined text-primary text-2xl">key</span>
-                  <h3 className="font-bold text-lg text-foreground">Start OTP</h3>
+                  <h3 className="font-bold text-lg text-foreground">{t("bookings.start_otp")}</h3>
                 </div>
-                <p className="text-muted text-sm mb-3">Share this OTP with the service provider to start the job</p>
+                <p className="text-muted text-sm mb-3">{t("bookings.start_otp_desc_desktop")}</p>
                 <div className="flex justify-center gap-2">
                   {booking.start_job_otp.split("").map((digit, i) => (
                     <div key={i} className="size-14 bg-white rounded-xl flex items-center justify-center text-2xl font-bold text-navy border border-border">
@@ -377,9 +379,9 @@ export default function BookingDetailsPage() {
               <div className="bg-success/5 border-2 border-success/20 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="material-symbols-outlined text-success text-2xl">verified</span>
-                  <h3 className="font-bold text-lg text-foreground">End OTP — Job In Progress</h3>
+                  <h3 className="font-bold text-lg text-foreground">{t("bookings.end_otp")}</h3>
                 </div>
-                <p className="text-muted text-sm mb-3">Share this OTP with the service provider to mark the job as completed</p>
+                <p className="text-muted text-sm mb-3">{t("bookings.end_otp_desc_desktop")}</p>
                 <div className="flex justify-center gap-2">
                   {booking.end_job_otp.split("").map((digit, i) => (
                     <div key={i} className="size-14 bg-white rounded-xl flex items-center justify-center text-2xl font-bold text-success border border-success/20">
@@ -397,7 +399,7 @@ export default function BookingDetailsPage() {
                 className="w-full py-3 rounded-xl border-2 border-destructive/30 text-destructive font-semibold hover:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[20px]">cancel</span>
-                Cancel Booking
+                {t("bookings.cancel_button")}
               </button>
             )}
           </div>
@@ -406,18 +408,30 @@ export default function BookingDetailsPage() {
           <div className="col-span-1 flex flex-col gap-6">
             {/* Partner Info */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-              <h3 className="font-bold text-lg text-foreground mb-4">Service Provider</h3>
+              <h3 className="font-bold text-lg text-foreground mb-4">{t("bookings.service_provider")}</h3>
               {booking.provider ? (
                 <div className="flex flex-col items-center gap-4">
-                  <div className="size-20 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
-                    <span className="material-symbols-outlined text-3xl text-muted-foreground">person</span>
+                  <div className="size-20 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20 overflow-hidden">
+                    {booking.provider.profile_picture ? (
+                      <Image
+                        src={booking.provider.profile_picture}
+                        alt={booking.provider.full_name}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-3xl font-bold">
+                        {booking.provider.full_name?.charAt(0).toUpperCase() || "P"}
+                      </span>
+                    )}
                   </div>
                   <div className="text-center">
                     <p className="font-bold text-foreground text-lg">{booking.provider.full_name}</p>
                     <div className="flex items-center justify-center gap-1 mt-2">
                       <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                      <span className="text-sm font-bold">{booking.provider.rating || "New"}</span>
-                      <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+                      <span className="text-sm font-bold">{booking.provider.rating || t("bookings.provider_new")}</span>
+                      <span className="text-xs text-muted">• {t("bookings.provider_jobs").replace("{count}", String(booking.provider.jobs_completed))}</span>
                     </div>
                   </div>
                   {booking.provider.user_phone && (
@@ -426,23 +440,23 @@ export default function BookingDetailsPage() {
                       className="w-full h-11 rounded-xl bg-success/10 text-success flex items-center justify-center gap-2 font-medium hover:bg-success/20 transition-colors"
                     >
                       <span className="material-symbols-outlined text-[20px]">call</span>
-                      Call Provider
+                      {t("bookings.call_provider")}
                     </a>
                   )}
                 </div>
               ) : (
                 <div className="text-center py-4">
                   <span className="material-symbols-outlined text-3xl text-muted/50 mb-2">person_search</span>
-                  <p className="text-muted text-sm border border-dashed border-border rounded-xl py-3 bg-muted/10">We are finding the best provider near you.</p>
+                  <p className="text-muted text-sm border border-dashed border-border rounded-xl py-3 bg-muted/10">{t("bookings.searching_desc_desktop")}</p>
                 </div>
               )}
             </div>
 
             {/* Payment Status */}
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-              <h3 className="font-bold text-foreground mb-3">Payment</h3>
+              <h3 className="font-bold text-foreground mb-3">{t("bookings.payment")}</h3>
               <div className="flex items-center justify-between">
-                <span className="text-muted">Status</span>
+                <span className="text-muted">{t("bookings.status_label")}</span>
                 <span className={cn(
                   "px-2 py-1 rounded text-xs font-bold",
                   booking.payment_status === "PAID" ? "bg-success/10 text-success" : "bg-yellow-100 text-yellow-600"
@@ -454,8 +468,8 @@ export default function BookingDetailsPage() {
 
             {/* Help */}
             <div className="bg-muted/30 rounded-2xl p-4 text-center">
-              <p className="text-sm text-muted">Need help with your booking?</p>
-              <button className="text-primary font-semibold text-sm mt-1 hover:underline">Contact Support</button>
+              <p className="text-sm text-muted">{t("bookings.need_help")}</p>
+              <button className="text-primary font-semibold text-sm mt-1 hover:underline">{t("bookings.contact_support")}</button>
             </div>
           </div>
         </div>
@@ -468,9 +482,9 @@ export default function BookingDetailsPage() {
           <span className={cn("material-symbols-outlined text-2xl", status.color)}>{status.icon}</span>
           <div>
             <p className={cn("font-bold", status.color)}>
-              {status.label}
+              {t(`status.${booking.status.toLowerCase()}`)}
             </p>
-            <p className="text-xs text-muted">Updated {formatDate(booking.updated_at)}</p>
+            <p className="text-xs text-muted">{t("bookings.updated_date").replace("{date}", formatDate(booking.updated_at))}</p>
           </div>
         </div>
 
@@ -495,30 +509,30 @@ export default function BookingDetailsPage() {
             </div>
             <div className="flex-1">
               <p className="text-xs text-primary font-semibold">{booking.service?.category_name || booking.category_name}</p>
-              <h2 className="text-lg font-bold text-foreground">{booking.service?.title || booking.category_name || "Instant Booking"}</h2>
-              <p className="text-sm text-muted">by {booking.provider ? booking.provider.full_name : "Searching Provider..."}</p>
+              <h2 className="text-lg font-bold text-foreground">{booking.service?.title || booking.category_name || t("bookings.instant_booking")}</h2>
+              <p className="text-sm text-muted">{t("bookings.by_provider").replace("{name}", booking.provider ? booking.provider.full_name : t("bookings.finding_provider"))}</p>
             </div>
           </div>
         </div>
 
         {/* Booking Details */}
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border flex flex-col gap-3">
-          <h3 className="font-bold text-foreground">Booking Details</h3>
+          <h3 className="font-bold text-foreground">{t("bookings.details_title")}</h3>
 
           <div className="flex justify-between items-center py-2 border-b border-border">
-            <span className="text-muted text-sm">Scheduled</span>
+            <span className="text-muted text-sm">{t("bookings.scheduled")}</span>
             <span className="font-semibold text-foreground text-sm">{formatDate(booking.scheduled_date, booking.scheduled_time)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-border">
-            <span className="text-muted text-sm">Quantity</span>
-            <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? "Hours" : "Units"}</span>
+            <span className="text-muted text-sm">{t("bookings.quantity")}</span>
+            <span className="font-semibold text-foreground">{booking.quantity} {booking.price_unit === "HOUR" ? t("bookings.hours") : booking.price_unit === "ACRE" ? t("bookings.acres") : t("bookings.units")}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-border">
-            <span className="text-muted text-sm">Location</span>
+            <span className="text-muted text-sm">{t("bookings.location")}</span>
             <span className="font-semibold text-foreground text-sm text-right max-w-[60%]">{booking.address}</span>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span className="text-muted text-sm">Total Amount</span>
+            <span className="text-muted text-sm">{t("bookings.total_amount")}</span>
             <span className="font-bold text-xl text-primary">₹{booking.total_amount}</span>
           </div>
         </div>
@@ -528,9 +542,9 @@ export default function BookingDetailsPage() {
           <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-primary">key</span>
-              <h3 className="font-bold text-foreground">Start OTP</h3>
+              <h3 className="font-bold text-foreground">{t("bookings.start_otp")}</h3>
             </div>
-            <p className="text-muted text-xs mb-3">Share with provider to start</p>
+            <p className="text-muted text-xs mb-3">{t("bookings.start_otp_desc_mobile")}</p>
             <div className="flex justify-center gap-2">
               {booking.start_job_otp.split("").map((digit, i) => (
                 <div key={i} className="size-12 bg-white rounded-xl flex items-center justify-center text-xl font-bold text-navy border border-border">
@@ -546,9 +560,9 @@ export default function BookingDetailsPage() {
           <div className="bg-success/5 border-2 border-success/20 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-success">verified</span>
-              <h3 className="font-bold text-foreground">End OTP — Job In Progress</h3>
+              <h3 className="font-bold text-foreground">{t("bookings.end_otp")}</h3>
             </div>
-            <p className="text-muted text-xs mb-3">Share with provider to complete the job</p>
+            <p className="text-muted text-xs mb-3">{t("bookings.end_otp_desc_mobile")}</p>
             <div className="flex justify-center gap-2">
               {booking.end_job_otp.split("").map((digit, i) => (
                 <div key={i} className="size-12 bg-white rounded-xl flex items-center justify-center text-xl font-bold text-success border border-success/20">
@@ -566,24 +580,36 @@ export default function BookingDetailsPage() {
             className="w-full py-3 rounded-xl border-2 border-destructive/30 text-destructive font-semibold active:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">cancel</span>
-            Cancel Booking
+            {t("bookings.cancel_button")}
           </button>
         )}
 
         {/* Provider Info */}
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
-          <h3 className="font-bold text-foreground mb-3">Service Provider</h3>
+          <h3 className="font-bold text-foreground mb-3">{t("bookings.service_provider")}</h3>
           {booking.provider ? (
             <div className="flex items-center gap-4">
-              <div className="size-14 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20">
-                <span className="material-symbols-outlined text-2xl text-muted-foreground">person</span>
+              <div className="size-14 rounded-full bg-muted flex items-center justify-center border-2 border-primary/20 overflow-hidden shrink-0">
+                {booking.provider.profile_picture ? (
+                  <Image
+                    src={booking.provider.profile_picture}
+                    alt={booking.provider.full_name}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-muted-foreground text-xl font-bold">
+                    {booking.provider.full_name?.charAt(0).toUpperCase() || "P"}
+                  </span>
+                )}
               </div>
               <div className="flex-1">
                 <p className="font-bold text-foreground">{booking.provider.full_name}</p>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-semibold">{booking.provider.rating || "New"}</span>
-                  <span className="text-xs text-muted">• {booking.provider.jobs_completed} jobs</span>
+                  <span className="text-sm font-semibold">{booking.provider.rating || t("bookings.provider_new")}</span>
+                  <span className="text-xs text-muted">• {t("bookings.provider_jobs").replace("{count}", String(booking.provider.jobs_completed))}</span>
                 </div>
               </div>
               {booking.provider.user_phone && (
@@ -597,7 +623,7 @@ export default function BookingDetailsPage() {
             </div>
           ) : (
             <div className="text-center py-2">
-              <p className="text-muted text-sm">Searching for a provider...</p>
+              <p className="text-muted text-sm">{t("bookings.searching_desc_mobile")}</p>
             </div>
           )}
         </div>
@@ -618,20 +644,20 @@ export default function BookingDetailsPage() {
                 <span className="material-symbols-outlined text-destructive text-2xl">warning</span>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-foreground">Cancel Booking?</h3>
-                <p className="text-sm text-muted">This action cannot be undone</p>
+                <h3 className="font-bold text-lg text-foreground">{t("bookings.cancel_title")}</h3>
+                <p className="text-sm text-muted">{t("bookings.cancel_warning")}</p>
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="text-sm font-medium text-foreground mb-2 block">Reason for cancellation</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">{t("bookings.cancel_reason_label")}</label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => {
                   setCancelReason(e.target.value)
                   if (cancelError) setCancelError(null)
                 }}
-                placeholder="Please tell us why you want to cancel (min 10 characters)..."
+                placeholder={t("bookings.cancel_reason_placeholder")}
                 className="w-full h-24 px-4 py-3 bg-background border border-border rounded-xl text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
               {cancelError && (
@@ -652,7 +678,7 @@ export default function BookingDetailsPage() {
                 disabled={isCancelling}
                 className="flex-1 py-3 rounded-xl border border-border text-foreground font-semibold hover:bg-muted/50 transition-colors"
               >
-                Go Back
+                {t("common.go_back")}
               </button>
               <button
                 onClick={handleCancelBooking}
@@ -670,7 +696,7 @@ export default function BookingDetailsPage() {
                     Cancelling...
                   </>
                 ) : (
-                  "Confirm Cancel"
+                  t("bookings.confirm_cancel")
                 )}
               </button>
             </div>

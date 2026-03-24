@@ -3,26 +3,27 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
 
 interface NavItem {
   href: string
   icon: string
-  label: string
+  labelKey: string
   disabled?: boolean
 }
 
 const farmerNavItems: NavItem[] = [
-  { href: "/", icon: "home", label: "Home" },
-  { href: "/search", icon: "search", label: "Search" },
-  { href: "/bookings", icon: "calendar_month", label: "Bookings" },
-  { href: "/profile", icon: "person", label: "Profile" },
+  { href: "/", icon: "home", labelKey: "nav.home" },
+  { href: "/search", icon: "search", labelKey: "nav.search" },
+  { href: "/bookings", icon: "calendar_month", labelKey: "nav.bookings" },
+  { href: "/profile", icon: "person", labelKey: "nav.profile" },
 ]
 
 const partnerNavItems: NavItem[] = [
-  { href: "/partner", icon: "dashboard", label: "Dashboard" },
-  { href: "/partner/services", icon: "construction", label: "Services" },
-  { href: "/partner/earnings", icon: "account_balance_wallet", label: "Earnings", disabled: true },
-  { href: "/partner/profile", icon: "person", label: "Profile" },
+  { href: "/partner", icon: "dashboard", labelKey: "nav.dashboard" },
+  { href: "/partner/services", icon: "construction", labelKey: "nav.services" },
+  { href: "/partner/earnings", icon: "account_balance_wallet", labelKey: "nav.earnings", disabled: true },
+  { href: "/partner/profile", icon: "person", labelKey: "nav.profile" },
 ]
 
 interface BottomNavProps {
@@ -31,6 +32,7 @@ interface BottomNavProps {
 
 export function BottomNav({ variant = "farmer" }: BottomNavProps) {
   const pathname = usePathname()
+  const { t } = useLanguage()
   const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
 
   return (
@@ -44,7 +46,7 @@ export function BottomNav({ variant = "farmer" }: BottomNavProps) {
             <li key={item.href}>
               <Link
                 href={item.disabled ? "#" : item.href}
-                onClick={item.disabled ? (e) => { e.preventDefault(); alert("Earnings feature is coming soon!"); } : undefined}
+                onClick={item.disabled ? (e) => { e.preventDefault(); alert(t("earnings.coming_soon")); } : undefined}
                 className={cn(
                   "flex flex-col items-center gap-1 w-16 transition-colors",
                   isActive ? "text-primary" : "text-muted hover:text-foreground",
@@ -59,7 +61,7 @@ export function BottomNav({ variant = "farmer" }: BottomNavProps) {
                     {item.icon}
                   </span>
                 </div>
-                <span className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}>{item.label}</span>
+                <span className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}>{t(item.labelKey)}</span>
               </Link>
             </li>
           )
@@ -68,3 +70,4 @@ export function BottomNav({ variant = "farmer" }: BottomNavProps) {
     </nav>
   )
 }
+

@@ -7,6 +7,7 @@ import { AccountLayout } from "@/components/account-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@/contexts/language-context"
 
 
 // Booking type from backend
@@ -61,6 +62,7 @@ function BookingsPageContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t } = useLanguage()
 
   const [bookings, setBookings] = useState<BookingItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -93,15 +95,15 @@ function BookingsPageContent() {
       if (res.ok && data.success) {
         setBookings(data.bookings || data.results || [])
       } else if (res.status === 401) {
-        setError("Please login to view your bookings")
+        setError(t("bookings.login_required"))
         setBookings([])
       } else {
-        setError(data.message || "Failed to load bookings")
+        setError(data.message || t("bookings.load_error"))
         setBookings([])
       }
     } catch (err) {
       console.error("Error fetching bookings:", err)
-      setError("Unable to connect. Please try again.")
+      setError(t("bookings.load_error"))
       setBookings([])
     } finally {
       setIsLoading(false)
@@ -136,7 +138,7 @@ function BookingsPageContent() {
   // Cancel booking handler
   const handleCancelBooking = async () => {
     if (!cancelBookingId || cancelReason.trim().length < 10) {
-      setCancelError("Please provide a reason (at least 10 characters)")
+      setCancelError(t("bookings.cancel_reason_error"))
       return
     }
 
@@ -159,11 +161,11 @@ function BookingsPageContent() {
         setCancelReason("")
         fetchBookings() // Refresh list
       } else {
-        setCancelError(data.message || "Failed to cancel booking")
+        setCancelError(data.message || t("bookings.cancel_failed"))
       }
     } catch (err) {
       console.error("Cancel error:", err)
-      setCancelError("Something went wrong. Please try again.")
+      setCancelError(t("common.error_generic"))
     } finally {
       setIsCancelling(false)
     }
@@ -181,9 +183,9 @@ function BookingsPageContent() {
 
     let dateDisplay = ""
     if (date.toDateString() === today.toDateString()) {
-      dateDisplay = "Today"
+      dateDisplay = t("time.today")
     } else if (date.toDateString() === yesterday.toDateString()) {
-      dateDisplay = "Yesterday"
+      dateDisplay = t("time.yesterday")
     } else {
       dateDisplay = date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
     }
@@ -200,11 +202,11 @@ function BookingsPageContent() {
   }
 
   return (
-    <AccountLayout pageTitle="My Bookings">
+    <AccountLayout pageTitle={t("bookings.title")}>
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-xl lg:text-2xl font-bold text-foreground">My Bookings</h2>
-        <p className="text-sm text-muted mt-1">Track and manage your service bookings</p>
+        <h2 className="text-xl lg:text-2xl font-bold text-foreground">{t("bookings.title")}</h2>
+        <p className="text-sm text-muted mt-1">{t("bookings.subtitle")}</p>
       </div>
 
       {/* Success Message */}
@@ -212,8 +214,8 @@ function BookingsPageContent() {
         <div className="mb-4 p-4 bg-success/10 border border-success/20 rounded-xl flex items-center gap-3">
           <span className="material-symbols-outlined text-success">check_circle</span>
           <div className="flex-1">
-            <p className="font-semibold text-success">Booking Created Successfully!</p>
-            {newBookingId && <p className="text-sm text-muted">Booking ID: {newBookingId}</p>}
+            <p className="font-semibold text-success">{t("bookings.created_success")}</p>
+            {newBookingId && <p className="text-sm text-muted">{t("bookings.booking_id_label").replace("{id}", newBookingId)}</p>}
           </div>
         </div>
       )}
@@ -222,7 +224,7 @@ function BookingsPageContent() {
       {searchingToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 bg-navy text-white rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
           <span className="material-symbols-outlined text-lg">info</span>
-          <span className="text-sm font-medium">Order details are not available for this booking.</span>
+          <span className="text-sm font-medium">{t("bookings.searching_toast")}</span>
         </div>
       )}
 
@@ -242,7 +244,7 @@ function BookingsPageContent() {
             onClick={() => fetchBookings()}
             className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium"
           >
-            Try Again
+            {t("common.try_again")}
           </button>
         </div>
       )}
@@ -251,15 +253,15 @@ function BookingsPageContent() {
       {!isLoading && !error && bookings.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <span className="material-symbols-outlined text-6xl text-muted mb-4">calendar_month</span>
-          <h3 className="text-lg font-bold text-foreground mb-2">No Bookings Yet</h3>
+          <h3 className="text-lg font-bold text-foreground mb-2">{t("bookings.empty_title")}</h3>
           <p className="text-muted mb-6">
-            You haven&apos;t made any bookings yet. Start exploring our services!
+            {t("bookings.empty_desc")}
           </p>
           <Link
             href="/"
             className="px-6 py-3 bg-primary text-white rounded-xl font-semibold"
           >
-            Browse Services
+            {t("bookings.browse_services")}
           </Link>
         </div>
       )}
@@ -292,7 +294,7 @@ function BookingsPageContent() {
                       </h3>
                     </div>
                     <p className="text-sm text-muted mt-0.5">
-                      {booking.status === "SEARCHING" ? "Finding provider..." : booking.provider_name}
+                      {booking.status === "SEARCHING" ? t("bookings.finding_provider") : booking.provider_name}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -300,7 +302,7 @@ function BookingsPageContent() {
                       "px-2 py-1 rounded text-[10px] font-bold uppercase",
                       status.bgColor, status.color
                     )}>
-                      {status.label}
+                      {t(`status.${booking.status.toLowerCase()}`)}
                     </span>
                   </div>
                 </div>
@@ -326,21 +328,21 @@ function BookingsPageContent() {
                         className="flex items-center gap-1 text-destructive/70 hover:text-destructive text-xs font-medium px-2 py-1 rounded-lg hover:bg-destructive/5 transition-colors"
                       >
                         <span className="material-symbols-outlined text-[14px]">close</span>
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     )}
                     {booking.status === "SEARCHING" ? (
                       <div className="flex items-center gap-1 text-muted text-sm">
                         <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                        <span>Processing</span>
+                        <span>{t("common.processing")}</span>
                       </div>
                     ) : isBlocked ? (
                       <div className="flex items-center gap-1 text-muted text-sm">
-                        <span>{status.label}</span>
+                        <span>{t(`status.${booking.status.toLowerCase()}`)}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-primary text-sm font-medium">
-                        <span>View Details</span>
+                        <span>{t("bookings.view_details")}</span>
                         <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                       </div>
                     )}
@@ -361,20 +363,20 @@ function BookingsPageContent() {
                 <span className="material-symbols-outlined text-destructive text-2xl">warning</span>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-foreground">Cancel Booking?</h3>
-                <p className="text-sm text-muted">This action cannot be undone</p>
+                <h3 className="font-bold text-lg text-foreground">{t("bookings.cancel_title")}</h3>
+                <p className="text-sm text-muted">{t("bookings.cancel_warning")}</p>
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="text-sm font-medium text-foreground mb-2 block">Reason for cancellation</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">{t("bookings.cancel_reason_label")}</label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => {
                   setCancelReason(e.target.value)
                   if (cancelError) setCancelError(null)
                 }}
-                placeholder="Please tell us why you want to cancel (min 10 characters)..."
+                placeholder={t("bookings.cancel_reason_placeholder")}
                 className="w-full h-24 px-4 py-3 bg-background border border-border rounded-xl text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
               {cancelError && (
@@ -396,7 +398,7 @@ function BookingsPageContent() {
                 disabled={isCancelling}
                 className="flex-1 py-3 rounded-xl border border-border text-foreground font-semibold hover:bg-muted/50 transition-colors"
               >
-                Go Back
+                {t("common.go_back")}
               </button>
               <button
                 onClick={handleCancelBooking}
@@ -414,7 +416,7 @@ function BookingsPageContent() {
                     Cancelling...
                   </>
                 ) : (
-                  "Confirm Cancel"
+                  t("bookings.confirm_cancel")
                 )}
               </button>
             </div>

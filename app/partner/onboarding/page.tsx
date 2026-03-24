@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
+import { useLanguage } from "@/contexts/language-context"
 import {
   PersonalInfoStep,
   type PersonalInfoData,
@@ -24,16 +25,18 @@ import {
 import { VerificationStep } from "@/components/onboarding/verification-step"
 import { APIProvider } from "@vis.gl/react-google-maps"
 
-// Step metadata for progress display
-const allSteps = [
-  { id: 1, label: "Personal Info", icon: "person", description: "Your basic details" },
-  { id: 2, label: "KYC Details", icon: "verified_user", description: "Verification documents" },
-  { id: 3, label: "List Service", icon: "add_business", description: "Add your first service" },
-  { id: 4, label: "Verification", icon: "task_alt", description: "Review & submit" },
-]
-
 export default function OnboardingPage() {
   const router = useRouter()
+  const { t } = useLanguage()
+
+  // Step metadata for progress display
+  const allSteps = [
+    { id: 1, label: t("onboarding.page.step1_title"), icon: "person", description: t("onboarding.page.step1_desc") },
+    { id: 2, label: t("onboarding.page.step2_title"), icon: "verified_user", description: t("onboarding.page.step2_desc") },
+    { id: 3, label: t("onboarding.page.step3_title"), icon: "add_business", description: t("onboarding.page.step3_desc") },
+    { id: 4, label: t("onboarding.page.step4_title"), icon: "task_alt", description: t("onboarding.page.step4_desc") },
+  ]
+
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -139,7 +142,7 @@ export default function OnboardingPage() {
 
   // Visible steps based on selected partner type
   const visibleSteps = kycDetails.partnerType === "LABOR"
-    ? allSteps.map(s => s.id === 3 ? { ...s, label: "Labor Details", icon: "engineering", description: "Your skills & work info" } : s)
+    ? allSteps.map(s => s.id === 3 ? { ...s, label: t("onboarding.page.step3_labor_title"), icon: "engineering", description: t("onboarding.page.step3_labor_desc") } : s)
     : allSteps;
 
   // Validation for each step
@@ -342,7 +345,7 @@ export default function OnboardingPage() {
       <div className="bg-background font-sans min-h-screen flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-muted font-medium">Checking your account...</p>
+          <p className="text-muted font-medium">{t("onboarding.page.checking")}</p>
         </div>
       </div>
     )
@@ -371,11 +374,10 @@ export default function OnboardingPage() {
 
             <div>
               <h1 className="text-2xl font-bold text-navy lg:text-3xl">
-                You&apos;re Already a Partner!
+                {t("onboarding.page.already_partner_title")}
               </h1>
               <p className="text-muted text-sm mt-2 leading-relaxed">
-                You are registered as <strong className="text-foreground">a partner</strong>.
-                Manage your services, view bookings, and track earnings from your dashboard.
+                {t("onboarding.page.already_partner_desc")}
               </p>
             </div>
 
@@ -384,17 +386,17 @@ export default function OnboardingPage() {
               <div className="w-full bg-card rounded-2xl border border-border p-5">
                 <div className="flex flex-col gap-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted">Type</span>
+                    <span className="text-sm text-muted">{t("onboarding.page.type")}</span>
                     <span className="text-sm font-semibold text-foreground capitalize">{partnerData.partner_type?.toLowerCase()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted">Verified</span>
+                    <span className="text-sm text-muted">{t("onboarding.page.verified")}</span>
                     <span className={`text-sm font-semibold ${partnerData.is_verified ? "text-success" : "text-primary"}`}>
-                      {partnerData.is_verified ? "✓ Verified" : "Pending"}
+                      {partnerData.is_verified ? t("onboarding.page.is_verified") : t("onboarding.page.pending")}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted">Rating</span>
+                    <span className="text-sm text-muted">{t("onboarding.page.rating")}</span>
                     <span className="text-sm font-semibold text-foreground">⭐ {partnerData.rating}</span>
                   </div>
                 </div>
@@ -408,14 +410,14 @@ export default function OnboardingPage() {
                 className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
               >
                 <span className="material-symbols-outlined">dashboard</span>
-                <span>Go to Dashboard</span>
+                <span>{t("onboarding.page.go_dashboard")}</span>
               </Link>
               <Link
                 href="/"
                 className="w-full h-12 bg-card border border-border hover:bg-muted/10 text-foreground rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-lg">home</span>
-                <span>Back to Home</span>
+                <span>{t("onboarding.page.back_home")}</span>
               </Link>
             </div>
           </div>
@@ -496,7 +498,7 @@ export default function OnboardingPage() {
           <div className="w-72 shrink-0">
             <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
               <h2 className="font-bold text-lg text-foreground mb-6">
-                Onboarding Progress
+                {t("onboarding.page.progress")}
               </h2>
               <div className="flex flex-col gap-1">
                 {visibleSteps.map((step, index) => {
@@ -533,9 +535,9 @@ export default function OnboardingPage() {
                           </p>
                           <p className="text-xs text-muted truncate">
                             {status === "completed"
-                              ? "Completed"
+                              ? t("onboarding.page.completed")
                               : status === "active"
-                                ? "In Progress"
+                                ? t("onboarding.page.in_progress")
                                 : step.description}
                           </p>
                         </div>
@@ -559,7 +561,10 @@ export default function OnboardingPage() {
                 {allSteps.find(s => s.id === currentStep)?.label}
               </h1>
               <p className="text-muted mt-1">
-                Step {visibleSteps.findIndex(s => s.id === currentStep) + 1} of {visibleSteps.length} — {allSteps.find(s => s.id === currentStep)?.description}
+                {t("onboarding.page.step_of")
+                  .replace("{current}", String(visibleSteps.findIndex(s => s.id === currentStep) + 1))
+                  .replace("{total}", String(visibleSteps.length))
+                  .replace("{desc}", allSteps.find(s => s.id === currentStep)?.description || "")}
               </p>
             </div>
 
@@ -626,7 +631,7 @@ export default function OnboardingPage() {
                     className="px-6 h-12 bg-card border border-border hover:bg-muted/10 text-foreground rounded-xl text-sm font-semibold transition-all flex items-center gap-2 active:scale-[0.98]"
                   >
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
-                    <span>Back</span>
+                    <span>{t("onboarding.page.btn_back")}</span>
                   </button>
                 ) : (
                   <div />
@@ -636,7 +641,7 @@ export default function OnboardingPage() {
                   disabled={isSubmitting}
                   className="px-8 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
+                  <span>{currentStep === 3 ? t("onboarding.page.btn_submit") : t("onboarding.page.btn_save")}</span>
                   <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
                     {currentStep === 3 ? "check_circle" : "arrow_forward"}
                   </span>
@@ -720,7 +725,7 @@ export default function OnboardingPage() {
                 disabled={isSubmitting}
                 className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span>{currentStep === 3 ? "Submit & Verify" : "Save & Continue"}</span>
+                <span>{currentStep === 3 ? t("onboarding.page.btn_submit") : t("onboarding.page.btn_save")}</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
                   {currentStep === 3 ? "check_circle" : "arrow_forward"}
                 </span>

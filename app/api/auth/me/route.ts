@@ -35,13 +35,13 @@ export async function GET() {
     const data = await response.json()
     const user = data.user || data // depending on how your backend serializes it
 
-    // Map common fields correctly from DRF
     const normalizedUser = {
       id: user.id || user.user_id,
       phone_number: user.phone_number || user.phone,
       email: user.email,
       role: user.role,
       full_name: user.full_name || user.name,
+      profile_picture: user.profile_picture || null,
       is_active: user.is_active,
     }
 

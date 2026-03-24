@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { useRouter, usePathname } from "next/navigation"
 import { API_ENDPOINTS, SearchResponse, fetchPublic } from "@/lib/api"
 
@@ -24,6 +25,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   
   const { isAuthenticated } = useAuth()
+  const { t, lang } = useLanguage()
   const router = useRouter()
   const pathname = usePathname()
   const [locationName, setLocationName] = useState<string>("India")
@@ -40,7 +42,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
           if (data.has_location && data.location?.address) {
             setLocationName(data.location.address.split(',')[0])
           } else {
-            setLocationName("Set your location")
+            setLocationName(t("location.set_location"))
           }
         })
         .catch(() => { })
@@ -55,7 +57,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
         })
         .catch(() => { })
     } else {
-      setLocationName("Set your location")
+      setLocationName(t("location.set_location"))
       setHasPartnerAccount(false)
     }
   }, [isAuthenticated])
@@ -70,7 +72,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery.trim().length >= 2) {
         setIsSearching(true)
-        fetchPublic(API_ENDPOINTS.SEARCH(searchQuery.trim()))
+        fetchPublic(API_ENDPOINTS.SEARCH(searchQuery.trim(), lang))
           .then(res => res.json())
           .then(data => {
             setSearchResults(data)
@@ -134,7 +136,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search tractors, labors..."
+                    placeholder={t("header.search_placeholder")}
                     className="w-full h-10 pl-10 pr-9 rounded-full bg-muted/50 border border-transparent focus:bg-background focus:border-primary/50 focus:shadow-sm outline-none text-sm placeholder:text-muted-foreground/60 transition-all"
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted-foreground text-[20px]">search</span>
@@ -153,7 +155,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                      {/* Categories */}
                      {searchResults.categories?.length > 0 && (
                        <div className="p-2 border-b border-border/50">
-                         <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Categories</div>
+                         <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("common.categories")}</div>
                          {searchResults.categories.slice(0, 3).map(cat => (
                             <button key={cat.id} type="button" onClick={() => { setSearchQuery(cat.name); handleSearchSubmit(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 rounded-lg flex items-center gap-2">
                                <span className="material-symbols-outlined text-[18px] text-muted-foreground">category</span>
@@ -166,7 +168,7 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                      {/* Services */}
                      {searchResults.services?.length > 0 ? (
                         <div className="p-2">
-                           <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Services</div>
+                           <div className="text-[10px] font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.services")}</div>
                            {searchResults.services.slice(0, 5).map(srv => (
                               <Link key={srv.id} href={`/booking/new/${srv.id}`} onClick={() => { setIsDropdownOpen(false); setIsSearchExpanded(false); }} className="px-3 py-2 hover:bg-muted/50 rounded-lg flex gap-3 items-center">
                                  {srv.thumbnail ? (
@@ -185,14 +187,14 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                         </div>
                      ) : (
                         <div className="p-6 text-center text-sm text-muted-foreground">
-                           {isSearching ? "Searching..." : "No matching services found"}
+                           {isSearching ? t("common.searching") : t("common.no_matching_services")}
                         </div>
                      )}
                      
                      {searchResults.total_services > 5 && (
                         <div className="p-2 border-t border-border/50 bg-muted/10">
                            <button type="button" onClick={() => handleSearchSubmit()} className="w-full py-2.5 text-sm text-primary font-bold hover:bg-primary/5 rounded-lg">
-                              View all {searchResults.total_services} results
+                              {t("common.view_all_results").replace("{count}", String(searchResults.total_services))}
                            </button>
                         </div>
                      )}
@@ -219,10 +221,10 @@ export function MobileHeader({ className }: MobileHeaderProps) {
               <Link
                 href={isPartnerView ? "/" : "/partner"}
                 className="flex flex-col items-center justify-center size-10 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-navy transition-colors"
-                title={isPartnerView ? "Switch to Farmer" : "Switch to Partner"}
+                title={isPartnerView ? t("header.switch_to_farmer") : t("header.switch_to_partner")}
               >
                 <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
-                <span className="text-[8px] font-bold leading-none mt-0.5">{isPartnerView ? "Farmer" : "Partner"}</span>
+                <span className="text-[8px] font-bold leading-none mt-0.5">{isPartnerView ? t("header.switch_farmer") : t("header.switch_partner")}</span>
               </Link>
             )}
           </div>

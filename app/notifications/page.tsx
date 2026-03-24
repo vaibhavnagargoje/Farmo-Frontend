@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { AccountLayout } from "@/components/account-layout"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApiNotification {
   id: number
@@ -15,18 +16,18 @@ interface ApiNotification {
   created_at: string
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: string) => string): string {
   const now = new Date()
   const date = new Date(dateStr)
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (seconds < 60) return "Just now"
+  if (seconds < 60) return t("time.just_now")
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return t("time.m_ago").replace("{m}", String(minutes))
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t("time.h_ago").replace("{h}", String(hours))
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
+  if (days < 7) return t("time.d_ago").replace("{d}", String(days))
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
 }
 
@@ -56,6 +57,7 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "unread">("all")
   const router = useRouter()
+  const { t } = useLanguage()
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true)
@@ -120,27 +122,27 @@ export default function NotificationsPage() {
   }
 
   return (
-    <AccountLayout pageTitle="Notifications">
+    <AccountLayout pageTitle={t("notifications.title")}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl lg:text-2xl font-bold text-foreground">
-              Notifications
+              {t("notifications.title")}
               {unreadCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-destructive text-white rounded-full">
                   {unreadCount}
                 </span>
               )}
             </h2>
-            <p className="text-sm text-muted mt-1">Stay updated on your bookings and account</p>
+            <p className="text-sm text-muted mt-1">{t("notifications.subtitle")}</p>
           </div>
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
               className="text-sm font-medium text-primary hover:text-primary/80 transition-colors hidden sm:block"
             >
-              Mark all as read
+              {t("notifications.mark_all_read")}
             </button>
           )}
         </div>
@@ -157,7 +159,7 @@ export default function NotificationsPage() {
                   : "bg-card text-foreground border border-border hover:bg-muted/50"
               )}
             >
-              All
+              {t("notifications.all")}
             </button>
             <button
               onClick={() => setFilter("unread")}
@@ -168,7 +170,7 @@ export default function NotificationsPage() {
                   : "bg-card text-foreground border border-border hover:bg-muted/50"
               )}
             >
-              Unread {unreadCount > 0 && `(${unreadCount})`}
+              {t("notifications.unread")} {unreadCount > 0 && `(${unreadCount})`}
             </button>
           </div>
           {unreadCount > 0 && (
@@ -176,7 +178,7 @@ export default function NotificationsPage() {
               onClick={markAllRead}
               className="text-sm font-medium text-primary hover:text-primary/80 transition-colors sm:hidden"
             >
-              Mark all read
+              {t("notifications.mark_all_read")}
             </button>
           )}
         </div>
@@ -185,18 +187,18 @@ export default function NotificationsPage() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="material-symbols-outlined text-4xl text-muted animate-spin mb-4">progress_activity</span>
-            <p className="text-sm text-muted">Loading notifications...</p>
+            <p className="text-sm text-muted">{t("notifications.loading")}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="material-symbols-outlined text-6xl text-muted mb-4">notifications_off</span>
             <h3 className="text-lg font-bold text-foreground mb-2">
-              {filter === "unread" ? "All caught up!" : "No Notifications"}
+              {filter === "unread" ? t("notifications.all_caught_up") : t("notifications.no_notifications")}
             </h3>
             <p className="text-muted text-sm">
               {filter === "unread"
-                ? "You've read all your notifications."
-                : "You don't have any notifications yet."}
+                ? t("notifications.read_all_desc")
+                : t("notifications.empty_desc")}
             </p>
           </div>
         ) : (
@@ -230,7 +232,7 @@ export default function NotificationsPage() {
                       )}
                     </div>
                     <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{notification.message}</p>
-                    <p className="text-[11px] text-muted/70 mt-2">{timeAgo(notification.created_at)}</p>
+                    <p className="text-[11px] text-muted/70 mt-2">{timeAgo(notification.created_at, t)}</p>
                   </div>
                 </div>
               )

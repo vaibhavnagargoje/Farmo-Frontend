@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState } from "react"
 import type { Category } from "@/lib/api"
 import { LaborListingSection } from "@/components/labor-listing-section"
+import { useLanguage } from "@/contexts/language-context"
 
 // Map category slugs to available images
 const categoryImages: Record<string, string> = {
@@ -35,6 +36,7 @@ interface ServiceTabsProps {
 
 export function ServiceTabs({ categories }: ServiceTabsProps) {
     const [activeTab, setActiveTab] = useState<"equipment" | "labors">("equipment")
+    const { t, lang } = useLanguage()
 
     return (
         <>
@@ -49,7 +51,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                             }`}
                     >
                         <span className="material-symbols-outlined text-[18px]">agriculture</span>
-                        Equipment
+                        {t("tabs.equipment")}
                     </button>
                     <button
                         onClick={() => setActiveTab("labors")}
@@ -59,7 +61,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                             }`}
                     >
                         <span className="material-symbols-outlined text-[18px]">engineering</span>
-                        Labors
+                        {t("tabs.labors")}
                     </button>
                 </div>
             </div>
@@ -69,7 +71,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                 <>
                     {/* Section Header */}
                     <div className="flex items-center justify-between px-4 lg:px-6 pb-4">
-                        <h2 className="text-base lg:text-xl font-bold text-foreground">All Categories</h2>
+                        <h2 className="text-base lg:text-xl font-bold text-foreground">{t("tabs.all_categories")}</h2>
                     </div>
 
                     {/* Equipment Categories Grid */}
@@ -78,6 +80,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                             <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
                                 {categories.slice(0, 9).map((category) => {
                                     const image = getCategoryImage(category.slug)
+                                    const displayName = category.name_translations?.[lang] || category.name
                                     return (
                                         <Link
                                             key={category.id}
@@ -87,14 +90,14 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                             <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted/20">
                                                 <Image
                                                     src={category.icon || image}
-                                                    alt={category.name}
+                                                    alt={displayName}
                                                     fill
                                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             </div>
                                             <div className="px-2 py-2.5 lg:px-4 lg:py-3 flex flex-col justify-center items-center">
                                                 <h3 className="text-foreground text-[12px] md:text-sm font-semibold leading-tight text-center w-full">
-                                                    {category.name}
+                                                    {displayName}
                                                 </h3>
                                             </div>
                                         </Link>
@@ -116,30 +119,8 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                         
                         <div className="flex items-center justify-center mt-6">
                             <Link href="/categories" className="px-8 py-2.5 rounded-lg border border-border text-sm font-bold text-foreground hover:bg-muted/50 transition-colors shadow-sm">
-                                View All
+                                {t("common.view_all")}
                             </Link>
-                        </div>
-                    </section>
-
-                    {/* How It Works */}
-                    <section className="px-4 lg:px-6 pb-6 lg:pb-10">
-                        <div className="bg-card border border-border rounded-md px-4 py-4 lg:px-6">
-                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">How It Works</h3>
-                            <div className="grid grid-cols-3 gap-4 lg:gap-8">
-                                {[
-                                    { icon: "search", title: "Browse", desc: "Find equipment near you" },
-                                    { icon: "calendar_month", title: "Book", desc: "Select date & confirm" },
-                                    { icon: "check_circle", title: "Get Service", desc: "Equipment at your farm" },
-                                ].map((step, i) => (
-                                    <div key={i} className="flex flex-col items-center text-center gap-1.5">
-                                        <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-primary text-[20px]">{step.icon}</span>
-                                        </div>
-                                        <p className="text-xs font-semibold text-foreground">{step.title}</p>
-                                        <p className="text-[10px] lg:text-xs text-muted-foreground leading-tight hidden sm:block">{step.desc}</p>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </section>
                 </>
@@ -152,3 +133,4 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
         </>
     )
 }
+

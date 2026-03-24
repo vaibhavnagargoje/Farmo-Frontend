@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useLanguage } from "@/contexts/language-context"
 
 interface VerificationStepProps {
     serviceName: string
@@ -25,6 +26,8 @@ export function VerificationStep({
     priceUnit,
     isLabor = false,
 }: VerificationStepProps) {
+    const { t } = useLanguage()
+
     return (
         <div className="flex flex-col items-center gap-6 py-4">
             {/* Animated Success Icon */}
@@ -45,10 +48,9 @@ export function VerificationStep({
 
             {/* Title & Message */}
             <div className="text-center max-w-sm">
-                <h2 className="text-2xl font-bold text-navy lg:text-3xl">Under Verification</h2>
+                <h2 className="text-2xl font-bold text-navy lg:text-3xl">{t("onboarding.step4_verif.title")}</h2>
                 <p className="text-muted text-sm mt-2 leading-relaxed">
-                    Your profile and services have been submitted for review. Our team will verify your
-                    details within <strong className="text-foreground">24-48 hours</strong>.
+                    {t("onboarding.step4_verif.desc")}
                 </p>
             </div>
 
@@ -60,8 +62,8 @@ export function VerificationStep({
                             <span className="material-symbols-outlined text-base">check</span>
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-foreground">Profile Submitted</p>
-                            <p className="text-xs text-muted">Personal info & KYC uploaded</p>
+                            <p className="text-sm font-semibold text-foreground">{t("onboarding.step4_verif.timeline.profile_submitted")}</p>
+                            <p className="text-xs text-muted">{t("onboarding.step4_verif.timeline.profile_desc")}</p>
                         </div>
                     </div>
                     {isLabor ? (
@@ -70,8 +72,8 @@ export function VerificationStep({
                             <span className="material-symbols-outlined text-base">check</span>
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-foreground">Labor Details Submitted</p>
-                            <p className="text-xs text-muted">Your skills & work info saved</p>
+                            <p className="text-sm font-semibold text-foreground">{t("onboarding.step4_verif.timeline.labor_submitted")}</p>
+                            <p className="text-xs text-muted">{t("onboarding.step4_verif.timeline.labor_desc")}</p>
                         </div>
                     </div>
                     ) : (
@@ -80,8 +82,8 @@ export function VerificationStep({
                             <span className="material-symbols-outlined text-base">check</span>
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-foreground">Service Listed</p>
-                            <p className="text-xs text-muted">Your service is saved and queued</p>
+                            <p className="text-sm font-semibold text-foreground">{t("onboarding.step4_verif.timeline.service_listed")}</p>
+                            <p className="text-xs text-muted">{t("onboarding.step4_verif.timeline.service_desc")}</p>
                         </div>
                     </div>
                     )}
@@ -90,8 +92,8 @@ export function VerificationStep({
                             <div className="size-3 rounded-full bg-primary animate-pulse" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-primary">Verification In Progress</p>
-                            <p className="text-xs text-muted">Our team is reviewing your details</p>
+                            <p className="text-sm font-semibold text-primary">{t("onboarding.step4_verif.timeline.in_progress")}</p>
+                            <p className="text-xs text-muted">{t("onboarding.step4_verif.timeline.in_progress_desc")}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 opacity-40">
@@ -99,8 +101,8 @@ export function VerificationStep({
                             <span className="material-symbols-outlined text-base">schedule</span>
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-muted">Go Live</p>
-                            <p className="text-xs text-muted">Start receiving bookings</p>
+                            <p className="text-sm font-semibold text-muted">{t("onboarding.step4_verif.timeline.go_live")}</p>
+                            <p className="text-xs text-muted">{t("onboarding.step4_verif.timeline.go_live_desc")}</p>
                         </div>
                     </div>
                 </div>
@@ -110,18 +112,18 @@ export function VerificationStep({
             {!isLabor && (
             <div className="w-full max-w-sm bg-navy/5 rounded-2xl border border-navy/10 p-5">
                 <h3 className="text-sm font-bold text-navy uppercase tracking-wider mb-3">
-                    Submission Summary
+                    {t("onboarding.step4_verif.summary.title")}
                 </h3>
                 <div className="flex flex-col gap-2.5">
                     {serviceName && (
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted">Service</span>
+                            <span className="text-sm text-muted">{t("onboarding.step4_verif.summary.service")}</span>
                             <span className="text-sm font-semibold text-foreground">{serviceName}</span>
                         </div>
                     )}
                     {category && (
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted">Category</span>
+                            <span className="text-sm text-muted">{t("onboarding.step4_verif.summary.category")}</span>
                             <span className="text-sm font-semibold text-foreground capitalize">
                                 {category.replace(/-/g, " ")}
                             </span>
@@ -129,9 +131,9 @@ export function VerificationStep({
                     )}
                     {price && (
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted">Price</span>
+                            <span className="text-sm text-muted">{t("onboarding.step4_verif.summary.price")}</span>
                             <span className="text-sm font-bold text-primary">
-                                ₹{price} {priceUnitLabels[priceUnit] || priceUnit}
+                                ₹{price} {t(`unit.${priceUnit}`) === `unit.${priceUnit}` ? priceUnitLabels[priceUnit] || priceUnit : t(`unit.${priceUnit}`)}
                             </span>
                         </div>
                     )}
@@ -145,8 +147,7 @@ export function VerificationStep({
                     notifications_active
                 </span>
                 <p className="text-xs text-muted leading-relaxed">
-                    You&apos;ll receive a notification once your profile is verified. After verification, your
-                    services will be visible to farmers in your area.
+                    {t("onboarding.step4_verif.note")}
                 </p>
             </div>
 
@@ -155,7 +156,7 @@ export function VerificationStep({
                 href="/partner"
                 className="w-full max-w-sm h-14 bg-navy hover:bg-navy/90 text-white rounded-2xl text-base font-bold tracking-wide shadow-lg shadow-navy/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
             >
-                <span>Go to Dashboard</span>
+                <span>{t("onboarding.step4_verif.btn_dashboard")}</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
                     arrow_forward
                 </span>

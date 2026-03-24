@@ -7,15 +7,16 @@ import { useRouter, usePathname } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { MobileHeader } from "@/components/mobile-header"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
 // Sidebar navigation items
 const sidebarNavItems = [
-    { icon: "dashboard", label: "Dashboard", href: "/partner", key: "dashboard" },
-    { icon: "construction", label: "Manage Services", href: "/partner/services", key: "services" },
-    { icon: "account_balance_wallet", label: "Earnings", href: "/partner/earnings", key: "earnings", disabled: true },
-    { icon: "person", label: "Profile", href: "/partner/profile", key: "profile" },
+    { icon: "dashboard", labelKey: "dashboard.title", href: "/partner", key: "dashboard" },
+    { icon: "construction", labelKey: "manage_services.title", href: "/partner/services", key: "services" },
+    { icon: "account_balance_wallet", labelKey: "partner_layout.earnings", href: "/partner/earnings", key: "earnings", disabled: true },
+    { icon: "person", labelKey: "partner_layout.profile", href: "/partner/profile", key: "profile" },
 ]
 
 interface PartnerLayoutProps {
@@ -26,6 +27,7 @@ interface PartnerLayoutProps {
 export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: PartnerLayoutProps) {
     const router = useRouter()
     const pathname = usePathname()
+    const { t } = useLanguage()
     const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth()
     const [partnerName, setPartnerName] = useState("Partner")
     const [isOnline, setIsOnline] = useState(true)
@@ -124,7 +126,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                     </div>
                     <div>
                         <span className="font-bold text-xl tracking-tight text-navy">Farmo</span>
-                        <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">PARTNER</span>
+                        <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">{t("partner_layout.partner")}</span>
                     </div>
                 </Link>
             </div>
@@ -159,7 +161,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                         "text-xs font-bold",
                         isOnline ? "text-green-600" : "text-muted"
                     )}>
-                        {isOnline ? "Online" : "Offline"}
+                        {isOnline ? t("status.online") : t("status.offline")}
                     </span>
                 </div>
             </div>
@@ -175,7 +177,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                             onClick={(e) => {
                                 if (item.disabled) {
                                     e.preventDefault()
-                                    alert("Earnings feature is coming soon!")
+                                    alert(t("partner_layout.coming_soon"))
                                     return
                                 }
                                 onNavClick?.()
@@ -191,7 +193,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                             <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">
                                 {item.icon}
                             </span>
-                            {item.label}
+                            {t(item.labelKey)}
                         </Link>
                     )
                 })}
@@ -205,7 +207,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                     className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-navy hover:bg-navy/5 rounded-xl transition-colors"
                 >
                     <span className="material-symbols-outlined text-xl">swap_horiz</span>
-                    Switch to Farmer
+                    {t("partner_layout.switch_to_farmer")}
                 </Link>
                 <button
                     onClick={() => {
@@ -215,7 +217,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                     className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                 >
                     <span className="material-symbols-outlined text-xl rotate-180">logout</span>
-                    Log Out
+                    {t("partner_layout.log_out")}
                 </button>
             </div>
         </>
@@ -239,7 +241,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                             "text-xs font-bold",
                             isOnline ? "text-green-600" : "text-muted"
                         )}>
-                            {isOnline ? "Online" : "Offline"}
+                            {isOnline ? t("status.online") : t("status.offline")}
                         </span>
                     </div>
                 </div>
@@ -271,13 +273,13 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                                 </span>
                                 <input
                                     className="block w-64 pl-10 pr-4 py-2 border-none rounded-full bg-gray-50 text-sm focus:ring-2 focus:ring-primary/20 placeholder-gray-400 transition-all hover:bg-gray-100"
-                                    placeholder="Search..."
+                                    placeholder={t("partner_layout.search")}
                                     type="text"
                                 />
                             </div>
                             <Link href="/profile" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 font-medium text-xs text-gray-600 hover:text-navy transition-colors border border-transparent">
                                 <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
-                                Farmer
+                                {t("partner_layout.farmer")}
                             </Link>
                             <Link href="/partner/profile" className="p-2 rounded-full hover:bg-gray-50 transition-colors text-gray-400">
                                 <span className="material-symbols-outlined">person</span>
@@ -292,7 +294,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
                                     "text-xs font-bold",
                                     isOnline ? "text-green-600" : "text-muted"
                                 )}>
-                                    {isOnline ? "Online" : "Offline"}
+                                    {isOnline ? t("status.online") : t("status.offline")}
                                 </span>
                             </div>
                         </div>

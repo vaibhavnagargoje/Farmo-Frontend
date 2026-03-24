@@ -5,14 +5,16 @@ import { publicApiRequest, rewriteMediaUrl } from "@/lib/api-server"
 // GET /api/services/categories?lat=...&lng=...
 export async function GET(request: Request) {
     try {
-        // Forward lat/lng for zone pricing resolution
+        // Forward query params (lat, lng for zone pricing; lang for translations)
         const { searchParams } = new URL(request.url)
-        let url = API_ENDPOINTS.CATEGORIES
+        const params = new URLSearchParams()
         const lat = searchParams.get('lat')
         const lng = searchParams.get('lng')
-        if (lat && lng) {
-            url += `?lat=${lat}&lng=${lng}`
-        }
+        const lang = searchParams.get('lang')
+        if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
+        if (lang) { params.set('lang', lang) }
+        const qs = params.toString()
+        const url = qs ? `${API_ENDPOINTS.CATEGORIES}?${qs}` : API_ENDPOINTS.CATEGORIES
         const res = await publicApiRequest(url)
         const data = await res.json()
 

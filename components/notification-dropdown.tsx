@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { onForegroundMessage } from "@/lib/firebase"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApiNotification {
   id: number
@@ -17,18 +18,18 @@ interface ApiNotification {
   created_at: string
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: string) => string): string {
   const now = new Date()
   const date = new Date(dateStr)
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (seconds < 60) return "Just now"
+  if (seconds < 60) return t("time.just_now")
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return t("time.m_ago").replace("{m}", String(minutes))
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t("time.h_ago").replace("{h}", String(hours))
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
+  if (days < 7) return t("time.d_ago").replace("{d}", String(days))
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
 }
 
@@ -54,6 +55,7 @@ export function NotificationDropdown() {
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { t } = useLanguage()
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
@@ -180,10 +182,10 @@ export function NotificationDropdown() {
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-foreground">Notifications</h3>
+              <h3 className="font-bold text-foreground">{t("notifications.title")}</h3>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
-                  {unreadCount} new
+                  {t("notifications.new").replace("{count}", String(unreadCount))}
                 </span>
               )}
             </div>
@@ -192,7 +194,7 @@ export function NotificationDropdown() {
                 onClick={markAllRead}
                 className="text-primary text-sm font-semibold hover:underline"
               >
-                Mark all read
+                {t("notifications.mark_all_read")}
               </button>
             )}
           </div>
@@ -206,7 +208,7 @@ export function NotificationDropdown() {
             ) : displayNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-5">
                 <span className="material-symbols-outlined text-4xl text-muted mb-2">notifications_off</span>
-                <p className="text-sm text-muted">No notifications yet</p>
+                <p className="text-sm text-muted">{t("notifications.empty")}</p>
               </div>
             ) : (
               displayNotifications.map((notification) => {
@@ -241,7 +243,7 @@ export function NotificationDropdown() {
                         {!notification.is_read && <span className="size-2 bg-primary rounded-full shrink-0 mt-1.5"></span>}
                       </div>
                       <p className="text-xs text-muted mt-0.5 line-clamp-2">{notification.message}</p>
-                      <p className="text-[10px] text-muted/70 mt-1">{timeAgo(notification.created_at)}</p>
+                      <p className="text-[10px] text-muted/70 mt-1">{timeAgo(notification.created_at, t)}</p>
                     </div>
                   </div>
                 )
@@ -256,7 +258,7 @@ export function NotificationDropdown() {
               onClick={() => setIsOpen(false)}
               className="w-full block text-center text-primary text-sm font-semibold hover:underline"
             >
-              View all notifications
+              {t("notifications.view_all")}
             </Link>
           </div>
         </div>

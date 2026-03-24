@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { PartnerLayout } from "@/components/partner-layout"
+import { useLanguage } from "@/contexts/language-context"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +39,7 @@ const statusColors: Record<string, { bg: string; text: string; label: string }> 
 }
 
 export default function ManageServicesPage() {
+    const { t, lang } = useLanguage()
     const [services, setServices] = useState<ServiceItem[]>([])
     const [categories, setCategories] = useState<CategoryOption[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -58,7 +60,7 @@ export default function ManageServicesPage() {
     const [laborEditForm, setLaborEditForm] = useState({ skills: "", dailyWage: "", isMigrant: false })
     const [laborSaving, setLaborSaving] = useState(false)
 
-    const SKILL_OPTIONS = ["Mason", "Helper", "Harvester", "Plougher", "Weeder", "Sprayer", "Loader", "Driver", "Carpenter", "Painter", "Electrician", "Plumber"]
+    const SKILL_OPTIONS = ["Mason", "Helper", "Harvester", "Plougher", "Weeding", "Spraying", "Loader", "Driver", "Carpenter", "Painter", "Electrician", "Plumber", "Farming Work", "Sowing"]
 
     // Image compression utility (same as onboarding)
     const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File> => {
@@ -105,7 +107,7 @@ export default function ManageServicesPage() {
         })
     }
 
-    useEffect(() => { fetchServices(); fetchCategories(); fetchPartnerType() }, [])
+    useEffect(() => { fetchServices(); fetchCategories(); fetchPartnerType() }, [lang])
     useEffect(() => { if (message) { const t = setTimeout(() => setMessage(null), 4000); return () => clearTimeout(t) } }, [message])
 
     const fetchPartnerType = async () => {
@@ -159,7 +161,7 @@ export default function ManageServicesPage() {
         try { const res = await fetch("/api/partner/services"); if (res.ok) { const d = await res.json(); setServices(Array.isArray(d) ? d : d.results || []) } } catch (e) { console.error(e) } finally { setIsLoading(false) }
     }
     const fetchCategories = async () => {
-        try { const res = await fetch("/api/services/categories"); if (res.ok) { const d = await res.json(); setCategories(Array.isArray(d) ? d : d.results || []) } } catch (e) { console.error(e) }
+        try { const res = await fetch(`/api/services/categories?lang=${lang}`); if (res.ok) { const d = await res.json(); setCategories(Array.isArray(d) ? d : d.results || []) } } catch (e) { console.error(e) }
     }
     const handleToggleAvailability = async (id: number, cur: boolean) => {
         setServices(p => p.map(s => s.id === id ? { ...s, is_available: !cur } : s))
@@ -221,7 +223,7 @@ export default function ManageServicesPage() {
     const getPriceUnitLabel = (u: string) => priceUnits.find(x => x.value === u)?.label || u
 
     return (
-        <PartnerLayout pageTitle="Manage Services">
+        <PartnerLayout pageTitle={t("manage_services.title")}>
             {message && (
                 <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-xl border text-sm font-medium flex items-center gap-2 animate-in slide-in-from-top-2 ${message.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}>
                     <span className="material-symbols-outlined text-lg">{message.type === "success" ? "check_circle" : "error"}</span>
@@ -230,11 +232,11 @@ export default function ManageServicesPage() {
             )}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h2 className="text-xl lg:text-2xl font-bold text-foreground">Manage Services</h2>
-                    <p className="text-sm text-muted mt-1">{services.length} service{services.length !== 1 ? "s" : ""} listed</p>
+                    <h2 className="text-xl lg:text-2xl font-bold text-foreground">{t("manage_services.title")}</h2>
+                    <p className="text-sm text-muted mt-1">{services.length} {t("manage_services.services_listed")}</p>
                 </div>
                 <button onClick={() => setShowAddForm(true)} className="bg-primary text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg">
-                    <span className="material-symbols-outlined text-lg">add</span>Add Service
+                    <span className="material-symbols-outlined text-lg">add</span>{t("manage_services.add_service")}
                 </button>
             </div>
 
@@ -244,7 +246,7 @@ export default function ManageServicesPage() {
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary">engineering</span>
-                            My Labor Profile
+                            {t("manage_services.my_labor_profile")}
                         </h3>
                         {!editingLabor && laborDetails && (
                             <button onClick={() => { setEditingLabor(true); setLaborEditForm({ skills: laborDetails.skills || "", dailyWage: laborDetails.daily_wage_estimate || "", isMigrant: laborDetails.is_migrant_worker || false }) }} className="size-9 rounded-lg border border-border flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-colors">
@@ -257,7 +259,7 @@ export default function ManageServicesPage() {
                         <div className="flex flex-col gap-4">
                             {/* Skills chips */}
                             <div className="flex flex-col gap-2">
-                                <Label className="text-sm font-semibold">Skills</Label>
+                                <Label className="text-sm font-semibold">{t("manage_services.skills")}</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {SKILL_OPTIONS.map(skill => {
                                         const selected = laborEditForm.skills.split(",").map(s => s.trim()).includes(skill)
@@ -267,7 +269,7 @@ export default function ManageServicesPage() {
                                                 const updated = selected ? current.filter(s => s !== skill) : [...current, skill]
                                                 setLaborEditForm(p => ({ ...p, skills: updated.join(", ") }))
                                             }} className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${selected ? "bg-primary text-white border-primary" : "bg-background text-muted border-border hover:border-primary/50"}`}>
-                                                {skill}
+                                                {t(`skills.${skill.toLowerCase().replace(/ /g, "_")}`) === `skills.${skill.toLowerCase().replace(/ /g, "_")}` ? skill : t(`skills.${skill.toLowerCase().replace(/ /g, "_")}`)}
                                             </button>
                                         )
                                     })}
@@ -275,17 +277,17 @@ export default function ManageServicesPage() {
                             </div>
                             {/* Daily Wage */}
                             <div className="flex flex-col gap-2">
-                                <Label className="text-sm font-semibold">Daily Wage (₹)</Label>
+                                <Label className="text-sm font-semibold">{t("manage_services.daily_wage")}</Label>
                                 <Input type="number" value={laborEditForm.dailyWage} onChange={e => setLaborEditForm(p => ({ ...p, dailyWage: e.target.value }))} placeholder="e.g. 500" className="h-11 rounded-xl bg-background" />
                             </div>
                             {/* Migrant */}
                             <div className="flex items-center justify-between">
-                                <Label className="text-sm font-semibold">Migrant Worker</Label>
+                                <Label className="text-sm font-semibold">{t("manage_services.migrant_worker")}</Label>
                                 <Switch checked={laborEditForm.isMigrant} onCheckedChange={v => setLaborEditForm(p => ({ ...p, isMigrant: v }))} />
                             </div>
                             <div className="flex gap-3 mt-2">
-                                <button onClick={() => setEditingLabor(false)} className="flex-1 h-10 rounded-xl border border-border text-muted text-sm font-semibold hover:bg-muted/10">Cancel</button>
-                                <button onClick={handleSaveLabor} disabled={laborSaving} className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">{laborSaving ? "Saving..." : "Save Changes"}</button>
+                                <button onClick={() => setEditingLabor(false)} className="flex-1 h-10 rounded-xl border border-border text-muted text-sm font-semibold hover:bg-muted/10">{t("manage_services.cancel")}</button>
+                                <button onClick={handleSaveLabor} disabled={laborSaving} className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">{laborSaving ? "..." : t("manage_services.save_changes")}</button>
                             </div>
                         </div>
                     ) : laborDetails ? (
@@ -295,7 +297,9 @@ export default function ManageServicesPage() {
                                 <span className="text-sm font-semibold text-foreground">Skills:</span>
                                 <div className="flex flex-wrap gap-1">
                                     {laborDetails.skills?.split(",").map(s => s.trim()).filter(Boolean).map((skill, i) => (
-                                        <span key={i} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">{skill}</span>
+                                        <span key={i} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                                            {t(`skills.${skill.toLowerCase().replace(/ /g, "_")}`) === `skills.${skill.toLowerCase().replace(/ /g, "_")}` ? skill : t(`skills.${skill.toLowerCase().replace(/ /g, "_")}`)}
+                                        </span>
                                     ))}
                                 </div>
                             </div>
@@ -312,9 +316,9 @@ export default function ManageServicesPage() {
                         </div>
                     ) : (
                         <div className="text-center py-4">
-                            <p className="text-sm text-muted mb-3">No labor details found. Add your profile info.</p>
+                            <p className="text-sm text-muted mb-3">{t("manage_services.no_labor_details")}</p>
                             <button onClick={() => setEditingLabor(true)} className="bg-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/90">
-                                <span className="material-symbols-outlined text-lg align-middle mr-1">add</span>Add Labor Details
+                                <span className="material-symbols-outlined text-lg align-middle mr-1">add</span>{t("manage_services.add_labor_details")}
                             </button>
                         </div>
                     )}
@@ -325,26 +329,26 @@ export default function ManageServicesPage() {
             ) : services.length === 0 && !showAddForm ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                     <span className="material-symbols-outlined text-6xl text-muted/30 mb-4">construction</span>
-                    <h3 className="text-lg font-bold text-foreground mb-2">No Services Yet</h3>
-                    <p className="text-muted text-sm mb-6 max-w-sm">Add your first service to start receiving bookings.</p>
-                    <button onClick={() => setShowAddForm(true)} className="bg-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-primary/90"><span className="material-symbols-outlined">add</span>Add Your First Service</button>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{t("manage_services.no_services")}</h3>
+                    <p className="text-muted text-sm mb-6 max-w-sm">{t("manage_services.no_services_desc")}</p>
+                    <button onClick={() => setShowAddForm(true)} className="bg-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-primary/90"><span className="material-symbols-outlined">add</span>{t("manage_services.add_first_service")}</button>
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
                     {showAddForm && (
                         <div className="bg-card rounded-2xl border-2 border-primary/20 p-5 lg:p-6">
                             <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-lg font-bold text-foreground flex items-center gap-2"><span className="material-symbols-outlined text-primary">add_circle</span>Add New Service</h3>
+                                <h3 className="text-lg font-bold text-foreground flex items-center gap-2"><span className="material-symbols-outlined text-primary">add_circle</span>{t("manage_services.add_new_service")}</h3>
                                 <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-foreground"><span className="material-symbols-outlined">close</span></button>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Category *</Label><Select value={newService.category} onValueChange={v => setNewService(p => ({ ...p, category: v }))}><SelectTrigger className="h-11 rounded-xl bg-background border-border"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent className="bg-card rounded-xl">{categories.map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}</SelectContent></Select></div>
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Title *</Label><Input value={newService.title} onChange={e => setNewService(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Tractor Ploughing" className="h-11 rounded-xl bg-background" /></div>
-                                <div className="flex flex-col gap-2 lg:col-span-2"><Label className="text-sm font-semibold">Description</Label><Textarea value={newService.description} onChange={e => setNewService(p => ({ ...p, description: e.target.value }))} placeholder="Describe your service..." className="rounded-xl bg-background min-h-[80px]" /></div>
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Price (₹) *</Label><Input type="number" value={newService.price} onChange={e => setNewService(p => ({ ...p, price: e.target.value }))} placeholder="500" className="h-11 rounded-xl bg-background" /></div>
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Price Unit</Label><Select value={newService.price_unit} onValueChange={v => setNewService(p => ({ ...p, price_unit: v }))}><SelectTrigger className="h-11 rounded-xl bg-background border-border"><SelectValue /></SelectTrigger><SelectContent className="bg-card rounded-xl">{priceUnits.map(u => (<SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>))}</SelectContent></Select></div>
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Service Radius (km)</Label><Input type="number" value={newService.service_radius_km} onChange={e => setNewService(p => ({ ...p, service_radius_km: e.target.value }))} className="h-11 rounded-xl bg-background" /></div>
-                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Images</Label><input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) setNewImages(Array.from(e.target.files)) }} /><button onClick={() => imageInputRef.current?.click()} className="h-11 rounded-xl bg-background border border-dashed border-border text-sm text-muted hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"><span className="material-symbols-outlined text-lg">upload</span>{newImages.length > 0 ? `${newImages.length} file(s)` : "Upload Images"}</button></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.category")}</Label><Select value={newService.category} onValueChange={v => setNewService(p => ({ ...p, category: v }))}><SelectTrigger className="h-11 rounded-xl bg-background border-border"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent className="bg-card rounded-xl">{categories.map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}</SelectContent></Select></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.service_title")}</Label><Input value={newService.title} onChange={e => setNewService(p => ({ ...p, title: e.target.value }))} className="h-11 rounded-xl bg-background" /></div>
+                                <div className="flex flex-col gap-2 lg:col-span-2"><Label className="text-sm font-semibold">{t("manage_services.description")}</Label><Textarea value={newService.description} onChange={e => setNewService(p => ({ ...p, description: e.target.value }))} className="rounded-xl bg-background min-h-[80px]" /></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.price")}</Label><Input type="number" value={newService.price} onChange={e => setNewService(p => ({ ...p, price: e.target.value }))} className="h-11 rounded-xl bg-background" /></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.price_unit")}</Label><Select value={newService.price_unit} onValueChange={v => setNewService(p => ({ ...p, price_unit: v }))}><SelectTrigger className="h-11 rounded-xl bg-background border-border"><SelectValue /></SelectTrigger><SelectContent className="bg-card rounded-xl">{priceUnits.map(u => (<SelectItem key={u.value} value={u.value}>{t(`unit.${u.value}`) === `unit.${u.value}` ? u.label : t(`unit.${u.value}`)}</SelectItem>))}</SelectContent></Select></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.radius")}</Label><Input type="number" value={newService.service_radius_km} onChange={e => setNewService(p => ({ ...p, service_radius_km: e.target.value }))} className="h-11 rounded-xl bg-background" /></div>
+                                <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">{t("manage_services.images")}</Label><input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) setNewImages(Array.from(e.target.files)) }} /><button onClick={() => imageInputRef.current?.click()} className="h-11 rounded-xl bg-background border border-dashed border-border text-sm text-muted hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"><span className="material-symbols-outlined text-lg">upload</span>{newImages.length > 0 ? `${newImages.length} file(s)` : t("manage_services.upload_images")}</button></div>
                             </div>
                             <div className="flex gap-3 mt-5">
                                 <button onClick={() => setShowAddForm(false)} className="flex-1 h-11 rounded-xl border border-border text-muted font-semibold hover:bg-muted/10">Cancel</button>
@@ -369,7 +373,7 @@ export default function ManageServicesPage() {
                                             <div className="flex flex-col gap-2"><Label className="text-sm font-semibold">Title</Label><Input value={editForm.title || ""} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} className="h-10 rounded-xl bg-background" /></div>
                                             <div className="flex gap-3">
                                                 <div className="flex flex-col gap-2 flex-1"><Label className="text-sm font-semibold">Price (₹)</Label><Input type="number" value={editForm.price || ""} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} className="h-10 rounded-xl bg-background" /></div>
-                                                <div className="flex flex-col gap-2 flex-1"><Label className="text-sm font-semibold">Unit</Label><Select value={editForm.price_unit || "HOUR"} onValueChange={v => setEditForm(p => ({ ...p, price_unit: v }))}><SelectTrigger className="h-10 rounded-xl bg-background border-border"><SelectValue /></SelectTrigger><SelectContent className="bg-card rounded-xl">{priceUnits.map(u => (<SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>))}</SelectContent></Select></div>
+                                                <div className="flex flex-col gap-2 flex-1"><Label className="text-sm font-semibold">Unit</Label><Select value={editForm.price_unit || "HOUR"} onValueChange={v => setEditForm(p => ({ ...p, price_unit: v }))}><SelectTrigger className="h-10 rounded-xl bg-background border-border"><SelectValue /></SelectTrigger><SelectContent className="bg-card rounded-xl">{priceUnits.map(u => (<SelectItem key={u.value} value={u.value}>{t(`unit.${u.value}`) === `unit.${u.value}` ? u.label : t(`unit.${u.value}`)}</SelectItem>))}</SelectContent></Select></div>
                                             </div>
                                             <div className="flex flex-col gap-2 lg:col-span-2"><Label className="text-sm font-semibold">Description</Label><Textarea value={editForm.description || ""} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} className="rounded-xl bg-background min-h-[60px]" /></div>
                                         </div>
@@ -388,11 +392,11 @@ export default function ManageServicesPage() {
                                             </div>
                                             {service.description && <p className="text-sm text-muted mt-2 line-clamp-2">{service.description}</p>}
                                             <div className="flex items-center gap-4 mt-3 flex-wrap">
-                                                <div className="flex items-center gap-1"><span className="material-symbols-outlined text-primary text-sm">payments</span><span className="text-sm font-bold text-foreground">₹{Number(service.price).toLocaleString("en-IN")}</span><span className="text-xs text-muted">/ {getPriceUnitLabel(service.price_unit)}</span></div>
+                                                <div className="flex items-center gap-1"><span className="material-symbols-outlined text-primary text-sm">payments</span><span className="text-sm font-bold text-foreground">₹{Number(service.price).toLocaleString("en-IN")}</span><span className="text-xs text-muted">/ {t(`unit.${service.price_unit}`) === `unit.${service.price_unit}` ? getPriceUnitLabel(service.price_unit) : t(`unit.${service.price_unit}`)}</span></div>
                                                 <div className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-muted">radar</span><span className="text-xs text-muted">{service.service_radius_km} km</span></div>
                                             </div>
                                             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                                                <div className="flex items-center gap-2"><Switch checked={service.is_available} onCheckedChange={() => handleToggleAvailability(service.id, service.is_available)} className="scale-90 data-[state=checked]:bg-success data-[state=unchecked]:bg-muted" /><span className={`text-xs font-semibold ${service.is_available ? "text-success" : "text-muted"}`}>{service.is_available ? "Available" : "Unavailable"}</span></div>
+                                                <div className="flex items-center gap-2"><Switch checked={service.is_available} onCheckedChange={() => handleToggleAvailability(service.id, service.is_available)} className="scale-90 data-[state=checked]:bg-success data-[state=unchecked]:bg-muted" /><span className={`text-xs font-semibold ${service.is_available ? "text-success" : "text-muted"}`}>{service.is_available ? t("manage_services.available") : t("manage_services.unavailable")}</span></div>
                                                 <div className="flex items-center gap-2">
                                                     <button onClick={() => handleStartEdit(service)} className="size-9 rounded-lg border border-border flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-colors"><span className="material-symbols-outlined text-lg">edit</span></button>
                                                     <button onClick={() => setDeleteConfirm(service.id)} className="size-9 rounded-lg border border-border flex items-center justify-center text-muted hover:text-red-600 hover:border-red-300 transition-colors"><span className="material-symbols-outlined text-lg">delete</span></button>

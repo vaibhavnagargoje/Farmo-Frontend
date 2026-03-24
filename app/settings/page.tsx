@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AccountLayout } from "@/components/account-layout"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
 
 // Settings sections
 const settingsSections = [
@@ -28,6 +29,7 @@ const settingsSections = [
 
 export default function SettingsPage() {
     const [activeSection, setActiveSection] = useState("profile")
+    const { lang, setLang } = useLanguage()
 
     return (
         <AccountLayout pageTitle="Settings">
@@ -250,10 +252,13 @@ export default function SettingsPage() {
                                         <p className="text-xs text-muted">Choose your preferred language</p>
                                     </div>
                                 </div>
-                                <select className="px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20">
-                                    <option>English</option>
-                                    <option>हिंदी</option>
-                                    <option>मराठी</option>
+                                <select 
+                                    className="px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                                    value={lang}
+                                    onChange={(e) => setLang(e.target.value as "en" | "mr")}
+                                >
+                                    <option value="en">English</option>
+                                    <option value="mr">मराठी</option>
                                 </select>
                             </div>
                         </div>

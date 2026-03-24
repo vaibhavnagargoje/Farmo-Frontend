@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { PartnerLayout } from "@/components/partner-layout"
+import { useLanguage } from "@/contexts/language-context"
 
 // ─── Types ────────────────────────────────────────────────
 interface BookingItem {
@@ -104,6 +105,7 @@ const PRICE_UNIT_LABELS: Record<string, string> = {
 }
 
 export default function PartnerDashboard() {
+  const { t } = useLanguage()
   // ─── State ──────────────────────────────────────────────
   const [waitingBookings, setWaitingBookings] = useState<DashboardBooking[]>([])
   const [acceptedBookings, setAcceptedBookings] = useState<DashboardBooking[]>([])
@@ -348,7 +350,7 @@ export default function PartnerDashboard() {
 
   // ─── Render ──────────────────────────────────────────
   return (
-    <PartnerLayout pageTitle="Dashboard">
+    <PartnerLayout pageTitle={t("dashboard.title")}>
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -363,7 +365,7 @@ export default function PartnerDashboard() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-amber-500">schedule</span>
-                <h3 className="text-lg font-bold text-foreground">Waiting Bookings</h3>
+                <h3 className="text-lg font-bold text-foreground">{t("dashboard.waiting")}</h3>
                 <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">
                   {waitingBookings.length}
                 </span>
@@ -396,7 +398,7 @@ export default function PartnerDashboard() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-success">check_circle</span>
-                <h3 className="text-lg font-bold text-foreground">Accepted / Need to Complete</h3>
+                <h3 className="text-lg font-bold text-foreground">{t("dashboard.accepted")}</h3>
                 <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded-full">
                   {acceptedBookings.length}
                 </span>
@@ -423,7 +425,7 @@ export default function PartnerDashboard() {
                 className="flex items-center gap-2 mb-3 w-full"
               >
                 <span className="material-symbols-outlined text-red-400">cancel</span>
-                <h3 className="text-lg font-bold text-foreground">Rejected</h3>
+                <h3 className="text-lg font-bold text-foreground">{t("dashboard.rejected")}</h3>
                 <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
                   {rejectedBookings.length}
                 </span>
@@ -456,9 +458,9 @@ export default function PartnerDashboard() {
           {waitingBookings.length === 0 && acceptedBookings.length === 0 && rejectedBookings.length === 0 && (
             <div className="bg-card rounded-2xl border border-border p-12 text-center">
               <span className="material-symbols-outlined text-6xl text-muted/30 mb-4">inbox</span>
-              <h3 className="text-lg font-bold text-foreground mb-2">No Active Requests</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">{t("dashboard.no_active")}</h3>
               <p className="text-muted text-sm max-w-md mx-auto">
-                You'll receive bookings here when customers request your services. Stay online!
+                {t("dashboard.no_active_desc")}
               </p>
             </div>
           )}
@@ -505,6 +507,7 @@ function WaitingBookingCard({
   formatAmount: (a: string | number) => string
   formatExpiry: (e: string | null) => string | null
 }) {
+  const { t } = useLanguage()
   const expiry = formatExpiry(booking.expires_at)
   const isAccepting = actionLoading === booking.id || actionLoading === booking.booking_id
 
@@ -538,14 +541,14 @@ function WaitingBookingCard({
               </p>
               {booking.distance_km && (
                 <span className="text-xs text-blue-600 font-medium">
-                  📍 {Number(booking.distance_km).toFixed(1)} km
+                  📍 {Number(booking.distance_km).toFixed(1)} km {t("dashboard.away")}
                 </span>
               )}
             </div>
             {/* Compact pricing row */}
             <div className="flex items-center gap-2 mt-1">
               <span className="text-primary font-bold text-sm">
-                {formatAmount(booking.unit_price)} x {booking.quantity} {PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit}
+                {formatAmount(booking.unit_price)} x {booking.quantity} {t(`unit.${booking.price_unit}`) === `unit.${booking.price_unit}` ? PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit : t(`unit.${booking.price_unit}`)}
               </span>
               <span className="text-[10px] text-muted">
                 Total {formatAmount(booking.amount)}
@@ -569,7 +572,7 @@ function WaitingBookingCard({
           ) : (
             <>
               <span className="material-symbols-outlined text-lg">check_circle</span>
-              Accept
+              {t("dashboard.accept")}
             </>
           )}
         </button>
@@ -590,6 +593,8 @@ function AcceptedBookingCard({
   formatDate: (d: string) => string
   formatAmount: (a: string | number) => string
 }) {
+  const { t } = useLanguage()
+
   return (
     <button
       onClick={onView}
@@ -609,12 +614,12 @@ function AcceptedBookingCard({
             <h4 className="text-foreground font-bold text-sm sm:text-base truncate max-w-35 sm:max-w-none">{booking.service_title}</h4>
             {booking.status === "IN_PROGRESS" && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">
-                In Progress
+                {t("status.IN_PROGRESS")}
               </span>
             )}
             {booking.booking_type === "INSTANT" && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 shrink-0">
-                 Instant
+                 {t("booking_type.INSTANT")}
               </span>
             )}
           </div>
@@ -657,6 +662,7 @@ function BookingDetailModal({
   formatDate: (d: string) => string
   formatExpiry: (e: string | null) => string | null
 }) {
+  const { t } = useLanguage()
   const [otp, setOtp] = useState("")
   const [detail, setDetail] = useState<{
     customer?: { phone_number: string; full_name: string }
@@ -720,14 +726,14 @@ function BookingDetailModal({
                     ? "bg-purple-100 text-purple-700"
                     : "bg-blue-100 text-blue-700"
                     }`}>
-                    {booking.booking_type === "INSTANT" ? "Instant" : "📅 Scheduled"}
+                    {booking.booking_type === "INSTANT" ? t("booking_type.INSTANT") : `📅 ${t("booking_type.SCHEDULED")}`}
                   </span>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isWaiting ? "bg-amber-100 text-amber-700" :
                     isConfirmed ? "bg-green-100 text-green-700" :
                       isInProgress ? "bg-blue-100 text-blue-700" :
                         "bg-red-100 text-red-700"
                     }`}>
-                    {isWaiting ? "Waiting" : isConfirmed ? "Accepted" : isInProgress ? "In Progress" : "Rejected"}
+                    {t(`status.${booking.status}`)}
                   </span>
                 </div>
               </div>
@@ -747,7 +753,7 @@ function BookingDetailModal({
           {isWaiting && expiry && expiry !== "Expired" && (
             <div className="flex items-center gap-2 p-2.5 bg-amber-50 rounded-xl border border-amber-100">
               <span className="material-symbols-outlined text-amber-600 text-base">timer</span>
-              <p className="text-sm font-medium text-amber-800">Expires in {expiry}</p>
+              <p className="text-sm font-medium text-amber-800">{t("dashboard.expires_in").replace("{time}", expiry)}</p>
             </div>
           )}
 
@@ -770,7 +776,7 @@ function BookingDetailModal({
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-lg">payments</span>
               <span className="text-sm text-foreground">
-                {formatAmount(booking.unit_price)} × {booking.quantity} {PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit}
+                {formatAmount(booking.unit_price)} × {booking.quantity} {t(`unit.${booking.price_unit}`) === `unit.${booking.price_unit}` ? PRICE_UNIT_LABELS[booking.price_unit] || booking.price_unit : t(`unit.${booking.price_unit}`)}
               </span>
             </div>
             <span className="text-base font-bold text-primary">{formatAmount(booking.amount)}</span>
@@ -780,7 +786,7 @@ function BookingDetailModal({
           {booking.distance_km && (
             <div className="flex items-center gap-2.5 p-2.5 bg-blue-50 rounded-xl border border-blue-100">
               <span className="material-symbols-outlined text-blue-600 text-base">distance</span>
-              <p className="text-sm font-semibold text-blue-800">{Number(booking.distance_km).toFixed(1)} km away</p>
+              <p className="text-sm font-semibold text-blue-800">{Number(booking.distance_km).toFixed(1)} km {t("dashboard.away")}</p>
             </div>
           )}
 
@@ -825,7 +831,7 @@ function BookingDetailModal({
             <div className="flex items-start gap-2.5 p-2.5 bg-red-50 rounded-xl border border-red-100">
               <span className="material-symbols-outlined text-red-500 text-base mt-0.5">info</span>
               <div>
-                <p className="text-xs font-bold text-red-800">Rejection Reason</p>
+                <p className="text-xs font-bold text-red-800">{t("dashboard.rejection_reason")}</p>
                 <p className="text-sm text-red-700 mt-0.5">{booking.cancellation_reason}</p>
               </div>
             </div>
@@ -840,7 +846,7 @@ function BookingDetailModal({
                 className="flex items-center justify-center gap-2 p-3 bg-green-50 rounded-xl border border-green-100 hover:bg-green-100 transition-colors"
               >
                 <span className="material-symbols-outlined text-xl text-green-600">call</span>
-                <span className="text-xs font-bold text-green-800">Contact</span>
+                <span className="text-xs font-bold text-green-800">{t("dashboard.contact")}</span>
               </a>
 
               {/* See Direction */}
@@ -852,7 +858,7 @@ function BookingDetailModal({
                   className="flex items-center justify-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors"
                 >
                   <span className="material-symbols-outlined text-xl text-blue-600">directions</span>
-                  <span className="text-xs font-bold text-blue-800">See Direction</span>
+                  <span className="text-xs font-bold text-blue-800">{t("dashboard.see_direction")}</span>
                 </a>
               )}
             </div>
@@ -863,15 +869,15 @@ function BookingDetailModal({
             <div className="bg-background rounded-xl p-3 space-y-2.5">
               <p className="text-xs text-muted">
                 {isConfirmed
-                  ? "Enter the Start OTP from the customer to begin the job."
-                  : "Enter the Completion OTP to mark job as done."}
+                  ? t("dashboard.start_job_desc")
+                  : t("dashboard.complete_job_desc")}
               </p>
               <input
                 type="text"
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                placeholder="Enter OTP"
+                placeholder={t("dashboard.enter_otp")}
                 className="w-full h-11 px-4 text-center text-lg font-mono font-bold rounded-xl border border-border bg-card tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               <button
@@ -888,9 +894,9 @@ function BookingDetailModal({
                 {isActioning ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
                 ) : isConfirmed ? (
-                  "Start Job"
+                  t("dashboard.start_job")
                 ) : (
-                  "Mark Completed ✓"
+                  t("dashboard.mark_completed")
                 )}
               </button>
             </div>
@@ -909,7 +915,7 @@ function BookingDetailModal({
                     onClick={() => onInstantAction(booking.instant_request_id!, "decline")}
                     className="flex-1 h-10 rounded-xl border border-border text-muted font-bold text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-50"
                   >
-                    Decline
+                    {t("dashboard.decline")}
                   </button>
                   <button
                     disabled={isActioning}
@@ -919,7 +925,7 @@ function BookingDetailModal({
                     {isActioning ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
                     ) : (
-                      "Accept ✓"
+                      t("dashboard.accept")
                     )}
                   </button>
                 </>
@@ -930,7 +936,7 @@ function BookingDetailModal({
                     onClick={() => onScheduledAction(booking.booking_id, "reject")}
                     className="flex-1 h-10 rounded-xl border border-border text-muted font-bold text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-50"
                   >
-                    Reject
+                    {t("dashboard.reject")}
                   </button>
                   <button
                     disabled={isActioning}
@@ -940,7 +946,7 @@ function BookingDetailModal({
                     {isActioning ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
                     ) : (
-                      "Accept ✓"
+                      t("dashboard.accept")
                     )}
                   </button>
                 </>

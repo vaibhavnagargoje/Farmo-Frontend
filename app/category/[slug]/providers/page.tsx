@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import { type Service, type Category } from "@/lib/api"
+import { useLanguage } from "@/contexts/language-context"
 
 // ── Constants ──
 const DISTANCE_OPTIONS = [
@@ -27,6 +28,7 @@ const SORT_OPTIONS = [
 export default function ProvidersPage() {
     const params = useParams()
     const slug = params.slug as string
+    const { t } = useLanguage()
 
     // ── Data ──
     const [services, setServices] = useState<Service[]>([])
@@ -137,7 +139,7 @@ export default function ProvidersPage() {
     }, [])
 
     // ── Computed ──
-    const categoryName = category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+    const categoryName = category?.name_translations?.[t("lang_code") === "mr" ? "mr" : "en"] || category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
     const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
     const currentSort = SORT_OPTIONS.find((s) => s.value === sortBy) || SORT_OPTIONS[0]
     const shortAddress = address.split(",").slice(0, 2).join(",").trim()
@@ -178,11 +180,11 @@ export default function ProvidersPage() {
                         </Link>
                         <div className="flex-1 min-w-0">
                             <h1 className="text-base lg:text-lg font-bold text-foreground truncate">
-                                {categoryName} Providers
+                                {t("providers.title").replace("{category}", categoryName)}
                             </h1>
                             <p className="text-[11px] lg:text-xs text-muted-foreground flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                                {!locationLoaded ? "Loading location..." : shortAddress}
+                                {!locationLoaded ? t("providers.loading_location") : shortAddress}
                             </p>
                         </div>
                         {/* View toggle */}
@@ -208,12 +210,12 @@ export default function ProvidersPage() {
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-[14px]">filter_alt</span>
-                                {activeDistance !== "all" ? activeDistanceLabel : "Distance"}
+                                {activeDistance !== "all" ? activeDistanceLabel : t("providers.distance")}
                             </button>
                             {showFilters && (
                                 <div className="absolute top-full left-0 mt-1.5 w-44 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                                     <div className="px-3 py-2 border-b border-border">
-                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Distance Range</p>
+                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("providers.distance_range")}</p>
                                     </div>
                                     {DISTANCE_OPTIONS.map((option) => (
                                         <button
@@ -246,7 +248,7 @@ export default function ProvidersPage() {
                             {showSortMenu && (
                                 <div className="absolute top-full left-0 mt-1.5 w-52 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                                     <div className="px-3 py-2 border-b border-border">
-                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sort By</p>
+                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("providers.sort_by")}</p>
                                     </div>
                                     {SORT_OPTIONS.map((option) => (
                                         <button
@@ -274,7 +276,7 @@ export default function ProvidersPage() {
                                 }`}
                         >
                             <span className="material-symbols-outlined text-[14px]">verified</span>
-                            Available ({availableCount})
+                            {t("providers.available_count").replace("{count}", String(availableCount))}
                         </button>
                     </div>
                 </div>
@@ -287,11 +289,11 @@ export default function ProvidersPage() {
                     <div className="px-4 lg:px-6 pt-4 pb-2 flex items-center justify-between">
                         <div>
                             <h2 className="text-sm font-bold text-foreground">
-                                {filteredServices.length} {filteredServices.length === 1 ? "Provider" : "Providers"}
+                                {t("providers.count_label").replace("{count}", String(filteredServices.length)).replace("{plural}", filteredServices.length === 1 ? "" : "s")}
                             </h2>
                             <p className="text-[11px] text-muted-foreground">
-                                {activeDistance !== "all" && `Within ${activeDistanceLabel} · `}
-                                Sorted by {currentSort.label.toLowerCase()}
+                                {activeDistance !== "all" && t("providers.within_distance").replace("{distance}", activeDistanceLabel).replace("{sort}", currentSort.label.toLowerCase())}
+                                {activeDistance === "all" && t("providers.sort_by") + " " + currentSort.label.toLowerCase()}
                             </p>
                         </div>
                     </div>
@@ -303,7 +305,7 @@ export default function ProvidersPage() {
                         <div className="flex flex-col items-center gap-3">
                             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
                             <p className="text-sm text-muted-foreground">
-                                {!locationLoaded ? "Loading your location..." : "Searching for providers..."}
+                                {!locationLoaded ? t("providers.loading_location") : t("providers.searching")}
                             </p>
                         </div>
                     </div>
@@ -322,8 +324,8 @@ export default function ProvidersPage() {
                 {!isLoading && locationLoaded && !error && !lat && (
                     <div className="px-4 lg:px-6 py-16 text-center">
                         <span className="material-symbols-outlined text-5xl text-muted-foreground/50 mb-3">pin_drop</span>
-                        <p className="text-base font-medium text-foreground">Location not set</p>
-                        <p className="text-sm text-muted-foreground mt-1">Go back and set your location first</p>
+                        <p className="text-base font-medium text-foreground">{t("providers.no_location_title")}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t("providers.no_location_desc")}</p>
                         <Link
                             href={`/category/${slug}`}
                             className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy/90 transition-colors"
@@ -338,15 +340,15 @@ export default function ProvidersPage() {
                 {!isLoading && locationLoaded && !error && lat && filteredServices.length === 0 && (
                     <div className="px-4 lg:px-6 text-center py-16">
                         <span className="material-symbols-outlined text-5xl text-muted-foreground/50 mb-3">search_off</span>
-                        <p className="text-base font-medium text-foreground">No providers found</p>
-                        <p className="text-sm text-muted-foreground mt-1">Try expanding the distance range or clearing filters</p>
+                        <p className="text-base font-medium text-foreground">{t("providers.no_providers_title")}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t("providers.no_providers_desc")}</p>
                         <div className="flex items-center justify-center gap-3 mt-5">
                             {activeDistance !== "all" && (
                                 <button
                                     onClick={() => setActiveDistance("all")}
                                     className="px-4 py-2 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy/90 transition-colors"
                                 >
-                                    Clear Distance Filter
+                                    {t("providers.clear_distance")}
                                 </button>
                             )}
                             {onlyAvailable && (
@@ -354,7 +356,7 @@ export default function ProvidersPage() {
                                     onClick={() => setOnlyAvailable(false)}
                                     className="px-4 py-2 bg-card border border-border text-foreground rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors"
                                 >
-                                    Show Unavailable
+                                    {t("providers.show_unavailable")}
                                 </button>
                             )}
                         </div>
@@ -379,7 +381,11 @@ export default function ProvidersPage() {
 
 // ─── Provider Card ───────────────────────────────────────
 function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid" | "list" }) {
-    const priceUnit = service.price_unit === "HOUR" ? "/hr" : service.price_unit === "DAY" ? "/day" : service.price_unit === "ACRE" ? "/acre" : ""
+    const { t } = useLanguage()
+    const tUnit = `unit.${service.price_unit?.toLowerCase()}`
+    const translatedUnit = service.price_unit ? t(tUnit) : ""
+    const priceUnitLabel = translatedUnit === tUnit ? `/${service.price_unit?.toLowerCase()}` : `/${translatedUnit}`
+    const priceUnit = service.price_unit ? priceUnitLabel : ""
     const rating = service.partner_rating ? parseFloat(service.partner_rating) : 0
 
     if (viewMode === "list") {
@@ -389,16 +395,22 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
                 className="bg-card rounded-2xl shadow-sm border border-border/50 overflow-hidden group hover:shadow-lg hover:border-primary/20 transition-all flex"
             >
                 {/* Thumbnail */}
-                <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
-                    <Image
-                        src={service.thumbnail || "/placeholder.svg"}
-                        alt={service.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden bg-muted flex items-center justify-center">
+                    {service.thumbnail || service.partner_profile_picture ? (
+                        <Image
+                            src={(service.thumbnail || service.partner_profile_picture)!}
+                            alt={service.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                    ) : (
+                        <span className="text-muted-foreground text-3xl font-bold">
+                            {service.partner_name?.charAt(0).toUpperCase() || "P"}
+                        </span>
+                    )}
                     {!service.is_available && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <span className="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded">Offline</span>
+                            <span className="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded">{t("providers.offline")}</span>
                         </div>
                     )}
                     {service.is_available && (
@@ -426,7 +438,7 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
                             )}
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-1">
-                            {service.partner_name || "Service Provider"}
+                            {service.partner_name || t("providers.default_name")}
                         </p>
                         {service.description && (
                             <p className="text-[11px] text-muted-foreground/70 line-clamp-1 mt-1">{service.description}</p>
@@ -440,7 +452,7 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
                         </div>
                         <div className="flex items-center gap-1 text-primary bg-primary/5 px-2.5 py-1 rounded-lg">
                             <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-                            <span className="text-xs font-semibold">Book Now</span>
+                            <span className="text-xs font-semibold">{t("providers.book_now")}</span>
                             <span className="material-symbols-outlined text-[12px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
                         </div>
                     </div>
@@ -455,13 +467,19 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
             href={`/booking/new/${service.id}`}
             className="bg-card rounded-2xl p-3 lg:p-4 shadow-sm border border-border/50 flex flex-col gap-2.5 group hover:shadow-lg hover:border-primary/20 transition-all"
         >
-            <div className="relative w-full aspect-[4/3] bg-muted/20 rounded-xl overflow-hidden">
-                <Image
-                    src={service.thumbnail || "/placeholder.svg"}
-                    alt={service.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+            <div className="relative w-full aspect-[4/3] bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
+                {service.thumbnail || service.partner_profile_picture ? (
+                    <Image
+                        src={(service.thumbnail || service.partner_profile_picture)!}
+                        alt={service.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    <span className="text-muted-foreground text-4xl font-bold">
+                        {service.partner_name?.charAt(0).toUpperCase() || "P"}
+                    </span>
+                )}
                 {/* Price badge */}
                 <div className="absolute top-2 right-2 bg-card/95 backdrop-blur shadow-sm px-2 py-1 rounded-lg flex items-center gap-0.5 z-10 border border-border">
                     <span className="text-navy font-bold text-sm">₹{service.price}</span>
@@ -477,7 +495,7 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
                     </div>
                 ) : (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded">Offline</span>
+                        <span className="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded">{t("providers.offline")}</span>
                     </div>
                 )}
             </div>
@@ -487,12 +505,12 @@ function ProviderCard({ service, viewMode }: { service: Service; viewMode: "grid
                     {service.title}
                 </h3>
                 <p className="text-xs text-muted-foreground line-clamp-1">
-                    {service.partner_name || "Service Provider"}
+                    {service.partner_name || t("providers.default_name")}
                 </p>
                 <div className="flex items-center justify-between mt-1">
                     <div className="flex items-center gap-1 text-primary">
                         <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-                        <span className="text-[11px] font-semibold">Book Now</span>
+                        <span className="text-[11px] font-semibold">{t("providers.book_now")}</span>
                     </div>
                     {rating > 0 && (
                         <div className="flex items-center gap-0.5 text-xs font-bold text-success">

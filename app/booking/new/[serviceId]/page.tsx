@@ -8,6 +8,7 @@ import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
 import { BottomNav } from "@/components/bottom-nav"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { type Service, type PriceUnit } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +16,7 @@ export default function NewBookingPage() {
   const params = useParams()
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { t } = useLanguage()
   const serviceId = params.serviceId as string
 
   // Service Data
@@ -174,7 +176,10 @@ export default function NewBookingPage() {
 
   const getPriceUnitLabel = (unitValue: string) => {
     const unit = priceUnits.find(u => u.value === unitValue)
-    return unit ? `/${unit.label}` : `/${unitValue.toLowerCase()}`
+    const tKey = `unit.${unitValue.toLowerCase()}`
+    const tVal = t(tKey)
+    const lbl = tVal === tKey ? (unit ? unit.label : unitValue.toLowerCase()) : tVal
+    return `/${lbl}`
   }
 
   const getPriceUnit = () => getPriceUnitLabel(selectedUnit || service?.price_unit || "")
@@ -207,9 +212,9 @@ export default function NewBookingPage() {
         <MobileHeader />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
           <span className="material-symbols-outlined text-6xl text-muted">error</span>
-          <p className="text-lg font-medium text-foreground">{error || "Service not found"}</p>
+          <p className="text-lg font-medium text-foreground">{error || t("service.not_found")}</p>
           <Link href="/" className="text-primary font-semibold">
-            Go back home
+            {t("booking.go_back_home")}
           </Link>
         </div>
       </div>
@@ -225,13 +230,13 @@ export default function NewBookingPage() {
       <div className="hidden lg:block max-w-6xl mx-auto w-full px-6 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted mb-6">
-          <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+          <Link href="/" className="hover:text-primary transition-colors">{t("nav.home")}</Link>
           <span>/</span>
           <Link href={`/category/${service.category?.slug || ""}`} className="hover:text-primary transition-colors">
-            {service.category?.name || service.category_name}
+            {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
           </Link>
           <span>/</span>
-          <span className="text-foreground font-medium">Book Service</span>
+          <span className="text-foreground font-medium">{t("booking.book_this_service")}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-8">
@@ -257,7 +262,7 @@ export default function NewBookingPage() {
                 {/* Availability Badge */}
                 {!service.is_available && (
                   <div className="absolute top-4 left-4 px-3 py-1 bg-destructive text-white text-sm font-bold rounded-full">
-                    Currently Unavailable
+                    {t("booking.unavailable")}
                   </div>
                 )}
               </div>
@@ -285,7 +290,9 @@ export default function NewBookingPage() {
             <div className="bg-card rounded-2xl p-6 border border-border">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 pr-4">
-                  <p className="text-sm text-primary font-semibold mb-1">{service.category?.name || service.category_name}</p>
+                  <p className="text-sm text-primary font-semibold mb-1">
+                    {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
+                  </p>
                   <h1 className="text-2xl font-bold text-foreground overflow-hidden text-ellipsis">{service.title}</h1>
                 </div>
                 <div className="flex flex-col items-end justify-start shrink-0">
@@ -315,7 +322,7 @@ export default function NewBookingPage() {
               {/* Description */}
               {service.description && (
                 <div className="mt-4">
-                  <h3 className="font-semibold text-foreground mb-2">Description</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t("booking.about_service")}</h3>
                   <p className="text-muted leading-relaxed">{service.description}</p>
                 </div>
               )}
@@ -323,7 +330,7 @@ export default function NewBookingPage() {
               {/* Specifications */}
               {service.specifications && Object.keys(service.specifications).length > 0 && (
                 <div className="mt-6">
-                  <h3 className="font-semibold text-foreground mb-3">Specifications</h3>
+                  <h3 className="font-semibold text-foreground mb-3">{t("booking.specifications")}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(service.specifications).map(([key, value]) => (
                       <div key={key} className="flex justify-between py-2 px-3 bg-muted/30 rounded-lg">
@@ -340,13 +347,13 @@ export default function NewBookingPage() {
           {/* Right - Booking Panel */}
           <div className="col-span-1">
             <div className="bg-card rounded-2xl p-6 border border-border sticky top-24">
-              <h2 className="text-lg font-bold text-foreground mb-4">Book This Service</h2>
+              <h2 className="text-lg font-bold text-foreground mb-4">{t("booking.book_this_service")}</h2>
 
               {/* Quantity & Unit Row */}
               <div className={cn("mb-4", priceUnits.length > 0 ? "grid grid-cols-2 gap-4" : "")}>
                 {/* Quantity */}
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
+                  <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.quantity") || "Quantity"}</label>
                   <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -371,7 +378,7 @@ export default function NewBookingPage() {
                 {/* Unit Selector */}
                 {priceUnits.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Unit</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.unit") || "Unit"}</label>
                     <div className="relative">
                       <select
                         value={selectedUnit || service.price_unit}
@@ -394,14 +401,14 @@ export default function NewBookingPage() {
                 className="flex items-center gap-2 text-sm text-primary font-medium mb-4"
               >
                 <span className="material-symbols-outlined text-lg">{showAdvanced ? "expand_less" : "expand_more"}</span>
-                {showAdvanced ? "Hide" : "Show"} Advanced Options
+                {showAdvanced ? t("booking.hide_advanced") : t("booking.show_advanced")}
               </button>
 
               {/* Advanced Options */}
               {showAdvanced && (
                 <div className="space-y-4 mb-4 p-4 bg-muted/20 rounded-xl">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Schedule Date</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.schedule_date")}</label>
                     <input
                       type="date"
                       value={scheduledDate}
@@ -411,7 +418,7 @@ export default function NewBookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Schedule Time</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.schedule_time")}</label>
                     <input
                       type="time"
                       value={scheduledTime}
@@ -420,11 +427,11 @@ export default function NewBookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Note for Partner (Optional)</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.note_for_partner")}</label>
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="Any special instructions..."
+                      placeholder={t("booking.any_instructions")}
                       className="w-full p-3 border border-border rounded-lg bg-background resize-none h-20"
                     />
                   </div>
@@ -438,7 +445,7 @@ export default function NewBookingPage() {
                   <span className="text-foreground">₹{Math.round(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="font-semibold text-foreground">{t("booking.total")}</span>
                   <span className="text-2xl font-bold text-primary">₹{Math.round(totalPrice)}</span>
                 </div>
               </div>
@@ -464,18 +471,18 @@ export default function NewBookingPage() {
                 {isBooking ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="animate-spin material-symbols-outlined text-xl">sync</span>
-                    Creating Booking...
+                    {t("booking.creating_booking")}
                   </span>
                 ) : service.is_available ? (
-                  "Book Service"
+                  t("booking.book_service")
                 ) : (
-                  "Currently Unavailable"
+                  t("booking.unavailable")
                 )}
               </button>
 
               {!isAuthenticated && (
                 <p className="text-xs text-center text-muted mt-3">
-                  You'll need to <Link href={`/auth?redirect=/booking/new/${serviceId}`} className="text-primary font-medium">login</Link> to complete booking
+                  <Link href={`/auth?redirect=/booking/new/${serviceId}`} className="text-primary font-medium">{t("booking.login_required")}</Link>
                 </p>
               )}
             </div>
@@ -518,7 +525,7 @@ export default function NewBookingPage() {
           {/* Availability Badge */}
           {!service.is_available && (
             <div className="absolute top-4 right-4 px-3 py-1 bg-destructive text-white text-sm font-bold rounded-full">
-              Unavailable
+              {t("booking.unavailable")}
             </div>
           )}
         </div>
@@ -545,7 +552,9 @@ export default function NewBookingPage() {
         <div className="p-4 space-y-4">
           {/* Title & Price */}
           <div className="bg-card rounded-2xl p-4 border border-border">
-            <p className="text-sm text-primary font-semibold mb-1">{service.category?.name || service.category_name}</p>
+            <p className="text-sm text-primary font-semibold mb-1">
+              {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
+            </p>
             <h1 className="text-xl font-bold text-foreground mb-2 break-words">{service.title}</h1>
             <div className="flex items-end justify-between gap-2 mt-3">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -565,19 +574,19 @@ export default function NewBookingPage() {
           {/* Description */}
           {service.description && (
             <div className="bg-card rounded-2xl p-4 border border-border">
-              <h3 className="font-semibold text-foreground mb-2">About Service</h3>
+              <h3 className="font-semibold text-foreground mb-2">{t("booking.about_service")}</h3>
               <p className="text-muted text-sm leading-relaxed">{service.description}</p>
             </div>
           )}
 
           {/* Booking Form - Mobile */}
           <div className="bg-card rounded-2xl p-4 border border-border space-y-4">
-            <h3 className="font-semibold text-foreground">Book Now</h3>
+            <h3 className="font-semibold text-foreground">{t("booking.book_now") || "Book Now"}</h3>
 
             <div className={cn("mb-2", priceUnits.length > 0 ? "grid grid-cols-2 gap-3" : "")}>
               {/* Quantity */}
               <div>
-                <label className="text-sm text-muted mb-2 block">Quantity</label>
+                <label className="text-sm text-muted mb-2 block">{t("booking.quantity") || "Quantity"}</label>
                 <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -602,7 +611,7 @@ export default function NewBookingPage() {
               {/* Unit Selector */}
               {priceUnits.length > 0 && (
                 <div>
-                  <label className="text-sm text-muted mb-2 block">Unit</label>
+                  <label className="text-sm text-muted mb-2 block">{t("booking.unit") || "Unit"}</label>
                   <div className="relative">
                     <select
                       value={selectedUnit || service.price_unit}
@@ -625,14 +634,14 @@ export default function NewBookingPage() {
               className="flex items-center gap-2 text-sm text-primary font-medium"
             >
               <span className="material-symbols-outlined text-lg">{showAdvanced ? "expand_less" : "schedule"}</span>
-              Schedule for later
+              {t("booking.schedule_for_later")}
             </button>
 
             {showAdvanced && (
               <div className="space-y-3 p-3 bg-muted/20 rounded-xl">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted mb-1 block">Date</label>
+                    <label className="text-xs text-muted mb-1 block">{t("booking.schedule_date")}</label>
                     <input
                       type="date"
                       value={scheduledDate}
@@ -642,7 +651,7 @@ export default function NewBookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted mb-1 block">Time</label>
+                    <label className="text-xs text-muted mb-1 block">{t("booking.schedule_time")}</label>
                     <input
                       type="time"
                       value={scheduledTime}
@@ -652,11 +661,11 @@ export default function NewBookingPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted mb-1 block">Note (Optional)</label>
+                  <label className="text-xs text-muted mb-1 block">{t("booking.note_for_partner")}</label>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Any instructions..."
+                    placeholder={t("booking.any_instructions")}
                     className="w-full p-2 text-sm border border-border rounded-lg bg-background resize-none h-16"
                   />
                 </div>
@@ -670,7 +679,7 @@ export default function NewBookingPage() {
       <div className="fixed bottom-[75px] left-0 right-0 bg-card border-t border-border p-4 lg:hidden z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] w-full">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs text-muted">Total Amount</p>
+            <p className="text-xs text-muted">{t("booking.total_amount") || "Total Amount"}</p>
             <p className="text-xl font-bold text-primary">₹{Math.round(totalPrice)}</p>
           </div>
           <div className="text-right text-xs text-muted">
@@ -692,7 +701,7 @@ export default function NewBookingPage() {
               : "bg-muted text-muted-foreground"
           )}
         >
-          {isBooking ? "Creating Booking..." : service.is_available ? "Book Service" : "Unavailable"}
+          {isBooking ? t("booking.creating_booking") : service.is_available ? t("booking.book_service") : t("booking.unavailable")}
         </button>
       </div>
 

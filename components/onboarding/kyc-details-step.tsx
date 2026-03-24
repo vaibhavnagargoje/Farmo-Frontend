@@ -3,6 +3,7 @@
 import { useRef } from "react"
 import Image from "next/image"
 import { Label } from "@/components/ui/label"
+import { useLanguage } from "@/contexts/language-context"
 
 export interface KYCDetailsData {
     partnerType: string
@@ -18,34 +19,30 @@ interface KYCDetailsStepProps {
     errors: Record<string, string>
 }
 
-const partnerTypes = [
-    {
-        value: "LABOR",
-        label: "Manual Worker",
-        icon: "engineering",
-        description: "Skilled & unskilled farm labor",
-    },
-    {
-        value: "MACHINERY",
-        label: "Machinery Owner",
-        icon: "agriculture",
-        description: "Tractor, harvester, rotavator",
-    },
-    {
-        value: "TRANSPORT",
-        label: "Transporter",
-        icon: "local_shipping",
-        description: "Tempo, truck, goods transport",
-    },
-    // {
-    //     value: "AGENCY",
-    //     label: "Agency",
-    //     icon: "business",
-    //     description: "Multiple services provider",
-    // },
-]
-
 export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) {
+    const { t } = useLanguage()
+
+    const partnerTypes = [
+        {
+            value: "LABOR",
+            label: t("onboarding.step2.type_labor"),
+            icon: "engineering",
+            description: t("onboarding.step2.desc_labor"),
+        },
+        {
+            value: "MACHINERY",
+            label: t("onboarding.step2.type_machinery"),
+            icon: "agriculture",
+            description: t("onboarding.step2.desc_machinery"),
+        },
+        {
+            value: "TRANSPORT",
+            label: t("onboarding.step2.type_transport"),
+            icon: "local_shipping",
+            description: t("onboarding.step2.desc_transport"),
+        },
+    ]
+
     const frontInputRef = useRef<HTMLInputElement>(null)
     const backInputRef = useRef<HTMLInputElement>(null)
 
@@ -137,14 +134,14 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
         <div className="flex flex-col gap-6">
             {/* Section Header */}
             <div>
-                <h2 className="text-xl font-bold text-navy lg:text-2xl">KYC & Verification</h2>
-                <p className="text-sm text-muted mt-1">Help us verify your identity and classify your services</p>
+                <h2 className="text-xl font-bold text-navy lg:text-2xl">{t("onboarding.step2.title")}</h2>
+                <p className="text-sm text-muted mt-1">{t("onboarding.step2.desc")}</p>
             </div>
 
             {/* Partner Type Selection */}
             <div className="flex flex-col gap-3">
                 <Label className="text-sm font-semibold text-foreground">
-                    What type of partner are you? <span className="text-destructive">*</span>
+                    {t("onboarding.step2.partner_type")} <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                     {partnerTypes.map((type) => (
@@ -190,14 +187,14 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold text-foreground">
-                        KYC Documents <span className="text-destructive">*</span>
+                        {t("onboarding.step2.kyc_docs")} <span className="text-destructive">*</span>
                     </Label>
                     <span className="px-2 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-md">
-                        Required
+                        {t("onboarding.step2.required")}
                     </span>
                 </div>
                 <p className="text-sm text-muted font-medium -mt-1">
-                    Upload your Aadhar Card (front & back)
+                    {t("onboarding.step2.upload_aadhar")}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -235,7 +232,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                                     </button>
                                 </div>
                                 <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md">
-                                    <span className="text-[10px] font-bold text-white uppercase">Front</span>
+                                    <span className="text-[10px] font-bold text-white uppercase">{t("onboarding.step2.front")}</span>
                                 </div>
                             </div>
                         ) : (
@@ -248,7 +245,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                                     <span className="material-symbols-outlined text-xl">add_a_photo</span>
                                 </div>
                                 <span className="text-xs font-semibold text-muted group-hover:text-primary transition-colors">
-                                    Front Side
+                                    {t("onboarding.step2.front_side")}
                                 </span>
                             </button>
                         )}
@@ -288,7 +285,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                                     </button>
                                 </div>
                                 <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md">
-                                    <span className="text-[10px] font-bold text-white uppercase">Back</span>
+                                    <span className="text-[10px] font-bold text-white uppercase">{t("onboarding.step2.back")}</span>
                                 </div>
                             </div>
                         ) : (
@@ -301,7 +298,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                                     <span className="material-symbols-outlined text-xl">add_a_photo</span>
                                 </div>
                                 <span className="text-xs font-semibold text-muted group-hover:text-primary transition-colors">
-                                    Back Side
+                                    {t("onboarding.step2.back_side")}
                                 </span>
                             </button>
                         )}
@@ -313,7 +310,7 @@ export function KYCDetailsStep({ data, onChange, errors }: KYCDetailsStepProps) 
                         {errors.aadharFront || errors.aadharBack}
                     </p>
                 )}
-                <p className="text-[11px] text-muted">Accepted: JPG, PNG. Max size: 5MB each.</p>
+                <p className="text-[11px] text-muted">{t("onboarding.step2.accepted_files")}</p>
             </div>
         </div>
     )

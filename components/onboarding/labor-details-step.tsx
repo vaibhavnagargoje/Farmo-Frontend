@@ -3,6 +3,7 @@
 import { useRef } from "react"
 import Image from "next/image"
 import { Label } from "@/components/ui/label"
+import { useLanguage } from "@/contexts/language-context"
 
 export interface LaborDetailsData {
     skills: string
@@ -22,11 +23,17 @@ const commonSkills = [
     "Mason",
     "Helper",
     "Harvester",
-    "Plumber",
-    "Painter",
-    "Welder",
+    "Plougher",
+    "Weeding",
+    "Spraying",
+    "Loader",
+    "Driver",
     "Carpenter",
+    "Painter",
     "Electrician",
+    "Plumber",
+    "Farming Work",
+    "Sowing"
 ]
 
 /**
@@ -71,6 +78,7 @@ const compressImage = (file: File, maxSize = 1200, quality = 0.7): Promise<File>
 }
 
 export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepProps) {
+    const { t } = useLanguage()
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const selectedSkills = data.skills
@@ -106,16 +114,16 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
         <div className="flex flex-col gap-6">
             {/* Section Header */}
             <div>
-                <h2 className="text-xl font-bold text-navy lg:text-2xl">Labor Details</h2>
-                <p className="text-sm text-muted mt-1">Tell us about your skills and work preferences</p>
+                <h2 className="text-xl font-bold text-navy lg:text-2xl">{t("onboarding.step3_labor.title")}</h2>
+                <p className="text-sm text-muted mt-1">{t("onboarding.step3_labor.desc")}</p>
             </div>
 
             {/* Skills Selection */}
             <div className="flex flex-col gap-3">
                 <Label className="text-sm font-semibold text-foreground">
-                    Your Skills <span className="text-destructive">*</span>
+                    {t("onboarding.step3_labor.your_skills")} <span className="text-destructive">*</span>
                 </Label>
-                <p className="text-xs text-muted -mt-1">Select all skills that apply</p>
+                <p className="text-xs text-muted -mt-1">{t("onboarding.step3_labor.select_skills")}</p>
                 <div className="flex flex-wrap gap-2">
                     {commonSkills.map((skill) => {
                         const isSelected = selectedSkills.includes(skill)
@@ -132,7 +140,11 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
                                 {isSelected && (
                                     <span className="material-symbols-outlined text-sm mr-1 align-middle">check</span>
                                 )}
-                                {skill}
+                                {(() => {
+                                    const key = `skills.${skill.toLowerCase().replace(/ /g, "_")}`
+                                    const translated = t(key)
+                                    return translated === key ? skill : translated
+                                })()}
                             </button>
                         )
                     })}
@@ -148,14 +160,14 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
             {/* Daily Wage Estimate */}
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-semibold text-foreground">
-                    Daily Wage Estimate (₹) <span className="text-destructive">*</span>
+                    {t("onboarding.step3_labor.daily_wage")} <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">₹</span>
                     <input
                         type="number"
                         inputMode="numeric"
-                        placeholder="e.g. 500"
+                        placeholder={t("onboarding.step3_labor.wage_placeholder")}
                         value={data.dailyWage}
                         onChange={(e) => onChange({ ...data, dailyWage: e.target.value })}
                         className={`w-full h-12 pl-9 pr-4 rounded-xl border-2 bg-card text-foreground text-sm font-medium outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 ${errors.dailyWage ? "border-destructive" : "border-border"
@@ -168,7 +180,7 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
                         {errors.dailyWage}
                     </p>
                 )}
-                <p className="text-[11px] text-muted">Estimated daily earnings to display on your profile</p>
+                <p className="text-[11px] text-muted">{t("onboarding.step3_labor.wage_desc")}</p>
             </div>
 
             {/* Migrant Worker Toggle */}
@@ -178,8 +190,8 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
                         <span className="material-symbols-outlined">travel_explore</span>
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-foreground">Migrant Worker</p>
-                        <p className="text-xs text-muted">Do you travel to different areas for work?</p>
+                        <p className="text-sm font-semibold text-foreground">{t("onboarding.step3_labor.migrant")}</p>
+                        <p className="text-xs text-muted">{t("onboarding.step3_labor.migrant_desc")}</p>
                     </div>
                 </div>
                 <button
@@ -201,14 +213,14 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold text-foreground">
-                        Skill Card Photo
+                        {t("onboarding.step3_labor.skill_card")}
                     </Label>
                     <span className="px-2 py-1 bg-muted/10 text-muted text-[10px] font-bold uppercase tracking-wider rounded-md">
-                        Optional
+                        {t("onboarding.step3_labor.optional")}
                     </span>
                 </div>
                 <p className="text-sm text-muted font-medium -mt-1">
-                    Upload a photo of your skill/training certificate if available
+                    {t("onboarding.step3_labor.upload_desc")}
                 </p>
 
                 <input
@@ -244,7 +256,7 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
                             </button>
                         </div>
                         <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md">
-                            <span className="text-[10px] font-bold text-white uppercase">Skill Card</span>
+                            <span className="text-[10px] font-bold text-white uppercase">{t("onboarding.step3_labor.skill_card")}</span>
                         </div>
                     </div>
                 ) : (
@@ -257,11 +269,11 @@ export function LaborDetailsStep({ data, onChange, errors }: LaborDetailsStepPro
                             <span className="material-symbols-outlined text-xl">add_a_photo</span>
                         </div>
                         <span className="text-xs font-semibold text-muted group-hover:text-primary transition-colors">
-                            Upload Skill Card
+                            {t("onboarding.step3_labor.upload_btn")}
                         </span>
                     </button>
                 )}
-                <p className="text-[11px] text-muted">Accepted: JPG, PNG. Max size: 5MB.</p>
+                <p className="text-[11px] text-muted">{t("onboarding.step3_labor.accepted_files")}</p>
             </div>
         </div>
     )
