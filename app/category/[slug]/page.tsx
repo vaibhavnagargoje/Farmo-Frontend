@@ -824,13 +824,13 @@ export default function CategoryServicesPage() {
                 ) : bookingStatus === "creating" ? (
                   <div className="relative h-14 lg:h-16 rounded-xl bg-navy/80 flex items-center justify-center gap-2">
                     <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                    <p className="text-white/80 text-sm font-semibold">Creating booking...</p>
+                    <p className="text-white/80 text-sm font-semibold">{t("category.creating_booking")}</p>
                   </div>
                 ) : null
               ) : availableProviders === 0 ? (
                 <div className="relative h-14 bg-muted/60 border border-border rounded-xl flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
-                  <p className="text-sm font-medium text-muted-foreground">No providers available in this area</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("category.no_providers")}</p>
                 </div>
               ) : null}
 
@@ -850,8 +850,8 @@ export default function CategoryServicesPage() {
           {!selectedLocation && locationStatus === "no_location" && !isLoading && (
             <div className="px-4 lg:px-6 py-8 text-center">
               <span className="material-symbols-outlined text-4xl text-muted-foreground mb-2">pin_drop</span>
-              <p className="text-base font-medium text-foreground">Set your location</p>
-              <p className="text-sm text-muted-foreground mt-1">Search above or click on the map to set your location</p>
+              <p className="text-base font-medium text-foreground">{t("category.set_location")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("category.set_location_hint")}</p>
             </div>
           )}
 
@@ -861,7 +861,7 @@ export default function CategoryServicesPage() {
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
                 <p className="text-sm text-muted-foreground">
-                  {locationStatus === "checking" ? "Checking your saved location..." : "Detecting your GPS location..."}
+                  {locationStatus === "checking" ? t("category.checking_location") : t("category.detecting_gps")}
                 </p>
               </div>
             </div>
@@ -871,7 +871,7 @@ export default function CategoryServicesPage() {
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-                <p className="text-sm text-muted-foreground">Loading services...</p>
+                <p className="text-sm text-muted-foreground">{t("common.loading_services") || "Loading services..."}</p>
               </div>
             </div>
           )}

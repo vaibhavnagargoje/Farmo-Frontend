@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useRef, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { APIProvider } from "@vis.gl/react-google-maps"
@@ -27,6 +28,7 @@ function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { sendOtp, login, logout, updateUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
+  const { t } = useLanguage()
 
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode] = useState("+91")
@@ -309,8 +311,8 @@ function AuthPageContent() {
               agriculture
             </span>
           </div>
-          <h1 className="text-white text-xl font-bold tracking-tight leading-none">Farmo</h1>
-          <p className="text-white/50 text-xs mt-1">Farm Services at your fingertips</p>
+          <h1 className="text-white text-xl font-bold tracking-tight leading-none">{t("auth.title")}</h1>
+          <p className="text-white/50 text-xs mt-1">{t("auth.subtitle")}</p>
 
 
         </div>
@@ -341,8 +343,8 @@ function AuthPageContent() {
           {step === "phone" && (
             <div className="flex flex-col gap-5">
               <div>
-                <h2 className="text-foreground text-xl font-bold">Welcome back </h2>
-                <p className="text-muted text-sm mt-1">Enter your mobile number to continue</p>
+                <h2 className="text-foreground text-xl font-bold">{t("auth.phone.welcome")}</h2>
+                <p className="text-muted text-sm mt-1">{t("auth.phone.subtitle")}</p>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -357,12 +359,12 @@ function AuthPageContent() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     onKeyDown={(e) => e.key === "Enter" && phone.length === 10 && handleSendOtp()}
-                    placeholder="98765 43210"
+                    placeholder={t("auth.phone.placeholder")}
                     autoFocus
                     className="flex-1 min-w-0 px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
                   />
                 </div>
-                <p className="text-xs text-muted ml-0.5">We'll send a 4-digit OTP to this number</p>
+                <p className="text-xs text-muted ml-0.5">{t("auth.phone.hint")}</p>
               </div>
 
               <button
@@ -371,24 +373,24 @@ function AuthPageContent() {
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>Sending…</span></>
+                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.phone.sending")}</span></>
                 ) : (
-                  <><span>Send OTP</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
+                  <><span>{t("auth.phone.send_otp")}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
                 )}
               </button>
 
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-muted text-xs font-medium">or</span>
+                <span className="text-muted text-xs font-medium">{t("auth.or")}</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
               <button
-                onClick={() => toast.info("Email login coming soon. Please use phone number.")}
+                onClick={() => toast.info(t("auth.email_coming_soon"))}
                 className="w-full h-11 flex items-center justify-center gap-2 text-navy text-sm font-semibold border border-border rounded-xl hover:bg-background active:scale-[0.98] transition-all"
               >
                 <span className="material-symbols-outlined text-[18px]">mail</span>
-                Continue with Email
+                {t("auth.email_continue")}
               </button>
             </div>
           )}
@@ -397,9 +399,9 @@ function AuthPageContent() {
           {step === "otp" && (
             <div className="flex flex-col gap-5">
               <div>
-                <h2 className="text-foreground text-xl font-bold">Enter OTP</h2>
+                <h2 className="text-foreground text-xl font-bold">{t("auth.otp.title")}</h2>
                 <p className="text-muted text-sm mt-1">
-                  Sent to{" "}
+                  {t("auth.otp.sent_to")}
                   <span className="text-navy font-semibold tabular-nums">
                     {countryCode} {phone.replace(/(\d{5})(\d{5})/, "$1 $2")}
                   </span>
@@ -429,13 +431,13 @@ function AuthPageContent() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted">Didn't receive it?</span>
+                <span className="text-xs text-muted">{t("auth.otp.didnt_receive")}</span>
                 <button
                   onClick={handleResendOtp}
                   disabled={isLoading}
                   className="text-xs font-semibold text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
                 >
-                  Resend OTP
+                  {t("auth.otp.resend")}
                 </button>
               </div>
 
@@ -445,9 +447,9 @@ function AuthPageContent() {
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>Verifying…</span></>
+                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.otp.verifying")}</span></>
                 ) : (
-                  <><span>Verify & Continue</span><span className="material-symbols-outlined text-[18px]">verified</span></>
+                  <><span>{t("auth.otp.verify")}</span><span className="material-symbols-outlined text-[18px]">verified</span></>
                 )}
               </button>
             </div>
@@ -457,20 +459,20 @@ function AuthPageContent() {
           {step === "register" && (
             <div className="flex flex-col gap-4">
               <div>
-                <h2 className="text-foreground text-xl font-bold">Complete your profile</h2>
-                <p className="text-muted text-sm mt-1">A few details to personalise your experience</p>
+                <h2 className="text-foreground text-xl font-bold">{t("auth.register.title")}</h2>
+                <p className="text-muted text-sm mt-1">{t("auth.register.subtitle")}</p>
               </div>
 
               {/* Full name */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-foreground">
-                  Full Name <span className="text-destructive">*</span>
+                  {t("auth.register.full_name")} <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Rahul Kumar"
+                  placeholder={t("auth.register.name_placeholder")}
                   autoFocus
                   className="w-full px-4 h-11 rounded-xl bg-background border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all placeholder:text-muted/50"
                 />
@@ -479,7 +481,7 @@ function AuthPageContent() {
               {/* Location section */}
               <div className="flex items-center gap-2 py-1">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted font-medium">Location (optional)</span>
+                <span className="text-xs text-muted font-medium">{t("auth.register.location_optional")}</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
@@ -487,7 +489,7 @@ function AuthPageContent() {
               <div className="w-full">
                 <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
                   <PlacesAutocomplete
-                    placeholder="Search your address..."
+                    placeholder={t("auth.register.search_address")}
                     onPlaceSelect={(place) => {
                       setUserAddress(place.address)
                       setLatitude(place.lat)
@@ -513,7 +515,7 @@ function AuthPageContent() {
                       onClick={() => { setLatitude(null); setLongitude(null); setUserAddress("") }}
                       className="text-[11px] text-muted hover:text-destructive mt-1 transition-colors"
                     >
-                      Remove
+                      {t("auth.register.remove")}
                     </button>
                   </div>
                 </div>
@@ -525,9 +527,9 @@ function AuthPageContent() {
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1"
               >
                 {isLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>Setting up…</span></>
+                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.register.setting_up")}</span></>
                 ) : (
-                  <><span>Complete Setup</span><span className="material-symbols-outlined text-[18px]">check_circle</span></>
+                  <><span>{t("auth.register.complete")}</span><span className="material-symbols-outlined text-[18px]">check_circle</span></>
                 )}
               </button>
             </div>
@@ -535,10 +537,10 @@ function AuthPageContent() {
 
           {/* ── Terms footer ──────────────────────────────────────────── */}
           <p className="text-center text-muted text-xs leading-relaxed mt-auto pt-6">
-            By continuing, you agree to our{" "}
-            <a href="#" className="text-navy font-semibold hover:underline">Terms</a>
-            {" & "}
-            <a href="#" className="text-navy font-semibold hover:underline">Privacy Policy</a>.
+            {t("auth.terms.agree")}
+            <a href="#" className="text-navy font-semibold hover:underline">{t("auth.terms.terms")}</a>
+            {t("auth.terms.and")}
+            <a href="#" className="text-navy font-semibold hover:underline">{t("auth.terms.privacy")}</a>.
           </p>
         </div>
       </div>

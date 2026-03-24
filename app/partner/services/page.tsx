@@ -352,7 +352,7 @@ export default function ManageServicesPage() {
                             </div>
                             <div className="flex gap-3 mt-5">
                                 <button onClick={() => setShowAddForm(false)} className="flex-1 h-11 rounded-xl border border-border text-muted font-semibold hover:bg-muted/10">Cancel</button>
-                                <button onClick={handleAddService} disabled={actionLoading} className="flex-1 h-11 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50">{actionLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : "Add Service"}</button>
+                                <button onClick={handleAddService} disabled={actionLoading} className="flex-1 h-11 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50">{actionLoading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto inline-block align-middle mr-2" />{t("common.saving")}</> : "Add Service"}</button>
                             </div>
                         </div>
                     )}
@@ -379,7 +379,7 @@ export default function ManageServicesPage() {
                                         </div>
                                         <div className="flex gap-3">
                                             <button onClick={() => setEditingId(null)} className="flex-1 h-10 rounded-xl border border-border text-muted text-sm font-semibold hover:bg-muted/10">Cancel</button>
-                                            <button onClick={() => handleSaveEdit(service.id)} disabled={actionLoading} className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">{actionLoading ? "Saving..." : "Save Changes"}</button>
+                                            <button onClick={() => handleSaveEdit(service.id)} disabled={actionLoading} className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">{actionLoading ? t("common.saving") : "Save Changes"}</button>
                                         </div>
                                     </div>
                                 ) : (

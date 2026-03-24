@@ -454,8 +454,8 @@ export default function OnboardingPage() {
           <div className="fixed inset-0 z-[90] bg-background/60 backdrop-blur-sm flex items-center justify-center">
             <div className="bg-card rounded-2xl border border-border p-8 flex flex-col items-center gap-4 shadow-xl max-w-xs mx-4">
               <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-              <p className="font-semibold text-foreground text-center">Submitting your details...</p>
-              <p className="text-sm text-muted text-center">Setting up your partner account, uploading KYC documents, and creating your service.</p>
+              <p className="font-semibold text-foreground text-center">{t("onboarding.submitting_details") || "Submitting your details..."}</p>
+              <p className="text-sm text-muted text-center">{t("onboarding.setting_up")}</p>
             </div>
           </div>
         )}
