@@ -19,6 +19,7 @@
   "common.starting_at": "Starting at",
   "common.providers": "Providers",
   "common.provider": "Provider",
+  "common.processing": "Processing...",
   "common.loading": "Loading...",
   "common.no_results": "No results found",
   "common.error": "Something went wrong",

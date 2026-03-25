@@ -16,7 +16,7 @@ export default function NewBookingPage() {
   const params = useParams()
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const serviceId = params.serviceId as string
 
   // Service Data
@@ -233,7 +233,7 @@ export default function NewBookingPage() {
           <Link href="/" className="hover:text-primary transition-colors">{t("nav.home")}</Link>
           <span>/</span>
           <Link href={`/category/${service.category?.slug || ""}`} className="hover:text-primary transition-colors">
-            {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
+            {service.category?.name_translations?.[lang] || service.category?.name || service.category_name}
           </Link>
           <span>/</span>
           <span className="text-foreground font-medium">{t("booking.book_this_service")}</span>
@@ -291,7 +291,7 @@ export default function NewBookingPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 pr-4">
                   <p className="text-sm text-primary font-semibold mb-1">
-                    {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
+                    {service.category?.name_translations?.[lang] || service.category?.name || service.category_name}
                   </p>
                   <h1 className="text-2xl font-bold text-foreground overflow-hidden text-ellipsis">{service.title}</h1>
                 </div>
@@ -353,7 +353,7 @@ export default function NewBookingPage() {
               <div className={cn("mb-4", priceUnits.length > 0 ? "grid grid-cols-2 gap-4" : "")}>
                 {/* Quantity */}
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.quantity") || "Quantity"}</label>
+                  {/* <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.quantity") || "Quantity"}</label> */}
                   <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -378,7 +378,7 @@ export default function NewBookingPage() {
                 {/* Unit Selector */}
                 {priceUnits.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.unit") || "Unit"}</label>
+                    {/* <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.unit") || "Unit"}</label> */}
                     <div className="relative">
                       <select
                         value={selectedUnit || service.price_unit}
@@ -553,7 +553,7 @@ export default function NewBookingPage() {
           {/* Title & Price */}
           <div className="bg-card rounded-2xl p-4 border border-border">
             <p className="text-sm text-primary font-semibold mb-1">
-              {t("lang_code") === "mr" ? service.category?.name_translations?.["mr"] : service.category?.name || service.category_name}
+              {service.category?.name_translations?.[lang] || service.category?.name || service.category_name}
             </p>
             <h1 className="text-xl font-bold text-foreground mb-2 break-words">{service.title}</h1>
             <div className="flex items-end justify-between gap-2 mt-3">
@@ -581,12 +581,12 @@ export default function NewBookingPage() {
 
           {/* Booking Form - Mobile */}
           <div className="bg-card rounded-2xl p-4 border border-border space-y-4">
-            <h3 className="font-semibold text-foreground">{t("booking.book_now") || "Book Now"}</h3>
+            <h3 className="font-semibold text-foreground">{t("booking.enter_estimated_detail") || "Enter Estimated Details"}</h3>
 
             <div className={cn("mb-2", priceUnits.length > 0 ? "grid grid-cols-2 gap-3" : "")}>
               {/* Quantity */}
               <div>
-                <label className="text-sm text-muted mb-2 block">{t("booking.quantity") || "Quantity"}</label>
+                {/* <label className="text-sm text-muted mb-2 block">{t("booking.quantity") || "Quantity"}</label> */}
                 <div className="flex items-center w-full h-11 border border-border rounded-xl bg-background overflow-hidden">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -611,7 +611,7 @@ export default function NewBookingPage() {
               {/* Unit Selector */}
               {priceUnits.length > 0 && (
                 <div>
-                  <label className="text-sm text-muted mb-2 block">{t("booking.unit") || "Unit"}</label>
+                  {/* <label className="text-sm text-muted mb-2 block">{t("booking.unit") || "Unit"}</label> */}
                   <div className="relative">
                     <select
                       value={selectedUnit || service.price_unit}
@@ -679,7 +679,7 @@ export default function NewBookingPage() {
       <div className="fixed bottom-[75px] left-0 right-0 bg-card border-t border-border p-4 lg:hidden z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] w-full">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs text-muted">{t("booking.total_amount") || "Total Amount"}</p>
+            <p className="text-xs text-muted">{t("booking.total") || "Total Amount"}</p>
             <p className="text-xl font-bold text-primary">₹{Math.round(totalPrice)}</p>
           </div>
           <div className="text-right text-xs text-muted">

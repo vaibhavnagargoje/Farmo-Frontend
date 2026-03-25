@@ -18,17 +18,20 @@ const DISTANCE_OPTIONS = [
     { value: "50", label: "50 km" },
 ]
 
-const SORT_OPTIONS = [
-    { value: "distance", label: "Nearest First", icon: "near_me" },
-    { value: "price_low", label: "Price: Low to High", icon: "arrow_upward" },
-    { value: "price_high", label: "Price: High to Low", icon: "arrow_downward" },
-    { value: "rating", label: "Top Rated", icon: "star" },
+const SORT_OPTIONS_KEYS = [
+    { value: "distance", labelKey: "providers.nearest", icon: "near_me" },
+    { value: "price_low", labelKey: "providers.price_low", icon: "arrow_upward" },
+    { value: "price_high", labelKey: "providers.price_high", icon: "arrow_downward" },
+    { value: "rating", labelKey: "providers.top_rated", icon: "star" },
 ]
 
 export default function ProvidersPage() {
     const params = useParams()
     const slug = params.slug as string
-    const { t } = useLanguage()
+    const { t, lang } = useLanguage()
+
+    // ── Translated sort options ──
+    const SORT_OPTIONS = SORT_OPTIONS_KEYS.map((o) => ({ ...o, label: t(o.labelKey) }))
 
     // ── Data ──
     const [services, setServices] = useState<Service[]>([])
@@ -76,11 +79,15 @@ export default function ProvidersPage() {
         fetchSavedLocation()
     }, [])
 
-    // ── Fetch category data once ──
+    // ── Fetch category data (re-fetches when lang changes for translations) ──
     useEffect(() => {
         const fetchCategory = async () => {
             try {
-                const catRes = await fetch("/api/services/categories")
+                const params = new URLSearchParams()
+                if (lang !== 'en') params.set('lang', lang)
+                const qs = params.toString()
+                const catUrl = qs ? `/api/services/categories?${qs}` : '/api/services/categories'
+                const catRes = await fetch(catUrl)
                 if (catRes.ok) {
                     const catData = await catRes.json()
                     const categories = catData.results || catData || []
@@ -91,7 +98,7 @@ export default function ProvidersPage() {
             }
         }
         if (slug) fetchCategory()
-    }, [slug])
+    }, [slug, lang])
 
     // ── Fetch services when location or distance changes ──
     useEffect(() => {
@@ -139,7 +146,7 @@ export default function ProvidersPage() {
     }, [])
 
     // ── Computed ──
-    const categoryName = category?.name_translations?.[t("lang_code") === "mr" ? "mr" : "en"] || category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+    const categoryName = category?.name_translations?.[lang] || category?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
     const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
     const currentSort = SORT_OPTIONS.find((s) => s.value === sortBy) || SORT_OPTIONS[0]
     const shortAddress = address.split(",").slice(0, 2).join(",").trim()

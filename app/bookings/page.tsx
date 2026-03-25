@@ -20,6 +20,7 @@ interface BookingItem {
   payment_status: "PENDING" | "PAID" | "REFUNDED"
   service_title: string
   category_name: string | null
+  category_name_translations?: Record<string, string>
   provider_name: string
   scheduled_date: string
   scheduled_time: string
@@ -62,7 +63,8 @@ function BookingsPageContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+
 
   const [bookings, setBookings] = useState<BookingItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -272,7 +274,7 @@ function BookingsPageContent() {
           {bookings.map((booking) => {
             const status = statusConfig[booking.status] || statusConfig.PENDING
             const isBlocked = booking.status === "SEARCHING" || booking.status === "CANCELLED" || booking.status === "EXPIRED"
-
+            const displayCategory = booking.category_name_translations?.[lang] || booking.category_name
             return (
               <div
                 key={booking.id}
@@ -288,6 +290,11 @@ function BookingsPageContent() {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
+                    {displayCategory && (
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">
+                        {displayCategory}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-foreground lg:text-lg line-clamp-1">
                         {booking.service_title}

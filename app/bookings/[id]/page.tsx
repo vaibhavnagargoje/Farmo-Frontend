@@ -22,6 +22,7 @@ interface BookingDetail {
   status: "PENDING" | "SEARCHING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
   payment_status: "PENDING" | "PAID" | "REFUNDED"
   category_name?: string
+  category_name_translations?: Record<string, string>
   price_unit: string
   service: {
     id: number
@@ -38,6 +39,7 @@ interface BookingDetail {
     rating: string
     jobs_completed: number
     user_phone?: string
+    profile_picture?: string
   } | null
   scheduled_date: string
   scheduled_time: string
@@ -77,7 +79,7 @@ export default function BookingDetailsPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const bookingId = params.id as string
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
 
   const [booking, setBooking] = useState<BookingDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -241,6 +243,14 @@ export default function BookingDetailsPage() {
   }
 
   const status = statusConfig[booking.status] || statusConfig.PENDING
+  const displayCategory = booking.category_name_translations?.[lang] || booking.category_name || booking.service?.category_name
+
+  const isTerminated = booking.status === "EXPIRED" || booking.status === "CANCELLED" || booking.status === "REJECTED"
+  const providerLabel = booking.provider 
+    ? booking.provider.full_name 
+    : isTerminated 
+      ? t(`status.${booking.status.toLowerCase()}`) 
+      : t("bookings.finding_provider")
 
   return (
     <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
@@ -313,10 +323,10 @@ export default function BookingDetailsPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-primary font-semibold mb-1">{booking.service?.category_name || booking.category_name}</p>
-                  <h2 className="text-2xl font-bold text-foreground">{booking.service?.title || booking.category_name || t("bookings.instant_booking")}</h2>
+                  <p className="text-sm text-primary font-semibold mb-1">{displayCategory}</p>
+                  <h2 className="text-2xl font-bold text-foreground">{booking.service?.title || displayCategory}</h2> 
                   <p className="text-muted mt-1">
-                    {t("bookings.by_provider").replace("{name}", booking.provider ? booking.provider.full_name : t("bookings.finding_provider"))}
+                    {t("bookings.by_provider").replace("{name}", providerLabel)}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-2xl font-bold text-navy">₹{booking.unit_price}</span>
@@ -446,25 +456,31 @@ export default function BookingDetailsPage() {
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <span className="material-symbols-outlined text-3xl text-muted/50 mb-2">person_search</span>
-                  <p className="text-muted text-sm border border-dashed border-border rounded-xl py-3 bg-muted/10">{t("bookings.searching_desc_desktop")}</p>
+                  <span className="material-symbols-outlined text-3xl text-muted/50 mb-2">
+                    {isTerminated ? "person_off" : "person_search"}
+                  </span>
+                  <p className="text-muted text-sm border border-dashed border-border rounded-xl py-3 bg-muted/10">
+                    {isTerminated ? t(`status.${booking.status.toLowerCase()}`) : t("bookings.searching_desc_desktop")}
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Payment Status */}
-            <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-              <h3 className="font-bold text-foreground mb-3">{t("bookings.payment")}</h3>
-              <div className="flex items-center justify-between">
-                <span className="text-muted">{t("bookings.status_label")}</span>
-                <span className={cn(
-                  "px-2 py-1 rounded text-xs font-bold",
-                  booking.payment_status === "PAID" ? "bg-success/10 text-success" : "bg-yellow-100 text-yellow-600"
-                )}>
-                  {booking.payment_status}
-                </span>
+            {!(isTerminated && booking.payment_status === "PENDING") && (
+              <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
+                <h3 className="font-bold text-foreground mb-3">{t("bookings.payment")}</h3>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">{t("bookings.status_label")}</span>
+                  <span className={cn(
+                    "px-2 py-1 rounded text-xs font-bold",
+                    booking.payment_status === "PAID" ? "bg-success/10 text-success" : "bg-yellow-100 text-yellow-600"
+                  )}>
+                    {booking.payment_status}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Help */}
             <div className="bg-muted/30 rounded-2xl p-4 text-center">
@@ -508,9 +524,9 @@ export default function BookingDetailsPage() {
               )}
             </div>
             <div className="flex-1">
-              <p className="text-xs text-primary font-semibold">{booking.service?.category_name || booking.category_name}</p>
-              <h2 className="text-lg font-bold text-foreground">{booking.service?.title || booking.category_name || t("bookings.instant_booking")}</h2>
-              <p className="text-sm text-muted">{t("bookings.by_provider").replace("{name}", booking.provider ? booking.provider.full_name : t("bookings.finding_provider"))}</p>
+              <p className="text-xs text-primary font-semibold">{displayCategory}</p>
+              <h2 className="text-lg font-bold text-foreground">{booking.service?.title || displayCategory || t("bookings.instant_booking")}</h2>
+              <p className="text-sm text-muted">{t("bookings.by_provider").replace("{name}", providerLabel)}</p>
             </div>
           </div>
         </div>
@@ -623,7 +639,9 @@ export default function BookingDetailsPage() {
             </div>
           ) : (
             <div className="text-center py-2">
-              <p className="text-muted text-sm">{t("bookings.searching_desc_mobile")}</p>
+              <p className="text-muted text-sm">
+                {isTerminated ? t(`status.${booking.status.toLowerCase()}`) : t("bookings.searching_desc_mobile")}
+              </p>
             </div>
           )}
         </div>

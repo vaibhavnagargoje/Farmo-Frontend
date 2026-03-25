@@ -19,6 +19,7 @@
   "common.starting_at": "सुरुवात",
   "common.providers": "सेवा प्रदाते",
   "common.provider": "सेवा प्रदाता",
+  "common.processing": "प्रक्रिया होत आहे...",
   "common.loading": "लोड होत आहे...",
   "common.no_results": "काहीही सापडले नाही",
   "common.error": "काहीतरी चूक झाली",
@@ -526,7 +527,7 @@
 
   "profile.title": "माझी प्रोफाइल",
   "profile.settings": "सेटिंग्ज",
-  "profile.settings_desc": "अॅप प्राधान्ये आणि खाते सेटिंग्ज",
+  "profile.settings_desc": "ॲप प्राधान्ये आणि खाते सेटिंग्ज",
   "profile.help_support": "मदत आणि सपोर्ट",
   "profile.help_support_desc": "मदत मिळवा, FAQs आणि सपोर्टशी संपर्क साधा",
   "profile.notifications": "सूचना",
