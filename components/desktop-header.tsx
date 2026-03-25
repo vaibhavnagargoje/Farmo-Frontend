@@ -144,8 +144,8 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
             {/* Search Bar */}
             <div className="w-[320px] relative" ref={dropdownRef}>
               <form onSubmit={handleSearchSubmit} className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">
-                <div className="pl-3 pr-2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[20px]">search</span>
+                <div className="pl-3 pr-2 text-muted-foreground group-focus-within:text-primary transition-colors flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px] block">search</span>
                 </div>
                 <input
                   type="text"
@@ -156,7 +156,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
                   className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70 h-full w-full"
                 />
                 {searchQuery && (
-                   <button type="button" onClick={() => { setSearchQuery(''); setIsDropdownOpen(false); }} className="mr-2 p-1 rounded-full text-muted-foreground hover:text-foreground">
+                   <button type="button" onClick={() => { setSearchQuery(''); setIsDropdownOpen(false); }} className="mr-2 size-6 shrink-0 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
                       <span className="material-symbols-outlined text-[16px] block">close</span>
                    </button>
                 )}

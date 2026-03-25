@@ -678,7 +678,7 @@ export default function BookingDetailsPage() {
                 disabled={isCancelling}
                 className="flex-1 py-3 rounded-xl border border-border text-foreground font-semibold hover:bg-muted/50 transition-colors"
               >
-                {t("common.go_back")}
+                {t("common.back")}
               </button>
               <button
                 onClick={handleCancelBooking}

@@ -139,13 +139,13 @@ export function MobileHeader({ className }: MobileHeaderProps) {
                     placeholder={t("header.search_placeholder")}
                     className="w-full h-10 pl-10 pr-9 rounded-full bg-muted/50 border border-transparent focus:bg-background focus:border-primary/50 focus:shadow-sm outline-none text-sm placeholder:text-muted-foreground/60 transition-all"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted-foreground text-[20px]">search</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-muted-foreground pointer-events-none"><span className="material-symbols-outlined text-[20px]">search</span></span>
                   <button
                     type="button"
                     onClick={() => { setIsSearchExpanded(false); setSearchQuery(""); setIsDropdownOpen(false); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-full bg-background/50 text-muted-foreground hover:text-foreground"
                   >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
+                    <span className="material-symbols-outlined text-[16px] block">close</span>
                   </button>
                 </form>
                 

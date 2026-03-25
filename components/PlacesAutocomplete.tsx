@@ -97,12 +97,12 @@ export function PlacesAutocomplete({ onPlaceSelect, placeholder = "Search locati
           onChange={handleInputChange}
           onFocus={() => { if (predictions.length > 0) setShowSuggestions(true) }}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground px-2.5 py-2.5 outline-none"
+          className="flex-1 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground px-2.5 py-2.5 outline-none truncate"
         />
         {inputValue && (
           <button
             onClick={() => { setInputValue(""); setPredictions([]); setShowSuggestions(false) }}
-            className="pr-3 text-muted-foreground hover:text-foreground"
+            className="flex items-center justify-center shrink-0 w-8 h-8 mr-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]">close</span>
           </button>
