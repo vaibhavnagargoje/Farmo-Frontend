@@ -67,6 +67,17 @@ function AuthPageContent() {
   // Let this single useEffect handle all successful auth navigation
   useEffect(() => {
     if (isVerifyingRef.current || isRegisteringRef.current) return
+
+    // If step is already register (e.g., from new user Google login), don't redirect them away.
+    // They must finish the address step.
+    if (step === "register") {
+      // If Google provided a name, pre-fill it
+      if (user?.full_name && !fullName) {
+        setFullName(user.full_name)
+      }
+      return
+    }
+
     if (!authLoading && isAuthenticated) {
       if (user && !user.full_name) {
         setStep("register")
@@ -76,7 +87,7 @@ function AuthPageContent() {
         router.push(redirect)
       }
     }
-  }, [isAuthenticated, authLoading, router, searchParams, user])
+  }, [isAuthenticated, authLoading, router, searchParams, user, step, fullName])
 
   // Scroll to error when it changes
   useEffect(() => {
@@ -86,7 +97,8 @@ function AuthPageContent() {
   }, [error])
 
   const handleSendOtp = async () => {
-    if (phone.length < 10 || !email.trim()) return
+    const isValidPhone = /^[6-9]\d{9}$/.test(phone)
+    if (!isValidPhone || !email.trim()) return
     setIsLoading(true)
     setError(null)
     setDevOtp(null)
@@ -108,8 +120,9 @@ function AuthPageContent() {
   }
 
   const handleGoogleLogin = async () => {
-    if (phone.length < 10) {
-      setError(t("auth.phone.enter_first"))
+    const isValidPhone = /^[6-9]\d{9}$/.test(phone)
+    if (!isValidPhone) {
+      setError(phone.length < 10 ? t("auth.phone.enter_first") : t("auth.phone.invalid"))
       return
     }
     setIsLoading(true)
@@ -427,7 +440,7 @@ function AuthPageContent() {
               {/* Send Email OTP Button */}
               <button
                 onClick={handleSendOtp}
-                disabled={phone.length < 10 || !email.trim() || isLoading}
+                disabled={!/^[6-9]\d{9}$/.test(phone) || !email.trim() || isLoading}
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
@@ -446,7 +459,7 @@ function AuthPageContent() {
               {/* Continue with Google */}
               <button
                 onClick={handleGoogleLogin}
-                disabled={phone.length < 10 || isLoading}
+                disabled={!/^[6-9]\d{9}$/.test(phone) || isLoading}
                 className="w-full h-11 flex items-center justify-center gap-2.5 text-foreground text-sm font-semibold border border-border rounded-xl hover:bg-background active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -459,9 +472,9 @@ function AuthPageContent() {
               </button>
 
               {/* Note about phone requirement */}
-              {phone.length < 10 && (
-                <p className="text-xs text-muted text-center">
-                  {t("auth.phone.enter_first")}
+              {(!/^[6-9]\d{9}$/.test(phone)) && (
+                <p className={cn("text-xs text-center", phone.length === 10 ? "text-destructive" : "text-muted")}>
+                  {phone.length < 10 ? t("auth.phone.enter_first") : t("auth.phone.invalid")}
                 </p>
               )}
             </div>
@@ -553,7 +566,9 @@ function AuthPageContent() {
               {/* Location section */}
               <div className="flex items-center gap-2 py-1">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted font-medium">{t("auth.register.location_optional")}</span>
+                <span className="text-xs text-muted font-medium">
+                  {t("auth.register.location_required")} <span className="text-destructive">*</span>
+                </span>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
@@ -595,7 +610,7 @@ function AuthPageContent() {
 
               <button
                 onClick={handleRegister}
-                disabled={!fullName.trim() || isLoading}
+                disabled={!fullName.trim() || !latitude || !longitude || isLoading}
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1"
               >
                 {isLoading ? (
