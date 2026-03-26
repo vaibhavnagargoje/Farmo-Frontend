@@ -18,6 +18,7 @@ interface LanguageContextType {
   t: (key: string) => string
   showPicker: boolean
   setShowPicker: (show: boolean) => void
+  setLangLocal: (lang: Language) => void
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -26,6 +27,7 @@ const LanguageContext = createContext<LanguageContextType>({
   t: (key) => key,
   showPicker: false,
   setShowPicker: () => {},
+  setLangLocal: () => {},
 })
 
 export function useLanguage() {
@@ -47,6 +49,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setShowPicker(true)
     }
     setIsInitialized(true)
+  }, [])
+
+  // Set language and persist (but only locally, useful for restoring from backend)
+  const setLangLocal = useCallback((newLang: Language) => {
+    setLangState(newLang)
+    localStorage.setItem("farmo_lang", newLang)
+    setShowPicker(false)
   }, [])
 
   // Set language and persist
@@ -75,7 +84,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   if (!isInitialized) return null
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, showPicker, setShowPicker }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, showPicker, setShowPicker, setLangLocal }}>
       {children}
     </LanguageContext.Provider>
   )

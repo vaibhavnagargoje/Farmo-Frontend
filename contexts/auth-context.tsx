@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation"
 import type { User } from "@/lib/api"
 import { requestFcmToken } from "@/lib/firebase"
+import { useLanguage, type Language } from "@/contexts/language-context"
 
 interface AuthContextType {
   user: User | null
@@ -48,6 +49,7 @@ function getUserFromCookie(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const { setLangLocal, setShowPicker } = useLanguage()
 
   // 1. Sync FCM Token Helper
   const syncDeviceToken = async () => {
@@ -95,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json()
         setUser(data.user)
 
+        // Sync frontend language to matching backend language
+        if (data.user?.preferred_language) {
+          setLangLocal(data.user.preferred_language as Language)
+        }
+
         // SYNC TOKEN ON FRESH LOAD IF WE GRABBED USER
         if (data.user) {
           syncDeviceToken();
@@ -122,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [setLangLocal])
 
   useEffect(() => {
     checkAuth()
@@ -189,6 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update user state
       setUser(data.user)
 
+      // Sync language to frontend
+      if (data.user?.preferred_language) {
+        setLangLocal(data.user.preferred_language as Language)
+      }
+
       // SYNC TOKEN ON EXPLICIT LOGIN
       if (data.user) {
         syncDeviceToken();
@@ -205,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: "Network error. Please try again.",
       }
     }
-  }, [])
+  }, [setLangLocal])
 
   // Login with Google Sign-In (memoized)
   const googleLogin = useCallback(async (
@@ -234,6 +246,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update user state
       setUser(data.user)
 
+      // Sync language to frontend
+      if (data.user?.preferred_language) {
+        setLangLocal(data.user.preferred_language as Language)
+      }
+
       // SYNC TOKEN ON EXPLICIT LOGIN
       if (data.user) {
         syncDeviceToken();
@@ -250,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: "Network error. Please try again.",
       }
     }
-  }, [])
+  }, [setLangLocal])
 
   // Logout (memoized)
   const logout = useCallback(async () => {
@@ -263,9 +280,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Logout error:", error)
     } finally {
       setUser(null)
+      localStorage.removeItem("farmo_lang")
+      setShowPicker(true)
       router.push("/auth")
     }
-  }, [router])
+  }, [router, setShowPicker])
 
   // Directly update user data (e.g., after profile update)
   const updateUser = useCallback((userData: User) => {
