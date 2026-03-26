@@ -13,22 +13,22 @@ import {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { phone_number, email, otp } = body
+    const { id_token, phone_number } = body
 
-    if (!phone_number || !email || !otp) {
+    if (!id_token || !phone_number) {
       return NextResponse.json(
-        { message: "Phone number, email, and OTP are required" },
+        { message: "Google token and phone number are required" },
         { status: 400 }
       )
     }
 
-    // Call Django backend to verify OTP
-    const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
+    // Call Django backend to verify Google token
+    const response = await fetch(API_ENDPOINTS.GOOGLE_AUTH, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ phone_number, email, otp }),
+      body: JSON.stringify({ id_token, phone_number }),
     })
 
     const data = await response.json()
@@ -38,7 +38,6 @@ export async function POST(request: Request) {
     }
 
     // Extract tokens and user from response
-    // Django returns access and refresh at root level, not in a tokens object
     const { access, refresh, user, is_new_user, message } = data
 
     if (!access || !refresh || !user) {
@@ -66,20 +65,19 @@ export async function POST(request: Request) {
     // Set user cookie (readable by client for UI purposes)
     cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), {
       ...cookieOptions,
-      httpOnly: false, // Allow client to read user info
+      httpOnly: false,
       maxAge: REFRESH_TOKEN_MAX_AGE,
     })
 
-    // Return success response (without tokens - they're in cookies)
     return NextResponse.json({
       message: message || "Login successful",
       is_new_user,
       user,
     })
   } catch (error) {
-    console.error("Verify OTP error:", error)
+    console.error("Google auth error:", error)
     return NextResponse.json(
-      { message: "Failed to verify OTP. Please try again." },
+      { message: "Failed to authenticate with Google. Please try again." },
       { status: 500 }
     )
   }

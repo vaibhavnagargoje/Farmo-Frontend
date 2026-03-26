@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { APIProvider } from "@vis.gl/react-google-maps"
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
+import { signInWithGoogle } from "@/lib/firebase"
 
 type AuthStep = "phone" | "otp" | "register"
 
@@ -27,12 +28,13 @@ export default function AuthPage() {
 function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { sendOtp, login, logout, updateUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
+  const { sendOtp, login, googleLogin, logout, updateUser, isAuthenticated, isLoading: authLoading, user } = useAuth()
   const { t } = useLanguage()
 
   const [step, setStep] = useState<AuthStep>("phone")
   const [countryCode] = useState("+91")
   const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [otp, setOtp] = useState(["", "", "", ""])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +86,7 @@ function AuthPageContent() {
   }, [error])
 
   const handleSendOtp = async () => {
-    if (phone.length < 10) return
+    if (phone.length < 10 || !email.trim()) return
     setIsLoading(true)
     setError(null)
     setDevOtp(null)
@@ -93,7 +95,7 @@ function AuthPageContent() {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10)
     const fullPhone = cleanPhone
 
-    const result = await sendOtp(fullPhone)
+    const result = await sendOtp(fullPhone, email.trim())
 
     setIsLoading(false)
 
@@ -102,6 +104,47 @@ function AuthPageContent() {
       setStep("otp")
     } else {
       setError(result.error || "Failed to send OTP")
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    if (phone.length < 10) {
+      setError(t("auth.phone.enter_first"))
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const idToken = await signInWithGoogle()
+      if (!idToken) {
+        // User closed the popup
+        setIsLoading(false)
+        return
+      }
+
+      const cleanPhone = phone.replace(/\D/g, "").slice(-10)
+      isVerifyingRef.current = true
+      const result = await googleLogin(idToken, cleanPhone)
+
+      if (result.success) {
+        if (result.isNewUser) {
+          setStep("register")
+          setIsLoading(false)
+          isVerifyingRef.current = false
+        } else {
+          window.location.href = searchParams.get("redirect") || "/"
+        }
+      } else {
+        setError(result.error || "Google login failed")
+        setIsLoading(false)
+        isVerifyingRef.current = false
+      }
+    } catch (err) {
+      console.error("Google login error:", err)
+      setError(t("auth.google.error"))
+      setIsLoading(false)
+      isVerifyingRef.current = false
     }
   }
 
@@ -157,7 +200,7 @@ function AuthPageContent() {
     setError(null)
 
     const cleanPhone = phone.replace(/\D/g, "").slice(-10)
-    const result = await login(cleanPhone, otpValue)
+    const result = await login(cleanPhone, email.trim(), otpValue)
 
     if (result.success) {
       // Clear OTP inputs immediately to prevent auto-submit useEffect re-firing
@@ -180,7 +223,7 @@ function AuthPageContent() {
       isVerifyingRef.current = false
       otpRefs[0].current?.focus()
     }
-  }, [otp, phone, login, router, searchParams])
+  }, [otp, phone, email, login, router, searchParams])
 
   // Auto-submit OTP when all 4 digits are entered
   useEffect(() => {
@@ -251,7 +294,7 @@ function AuthPageContent() {
     setIsLoading(true)
     setError(null)
     const cleanPhone = phone.replace(/\D/g, "").slice(-10)
-    const result = await sendOtp(cleanPhone)
+    const result = await sendOtp(cleanPhone, email.trim())
     setIsLoading(false)
     if (result.success) {
       if (result.otp) setDevOtp(result.otp)
@@ -339,7 +382,7 @@ function AuthPageContent() {
             </div>
           )}
 
-          {/* ── STEP 1 : Phone ───────────────────────────────────────── */}
+          {/* ── STEP 1 : Phone + Email / Google ───────────────────────── */}
           {step === "phone" && (
             <div className="flex flex-col gap-5">
               <div>
@@ -347,8 +390,8 @@ function AuthPageContent() {
                 <p className="text-muted text-sm mt-1">{t("auth.phone.subtitle")}</p>
               </div>
 
+              {/* Phone Number */}
               <div className="flex flex-col gap-1.5">
-
                 <div className="flex gap-2">
                   <div className="flex items-center gap-1.5 px-3 h-11 bg-background border border-border rounded-xl text-sm font-semibold text-foreground whitespace-nowrap shrink-0 select-none">
                     <span>{countryCode}</span>
@@ -358,24 +401,39 @@ function AuthPageContent() {
                     inputMode="numeric"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    onKeyDown={(e) => e.key === "Enter" && phone.length === 10 && handleSendOtp()}
                     placeholder={t("auth.phone.placeholder")}
                     autoFocus
                     className="flex-1 min-w-0 px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
                   />
                 </div>
-                <p className="text-xs text-muted ml-0.5">{t("auth.phone.hint")}</p>
+                <p className="text-xs text-muted ml-0.5">{t("auth.phone.hint_mobile")}</p>
               </div>
 
+              {/* Email */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-foreground">{t("auth.email.label")}</label>
+                <input
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && phone.length === 10 && email.trim() && handleSendOtp()}
+                  placeholder={t("auth.email.placeholder")}
+                  className="w-full px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
+                />
+                <p className="text-xs text-muted ml-0.5">{t("auth.email.hint")}</p>
+              </div>
+
+              {/* Send Email OTP Button */}
               <button
                 onClick={handleSendOtp}
-                disabled={phone.length < 10 || isLoading}
+                disabled={phone.length < 10 || !email.trim() || isLoading}
                 className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.phone.sending")}</span></>
                 ) : (
-                  <><span>{t("auth.phone.send_otp")}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
+                  <><span className="material-symbols-outlined text-[18px]">mail</span><span>{t("auth.email.send_otp")}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
                 )}
               </button>
 
@@ -385,13 +443,27 @@ function AuthPageContent() {
                 <div className="h-px flex-1 bg-border" />
               </div>
 
+              {/* Continue with Google */}
               <button
-                onClick={() => toast.info(t("auth.email_coming_soon"))}
-                className="w-full h-11 flex items-center justify-center gap-2 text-navy text-sm font-semibold border border-border rounded-xl hover:bg-background active:scale-[0.98] transition-all"
+                onClick={handleGoogleLogin}
+                disabled={phone.length < 10 || isLoading}
+                className="w-full h-11 flex items-center justify-center gap-2.5 text-foreground text-sm font-semibold border border-border rounded-xl hover:bg-background active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined text-[18px]">mail</span>
-                {t("auth.email_continue")}
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                <span>{t("auth.google.continue")}</span>
               </button>
+
+              {/* Note about phone requirement */}
+              {phone.length < 10 && (
+                <p className="text-xs text-muted text-center">
+                  {t("auth.phone.enter_first")}
+                </p>
+              )}
             </div>
           )}
 
@@ -401,9 +473,9 @@ function AuthPageContent() {
               <div>
                 <h2 className="text-foreground text-xl font-bold">{t("auth.otp.title")}</h2>
                 <p className="text-muted text-sm mt-1">
-                  {t("auth.otp.sent_to")}
-                  <span className="text-navy font-semibold tabular-nums">
-                    {countryCode} {phone.replace(/(\d{5})(\d{5})/, "$1 $2")}
+                  {t("auth.otp.sent_to_email")}
+                  <span className="text-navy font-semibold">
+                    {email}
                   </span>
                 </p>
               </div>

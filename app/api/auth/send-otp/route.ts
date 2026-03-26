@@ -5,11 +5,11 @@ import { API_ENDPOINTS } from "@/lib/api"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { phone_number } = body
+    const { phone_number, email } = body
 
-    if (!phone_number) {
+    if (!phone_number || !email) {
       return NextResponse.json(
-        { message: "Phone number is required" },
+        { message: "Phone number and email are required" },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ phone_number }),
+      body: JSON.stringify({ phone_number, email }),
     })
 
     const data = await response.json()
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const debugOtp = data.otp || data.debug_otp
 
     return NextResponse.json({
-      message: data.message || "OTP sent successfully",
+      message: data.message || "OTP sent to your email",
       ...(debugOtp && { otp: debugOtp }), // Only include OTP if returned (dev mode)
     })
   } catch (error) {

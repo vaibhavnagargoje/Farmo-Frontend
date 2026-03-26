@@ -18,9 +18,10 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (phoneNumber: string, otp: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>
+  login: (phoneNumber: string, email: string, otp: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>
+  googleLogin: (idToken: string, phoneNumber: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>
   logout: () => Promise<void>
-  sendOtp: (phoneNumber: string) => Promise<{ success: boolean; otp?: string; error?: string }>
+  sendOtp: (phoneNumber: string, email: string) => Promise<{ success: boolean; otp?: string; error?: string }>
   refreshUser: () => Promise<void>
   updateUser: (userData: User) => void
 }
@@ -127,15 +128,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [checkAuth])
 
-  // Send OTP (memoized to prevent unnecessary re-renders)
-  const sendOtp = useCallback(async (phoneNumber: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
+  // Send OTP to email (memoized to prevent unnecessary re-renders)
+  const sendOtp = useCallback(async (phoneNumber: string, email: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
     try {
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phone_number: phoneNumber }),
+        body: JSON.stringify({ phone_number: phoneNumber, email }),
       })
 
       const data = await response.json()
@@ -160,9 +161,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Login with OTP verification (memoized)
+  // Login with email OTP verification (memoized)
   const login = useCallback(async (
     phoneNumber: string,
+    email: string,
     otp: string
   ): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
     try {
@@ -172,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ phone_number: phoneNumber, otp }),
+        body: JSON.stringify({ phone_number: phoneNumber, email, otp }),
       })
 
       const data = await response.json()
@@ -198,6 +200,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Login error:", error)
+      return {
+        success: false,
+        error: "Network error. Please try again.",
+      }
+    }
+  }, [])
+
+  // Login with Google Sign-In (memoized)
+  const googleLogin = useCallback(async (
+    idToken: string,
+    phoneNumber: string
+  ): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
+    try {
+      const response = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ id_token: idToken, phone_number: phoneNumber }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.message || data.error || "Google login failed",
+        }
+      }
+
+      // Update user state
+      setUser(data.user)
+
+      // SYNC TOKEN ON EXPLICIT LOGIN
+      if (data.user) {
+        syncDeviceToken();
+      }
+
+      return {
+        success: true,
+        isNewUser: data.is_new_user,
+      }
+    } catch (error) {
+      console.error("Google login error:", error)
       return {
         success: false,
         error: "Network error. Please try again.",
@@ -235,11 +282,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isAuthenticated: !!user,
     login,
+    googleLogin,
     logout,
     sendOtp,
     refreshUser,
     updateUser,
-  }), [user, isLoading, login, logout, sendOtp, refreshUser, updateUser])
+  }), [user, isLoading, login, googleLogin, logout, sendOtp, refreshUser, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage, MessagePayload } from "firebase/messaging";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
 // We require NEXT_PUBLIC_ variables so they are baked into the frontend build.
 const firebaseConfig = {
@@ -62,3 +63,27 @@ export const onForegroundMessage = async (callback: (payload: MessagePayload) =>
     return null;
   }
 };
+
+/**
+ * Signs in with Google using Firebase Auth popup.
+ * Returns the Google ID token to send to the backend.
+ */
+export const signInWithGoogle = async (): Promise<string | null> => {
+  try {
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    // Get the ID token to send to our backend
+    const idToken = await result.user.getIdToken();
+    return idToken;
+  } catch (err: any) {
+    // User closed the popup or other error
+    if (err?.code === "auth/popup-closed-by-user") {
+      console.log("Google sign-in popup was closed by user.");
+      return null;
+    }
+    console.error("Google sign-in error:", err);
+    throw err;
+  }
+};
+
