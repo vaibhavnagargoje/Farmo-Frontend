@@ -22,7 +22,7 @@ interface AuthContextType {
   login: (phoneNumber: string, email: string, otp: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>
   googleLogin: (idToken: string, phoneNumber: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>
   logout: () => Promise<void>
-  sendOtp: (phoneNumber: string, email: string) => Promise<{ success: boolean; otp?: string; error?: string }>
+  sendOtp: (phoneNumber: string, email: string) => Promise<{ success: boolean; error?: string }>
   refreshUser: () => Promise<void>
   updateUser: (userData: User) => void
 }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth])
 
   // Send OTP to email (memoized to prevent unnecessary re-renders)
-  const sendOtp = useCallback(async (phoneNumber: string, email: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
+  const sendOtp = useCallback(async (phoneNumber: string, email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
@@ -157,7 +157,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return {
         success: true,
-        otp: data.otp, // Only returned in development mode
       }
     } catch (error) {
       console.error("Send OTP error:", error)

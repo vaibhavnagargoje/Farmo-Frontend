@@ -11,7 +11,7 @@ import { APIProvider } from "@vis.gl/react-google-maps"
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete"
 import { signInWithGoogle } from "@/lib/firebase"
 
-type AuthStep = "phone" | "otp" | "register"
+type AuthStep = "phone" | "method" | "otp" | "register"
 
 export default function AuthPage() {
   return (
@@ -38,7 +38,6 @@ function AuthPageContent() {
   const [otp, setOtp] = useState(["", "", "", ""])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [devOtp, setDevOtp] = useState<string | null>(null)
 
   // Registration fields
   const [fullName, setFullName] = useState("")
@@ -96,12 +95,21 @@ function AuthPageContent() {
     }
   }, [error])
 
+  const handlePhoneSubmit = () => {
+    const isValidPhone = /^[6-9]\d{9}$/.test(phone)
+    if (!isValidPhone) {
+      setError(phone.length < 10 ? t("auth.phone.enter_first") : t("auth.phone.invalid"))
+      return
+    }
+    setError(null)
+    setStep("method")
+  }
+
   const handleSendOtp = async () => {
     const isValidPhone = /^[6-9]\d{9}$/.test(phone)
     if (!isValidPhone || !email.trim()) return
     setIsLoading(true)
     setError(null)
-    setDevOtp(null)
 
     // Format phone number (remove country code if accidentally included)
     const cleanPhone = phone.replace(/\D/g, "").slice(-10)
@@ -112,7 +120,6 @@ function AuthPageContent() {
     setIsLoading(false)
 
     if (result.success) {
-      if (result.otp) setDevOtp(result.otp)
       setStep("otp")
     } else {
       setError(result.error || "Failed to send OTP")
@@ -310,7 +317,6 @@ function AuthPageContent() {
     const result = await sendOtp(cleanPhone, email.trim())
     setIsLoading(false)
     if (result.success) {
-      if (result.otp) setDevOtp(result.otp)
       setOtp(["", "", "", ""])
       otpRefs[0].current?.focus()
     } else {
@@ -388,14 +394,8 @@ function AuthPageContent() {
               <span>{error}</span>
             </div>
           )}
-          {devOtp && step === "otp" && (
-            <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3 mb-4">
-              <span className="material-symbols-outlined text-[18px] shrink-0">bug_report</span>
-              Dev OTP:&nbsp;<span className="font-mono font-bold tracking-widest">{devOtp}</span>
-            </div>
-          )}
 
-          {/* ── STEP 1 : Phone + Email / Google ───────────────────────── */}
+          {/* ── STEP 1 : Phone ───────────────────────── */}
           {step === "phone" && (
             <div className="flex flex-col gap-5">
               <div>
@@ -414,6 +414,7 @@ function AuthPageContent() {
                     inputMode="numeric"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    onKeyDown={(e) => e.key === "Enter" && /^[6-9]\d{9}$/.test(phone) && handlePhoneSubmit()}
                     placeholder={t("auth.phone.placeholder")}
                     autoFocus
                     className="flex-1 min-w-0 px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
@@ -422,45 +423,48 @@ function AuthPageContent() {
                 <p className="text-xs text-muted ml-0.5">{t("auth.phone.hint_mobile")}</p>
               </div>
 
-              {/* Email */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-foreground">{t("auth.email.label")}</label>
-                <input
-                  type="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && phone.length === 10 && email.trim() && handleSendOtp()}
-                  placeholder={t("auth.email.placeholder")}
-                  className="w-full px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
-                />
-                <p className="text-xs text-muted ml-0.5">{t("auth.email.hint")}</p>
-              </div>
+              {/* Note about phone requirement */}
+              {(!/^[6-9]\d{9}$/.test(phone)) && (
+                <p className={cn("text-xs text-center", phone.length === 10 ? "text-destructive" : "text-muted")}>
+                  {phone.length < 10 ? t("auth.phone.enter_first") : t("auth.phone.invalid")}
+                </p>
+              )}
 
-              {/* Send Email OTP Button */}
+              {/* Continue Button */}
               <button
-                onClick={handleSendOtp}
-                disabled={!/^[6-9]\d{9}$/.test(phone) || !email.trim() || isLoading}
-                className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                onClick={handlePhoneSubmit}
+                disabled={!/^[6-9]\d{9}$/.test(phone)}
+                className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2"
               >
-                {isLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.phone.sending")}</span></>
-                ) : (
-                  <><span className="material-symbols-outlined text-[18px]">mail</span><span>{t("auth.email.send_otp")}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
-                )}
+                <span>{t("auth.phone.continue")}</span>
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </button>
+            </div>
+          )}
 
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-muted text-xs font-medium">{t("auth.or")}</span>
-                <div className="h-px flex-1 bg-border" />
+          {/* ── STEP 1.5 : Method Selection ───────────────────────────────── */}
+          {step === "method" && (
+            <div className="flex flex-col gap-5 relative">
+              <button
+                onClick={() => setStep("phone")}
+                className="absolute -top-1 right-0 p-1 text-muted hover:text-foreground transition-colors"
+                title="Go back"
+              >
+                <span className="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              
+              <div className="pr-8">
+                <h2 className="text-foreground text-xl font-bold">{t("auth.method.title")}</h2>
+                <p className="text-muted text-sm mt-1 text-balance">
+                  {t("auth.method.subtitle")}<span className="font-semibold text-foreground whitespace-nowrap">{countryCode} {phone}</span>?
+                </p>
               </div>
 
               {/* Continue with Google */}
               <button
                 onClick={handleGoogleLogin}
-                disabled={!/^[6-9]\d{9}$/.test(phone) || isLoading}
-                className="w-full h-11 flex items-center justify-center gap-2.5 text-foreground text-sm font-semibold border border-border rounded-xl hover:bg-background active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading}
+                className="w-full h-12 flex items-center justify-center gap-2.5 text-foreground text-[15px] font-bold border border-border rounded-xl hover:bg-muted/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -471,12 +475,40 @@ function AuthPageContent() {
                 <span>{t("auth.google.continue")}</span>
               </button>
 
-              {/* Note about phone requirement */}
-              {(!/^[6-9]\d{9}$/.test(phone)) && (
-                <p className={cn("text-xs text-center", phone.length === 10 ? "text-destructive" : "text-muted")}>
-                  {phone.length < 10 ? t("auth.phone.enter_first") : t("auth.phone.invalid")}
-                </p>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-muted text-xs font-medium uppercase tracking-wider">{t("auth.or")}</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {/* Email */}
+              <div className="flex flex-col gap-1.5 -mt-1">
+                <label className="text-sm font-semibold text-foreground">{t("auth.email.label")}</label>
+                <input
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && email.trim() && handleSendOtp()}
+                  placeholder={t("auth.email.placeholder")}
+                  className="w-full px-4 h-11 rounded-xl bg-background border border-border text-sm font-medium placeholder:text-muted/50 focus:ring-2 focus:ring-primary/20 focus:border-primary/60 outline-none transition-all"
+                />
+                <p className="text-xs text-muted ml-0.5">{t("auth.email.hint")}</p>
+              </div>
+
+              {/* Send Email OTP Button */}
+              <button
+                onClick={handleSendOtp}
+                disabled={!email.trim() || isLoading}
+                className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>{t("auth.phone.sending")}</span></>
+                ) : (
+                  <><span className="material-symbols-outlined text-[18px]">mail</span><span>{t("auth.email.send_otp")}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></>
+                )}
+              </button>
+
             </div>
           )}
 

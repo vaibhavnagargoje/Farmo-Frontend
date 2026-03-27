@@ -30,12 +30,8 @@ export async function POST(request: Request) {
     }
 
     // Return success response
-    // In development, Django returns debug_otp for testing
-    const debugOtp = data.otp || data.debug_otp
-
     return NextResponse.json({
       message: data.message || "OTP sent to your email",
-      ...(debugOtp && { otp: debugOtp }), // Only include OTP if returned (dev mode)
     })
   } catch (error) {
     console.error("Send OTP error:", error)
