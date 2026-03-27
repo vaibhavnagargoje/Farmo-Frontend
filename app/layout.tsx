@@ -4,7 +4,6 @@ import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/contexts/auth-context"
 import { LanguageProvider } from "@/contexts/language-context"
-import { AccessGate } from "@/components/access-gate"
 import { LanguagePicker } from "@/components/language-picker"
 import "./globals.css"
 
@@ -89,12 +88,10 @@ export default function RootLayout({
       <body className={`font-sans antialiased min-h-screen bg-muted/30`}>
         <LanguageProvider>
           <AuthProvider>
-            <AccessGate>
-              {/* Mobile: constrained width, Desktop: full width */}
-              <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
-                {children}
-              </div>
-            </AccessGate>
+            {/* Mobile: constrained width, Desktop: full width */}
+            <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
+              {children}
+            </div>
           </AuthProvider>
           <LanguagePicker />
         </LanguageProvider>
