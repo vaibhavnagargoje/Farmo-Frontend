@@ -20,8 +20,25 @@ async function getCategories(): Promise<Category[]> {
 export default async function HomePage() {
   const categories = await getCategories()
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Farmo",
+    "url": "https://farmo.in",
+    "description": "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://farmo.in/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen pb-24 lg:pb-0 bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <DesktopHeader variant="farmer" />
       <MobileHeader />
 
