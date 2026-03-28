@@ -25,6 +25,7 @@ interface GoogleMapPickerProps {
     className?: string
     defaultCenter?: { lat: number; lng: number }
     defaultZoom?: number
+    restrictToCenter?: boolean
 }
 
 // ── Default center: Surat, Gujarat ──
@@ -39,6 +40,7 @@ function MapContent({
     serviceMarkers = [],
     defaultCenter = DEFAULT_CENTER,
     defaultZoom = DEFAULT_ZOOM,
+    restrictToCenter = false,
 }: Omit<GoogleMapPickerProps, "className">) {
     const map = useMap()
     const geocoderRef = useRef<google.maps.Geocoder | null>(null)
@@ -52,12 +54,78 @@ function MapContent({
         }
     }, [apiIsLoaded])
 
-    // Pan to selected location when it changes
+    // Pan to selected location, apply bounds and zoom restrictions
     useEffect(() => {
         if (map && selectedLocation) {
             map.panTo({ lat: selectedLocation.lat, lng: selectedLocation.lng })
+
+            // 3km panning limit bounds (2km base view + 1km scrolling padding)
+            // 1 degree of latitude is ~111km
+            const radiusInKm = 3
+            const latDelta = radiusInKm / 111
+            const lngDelta = radiusInKm / (111 * Math.cos((selectedLocation.lat * Math.PI) / 180))
+
+            const restriction = {
+                latLngBounds: {
+                    north: selectedLocation.lat + latDelta,
+                    south: selectedLocation.lat - latDelta,
+                    east: selectedLocation.lng + lngDelta,
+                    west: selectedLocation.lng - lngDelta,
+                },
+                strictBounds: false,
+            }
+
+            // Restrict zoom out to approx 2km view and apply panning restriction
+            map.setOptions({
+                restriction,
+                minZoom: 14,
+                maxZoom: null, // Allow zooming in fully
+            })
+        } else if (map && !selectedLocation) {
+            // Remove restrictions if no location is selected
+            map.setOptions({
+                restriction: null,
+                minZoom: null,
+                maxZoom: null,
+            })
         }
     }, [map, selectedLocation?.lat, selectedLocation?.lng])
+
+    // Lock map bounds and zoom if enabled
+    useEffect(() => {
+        if (!map) return
+
+        if (!selectedLocation || !restrictToCenter) {
+            map.setOptions({
+                restriction: null,
+                minZoom: null,
+            })
+            return
+        }
+
+        const RESTRICTION_RADIUS_KM = 3.5 // 3km limit + 500m buffer
+        
+        // Convert radius to delta in degrees
+        // ~1 degree latitude = 111.32 km
+        const latDelta = RESTRICTION_RADIUS_KM / 111.32
+        // ~1 degree longitude = 111.32 * cos(lat) km
+        const lngDelta = RESTRICTION_RADIUS_KM / (111.32 * Math.cos((selectedLocation.lat * Math.PI) / 180))
+
+        const bounds = {
+            north: selectedLocation.lat + latDelta,
+            south: selectedLocation.lat - latDelta,
+            east: selectedLocation.lng + lngDelta,
+            west: selectedLocation.lng - lngDelta,
+        }
+
+        map.setOptions({
+            restriction: {
+                latLngBounds: bounds,
+                strictBounds: true,
+            },
+            minZoom: 13,
+        })
+    }, [map, selectedLocation?.lat, selectedLocation?.lng, restrictToCenter])
 
     // Reverse geocode lat/lng to address
     const reverseGeocode = useCallback(

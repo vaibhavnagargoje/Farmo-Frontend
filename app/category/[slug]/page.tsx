@@ -539,14 +539,12 @@ export default function CategoryServicesPage() {
                   <PlacesAutocomplete
                     defaultValue={searchQuery}
                     onPlaceSelect={(place) => {
-                      setSearchQuery(place.address)
                       const loc: SelectedLocation = {
                         lat: place.lat,
                         lng: place.lng,
                         address: place.address,
                       }
-                      setSelectedLocation(loc)
-                      setLocationStatus("ready")
+                      handleLocationSelect(loc)
                     }}
                   />
                 </APIProvider>
@@ -638,6 +636,8 @@ export default function CategoryServicesPage() {
                 selectedLocation={selectedLocation}
                 serviceMarkers={serviceMarkers}
                 className="aspect-[4/3] sm:aspect-[16/9] lg:aspect-auto lg:h-[calc(100vh-220px)]"
+                restrictToCenter={true}
+                defaultZoom={14}
               />
             </div>
           </div>
