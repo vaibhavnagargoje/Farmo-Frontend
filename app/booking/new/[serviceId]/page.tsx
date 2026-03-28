@@ -44,6 +44,7 @@ export default function NewBookingPage() {
   // Booking State
   const [isBooking, setIsBooking] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [duplicateProvider, setDuplicateProvider] = useState(false)
 
   // Fetch service details
   useEffect(() => {
@@ -113,6 +114,7 @@ export default function NewBookingPage() {
 
     setIsBooking(true)
     setBookingError(null)
+    setDuplicateProvider(false)
 
     try {
       const bookingData = {
@@ -139,6 +141,9 @@ export default function NewBookingPage() {
       if (res.ok && data.success) {
         // Redirect to bookings list with success message
         router.push(`/bookings?success=true&booking_id=${data.booking?.booking_id || ""}`)
+      } else if (data.duplicate_provider) {
+        // Show duplicate provider popup
+        setDuplicateProvider(true)
       } else {
         setBookingError(data.message || "Failed to create booking")
       }
@@ -704,6 +709,49 @@ export default function NewBookingPage() {
           {isBooking ? t("booking.creating_booking") : service.is_available ? t("booking.book_service") : t("booking.unavailable")}
         </button>
       </div>
+
+      {/* ─── DUPLICATE PROVIDER MODAL ─── */}
+      {duplicateProvider && (
+        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDuplicateProvider(false)} />
+          <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
+              <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <h2 className="text-xl font-bold mb-1">{t("booking.duplicate_provider_title")}</h2>
+              <p className="text-sm text-white/80">{t("booking.duplicate_provider_msg")}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-orange-600 text-[24px] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{t("booking.duplicate_provider_info")}</p>
+                  <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
+                    {t("booking.duplicate_provider_wait")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => router.push("/orders")}
+                  className="flex-1 py-3 bg-navy text-white font-semibold rounded-xl hover:bg-navy/90 transition-colors text-sm"
+                >
+                  {t("booking.view_orders")}
+                </button>
+                <button
+                  onClick={() => setDuplicateProvider(false)}
+                  className="flex-1 py-3 bg-muted/50 text-foreground font-semibold rounded-xl hover:bg-muted transition-colors text-sm"
+                >
+                  {t("common.close")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav variant="farmer" />
     </div>

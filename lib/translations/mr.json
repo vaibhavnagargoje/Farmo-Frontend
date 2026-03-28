@@ -14,6 +14,11 @@
   "search.category": "श्रेणी",
   "search.apply_filters": "फिल्टर लागू करा",
   "search.no_results_desc": "आम्हाला \"{query}\" शी जुळणारी कोणतीही यंत्रसामग्री सापडली नाही. आपले शोध शब्द बदलून पहा.",
+  "search.browse_title": "श्रेण्या ब्राउझ करा",
+  "search.browse_desc": "तुमच्या जवळच्या उपलब्ध सेवा शोधा",
+  "search.popular_services": "लोकप्रिय सेवा",
+  "search.book_now": "आता बुक करा",
+  "search.view_category": "सेवा पहा",
 
   "common.available": "उपलब्ध",
   "common.starting_at": "सुरुवात",
@@ -74,6 +79,10 @@
   "booking.cannot_create": "नवीन ऑर्डर तयार करू शकत नाही",
   "booking.cancel_or_wait": "नवीन ऑर्डर तयार करण्यापूर्वी तुमची विद्यमान ऑर्डर रद्द करा किंवा ती कालबाह्य होईपर्यंत प्रतीक्षा करा.",
   "booking.view_orders": "ऑर्डर्स पहा",
+  "booking.duplicate_provider_title": "सक्रिय बुकिंग अस्तित्वात आहे",
+  "booking.duplicate_provider_msg": "या प्रदात्यासोबत तुमची आधीपासून एक सक्रिय बुकिंग आहे",
+  "booking.duplicate_provider_info": "नवीन बुकिंग तयार करू शकत नाही",
+  "booking.duplicate_provider_wait": "कृपया तुमची विद्यमान बुकिंग पूर्ण होईपर्यंत प्रतीक्षा करा किंवा ती रद्द करा. तुम्ही वेगळ्या प्रदात्याकडे बुक करू शकता.",
 
   "booking_type.INSTANT": "त्वरित",
   "booking_type.SCHEDULED": "नियोजित",

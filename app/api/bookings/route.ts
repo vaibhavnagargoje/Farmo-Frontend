@@ -92,8 +92,21 @@ export async function POST(request: NextRequest) {
         booking: data.booking || data,
       })
     } else {
+      // Check for duplicate provider conflict
+      // Django returns non_field_errors as an array; each item can be a dict
+      const nonFieldErrors = data.non_field_errors || []
+      const duplicateEntry = Array.isArray(nonFieldErrors)
+        ? nonFieldErrors.find((e: any) => typeof e === 'object' && e.duplicate_provider)
+        : null
+      const isDuplicate = !!duplicateEntry || data.duplicate_provider
+
       return NextResponse.json(
-        { message: extractErrorMessage(data, "Failed to create booking") },
+        {
+          message: isDuplicate
+            ? (duplicateEntry?.message || "You already have an active booking with this provider.")
+            : extractErrorMessage(data, "Failed to create booking"),
+          ...(isDuplicate ? { duplicate_provider: true } : {}),
+        },
         { status: response.status }
       )
     }

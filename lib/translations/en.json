@@ -14,6 +14,11 @@
   "search.category": "Category",
   "search.apply_filters": "Apply Filters",
   "search.no_results_desc": "We couldn't find any equipment matching \"{query}\". Try adjusting your search term or using broader keywords.",
+  "search.browse_title": "Browse Categories",
+  "search.browse_desc": "Explore available services near you",
+  "search.popular_services": "Popular Services",
+  "search.book_now": "Book Now",
+  "search.view_category": "View Services",
 
   "common.available": "Available",
   "common.starting_at": "Starting at",
@@ -72,6 +77,10 @@
   "booking.cannot_create": "Cannot create a new order",
   "booking.cancel_or_wait": "Cancel your existing order or wait for it to expire before creating a new one.",
   "booking.view_orders": "View Orders",
+  "booking.duplicate_provider_title": "Active Booking Exists",
+  "booking.duplicate_provider_msg": "You already have an active booking with this provider",
+  "booking.duplicate_provider_info": "Cannot create a new booking",
+  "booking.duplicate_provider_wait": "Please wait for your existing booking to complete or cancel it before booking this provider again. You can book a different provider.",
 
   "booking_type.INSTANT": "Instant",
   "booking_type.SCHEDULED": "Scheduled",

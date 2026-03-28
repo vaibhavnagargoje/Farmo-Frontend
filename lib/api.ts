@@ -238,6 +238,7 @@ export interface InstantBookingStatus {
 
 export interface SearchResponse {
   query: string
+  browse_mode: boolean
   categories: Category[]
   services: Service[]
   total_services: number
