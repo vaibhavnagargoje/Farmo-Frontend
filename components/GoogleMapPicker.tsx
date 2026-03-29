@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { APIProvider, Map, AdvancedMarker, useMap, useApiIsLoaded } from "@vis.gl/react-google-maps"
+import { usePermission } from "@/contexts/permission-context"
 
 // ── Types ──
 interface SelectedLocation {
@@ -46,6 +47,7 @@ function MapContent({
     const geocoderRef = useRef<google.maps.Geocoder | null>(null)
     const [isLocating, setIsLocating] = useState(false)
     const apiIsLoaded = useApiIsLoaded()
+    const { requestLocationPermission, showLocationDeniedPrompt } = usePermission()
 
     // Init geocoder when API is loaded
     useEffect(() => {
@@ -104,7 +106,7 @@ function MapContent({
         }
 
         const RESTRICTION_RADIUS_KM = 3.5 // 3km limit + 500m buffer
-        
+
         // Convert radius to delta in degrees
         // ~1 degree latitude = 111.32 km
         const latDelta = RESTRICTION_RADIUS_KM / 111.32
@@ -168,6 +170,11 @@ function MapContent({
             alert("Geolocation is not supported by your browser")
             return
         }
+
+        // Show custom location permission prompt if needed
+        const permResult = await requestLocationPermission()
+        if (permResult === "denied" || permResult === "dismissed") return
+
         setIsLocating(true)
 
         const onSuccess = async (position: GeolocationPosition) => {
@@ -184,15 +191,14 @@ function MapContent({
 
         const onFinalError = (error: GeolocationPositionError) => {
             console.error("Geolocation error:", error.code, error.message)
-            let msg = "Unable to get your location. "
             if (error.code === 1) {
-                msg += "Please enable location access in your browser settings."
+                // Permission denied — show recovery prompt
+                showLocationDeniedPrompt()
             } else if (error.code === 2) {
-                msg += "Please check that your device's location services are turned on."
+                alert("Unable to get your location. Please check that your device's location services are turned on.")
             } else {
-                msg += "Please try again or pick a location on the map."
+                alert("Unable to get your location. Please try again or pick a location on the map.")
             }
-            alert(msg)
             setIsLocating(false)
         }
 
@@ -208,7 +214,7 @@ function MapContent({
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
         )
-    }, [map, onLocationSelect, reverseGeocode])
+    }, [map, onLocationSelect, reverseGeocode, requestLocationPermission, showLocationDeniedPrompt])
 
     return (
         <div className="relative w-full h-full">

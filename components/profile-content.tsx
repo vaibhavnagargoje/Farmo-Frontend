@@ -16,12 +16,6 @@ const getProfileMenuItems = (t: (key: string) => string) => [
         href: "/settings",
     },
     {
-        icon: "headset_mic",
-        label: t("profile.help_support"),
-        description: t("profile.help_support_desc"),
-        href: "/support",
-    },
-    {
         icon: "notifications",
         label: t("profile.notifications"),
         description: t("profile.notifications_desc"),
@@ -174,6 +168,13 @@ export function ProfileContent({ isPartnerView = false }: { isPartnerView?: bool
                     >
                         {t("profile.contact_support")}
                     </Link>
+                </div>
+
+                {/* Footer Links */}
+                <div className="flex items-center justify-center gap-4 pt-2 pb-6 text-xs text-muted">
+                    <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                    <span>•</span>
+                    <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
                 </div>
             </div >
         </>

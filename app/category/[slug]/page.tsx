@@ -13,6 +13,7 @@ import { APIProvider } from "@vis.gl/react-google-maps"
 import { type Service, type Category, type PriceUnit } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { usePermission } from "@/contexts/permission-context"
 
 // ── Constants ──
 const DISTANCE_OPTIONS = [
@@ -29,6 +30,7 @@ export default function CategoryServicesPage() {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
   const { lang, t } = useLanguage()
+  const { requestLocationPermission, showLocationDeniedPrompt } = usePermission()
 
   // ── Data ──
   const [services, setServices] = useState<Service[]>([])
@@ -119,8 +121,15 @@ export default function CategoryServicesPage() {
         // Not logged in or fetch failed
       }
 
-      // No saved location — auto-detect via GPS
+      // No saved location — show custom prompt then auto-detect via GPS
       if ("geolocation" in navigator) {
+        // Show custom location permission prompt before browser prompt
+        const permResult = await requestLocationPermission()
+        if (permResult === "denied" || permResult === "dismissed") {
+          setLocationStatus("no_location")
+          return
+        }
+
         setLocationStatus("fetching_gps")
 
         const onGpsSuccess = async (position: GeolocationPosition) => {
@@ -151,7 +160,10 @@ export default function CategoryServicesPage() {
             // High accuracy failed — try lower accuracy (network/WiFi based)
             navigator.geolocation.getCurrentPosition(
               onGpsSuccess,
-              () => {
+              (error) => {
+                if (error.code === 1) {
+                  showLocationDeniedPrompt()
+                }
                 setLocationStatus("no_location")
               },
               { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
@@ -165,7 +177,7 @@ export default function CategoryServicesPage() {
     }
 
     initLocation()
-  }, [])
+  }, [requestLocationPermission, showLocationDeniedPrompt])
 
   // ── Fetch category data (re-fetches when location changes for zone pricing) ──
   useEffect(() => {
@@ -251,11 +263,16 @@ export default function CategoryServicesPage() {
   }, [])
 
   // ── Handle "get my location" button ──
-  const handleGetCurrentLocation = useCallback(() => {
+  const handleGetCurrentLocation = useCallback(async () => {
     if (!("geolocation" in navigator)) {
       alert("Geolocation is not supported by your browser.")
       return
     }
+
+    // Show custom location permission prompt if needed
+    const permResult = await requestLocationPermission()
+    if (permResult === "denied" || permResult === "dismissed") return
+
     setLocationStatus("fetching_gps")
 
     const onSuccess = async (position: GeolocationPosition) => {
@@ -280,15 +297,14 @@ export default function CategoryServicesPage() {
 
     const onFinalError = (error: GeolocationPositionError) => {
       console.error("Geolocation error:", error.code, error.message)
-      let msg = "Unable to get your location. "
       if (error.code === 1) {
-        msg += "Location permission was denied. Please enable location access in your browser settings."
+        // Permission denied — show custom recovery prompt
+        showLocationDeniedPrompt()
       } else if (error.code === 2) {
-        msg += "Location is unavailable. Please check that your device's location services are turned on."
+        alert("Location is unavailable. Please check that your device's location services are turned on.")
       } else {
-        msg += "Location request timed out. Please try again or search for your location manually."
+        alert("Location request timed out. Please try again or search for your location manually.")
       }
-      alert(msg)
       setLocationStatus("no_location")
     }
 
@@ -305,7 +321,7 @@ export default function CategoryServicesPage() {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
-  }, [])
+  }, [requestLocationPermission, showLocationDeniedPrompt])
 
   // ── Fetch price units on mount ──
   useEffect(() => {
@@ -341,7 +357,7 @@ export default function CategoryServicesPage() {
   const estimatedTotal = instantPrice * quantity
   const activeDistanceLabel = DISTANCE_OPTIONS.find((d) => d.value === activeDistance)?.label || "All Areas"
   const resolvedUnit = selectedUnit || category?.instant_price_unit || ""
-  
+
   const tUnitKey = `unit.${resolvedUnit.toLowerCase()}`
   const tUnit = resolvedUnit ? t(tUnitKey) : ""
   const fallbackLabel = priceUnits.find((u) => u.value === resolvedUnit)?.label || resolvedUnit || "Per unit"

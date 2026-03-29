@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@/lib/api"
 import { requestFcmToken } from "@/lib/firebase"
 import { useLanguage, type Language } from "@/contexts/language-context"
+import { usePermission } from "@/contexts/permission-context"
 
 interface AuthContextType {
   user: User | null
@@ -50,10 +51,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const { setLangLocal, setShowPicker } = useLanguage()
+  const { showNotificationPrompt } = usePermission()
 
   // 1. Sync FCM Token Helper
-  const syncDeviceToken = async () => {
+  const syncDeviceToken = async (isExplicitLogin = false) => {
     try {
+      if (typeof window === "undefined" || !("Notification" in window)) return
+
+      // Permission not yet decided
+      if (Notification.permission === "default") {
+        if (isExplicitLogin) {
+          // Show custom branded prompt, then browser prompt
+          const granted = await showNotificationPrompt()
+          if (!granted) return
+        } else {
+          // Silent sync on page refresh — don't bother the user
+          return
+        }
+      }
+
+      // If denied, skip entirely
+      if (Notification.permission === "denied") return
+
+      // Permission is "granted" — get the FCM token
       const token = await requestFcmToken();
       if (token) {
         await fetch("/api/notifications/register-device", {
@@ -102,9 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLangLocal(data.user.preferred_language as Language)
         }
 
-        // SYNC TOKEN ON FRESH LOAD IF WE GRABBED USER
+        // SYNC TOKEN ON FRESH LOAD IF WE GRABBED USER (silent — no prompt)
         if (data.user) {
-          syncDeviceToken();
+          syncDeviceToken(false);
         }
 
       } else if (response.status === 401) {
@@ -200,9 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLangLocal(data.user.preferred_language as Language)
       }
 
-      // SYNC TOKEN ON EXPLICIT LOGIN
+      // SYNC TOKEN ON EXPLICIT LOGIN (show custom prompt)
       if (data.user) {
-        syncDeviceToken();
+        syncDeviceToken(true);
       }
 
       return {
@@ -250,9 +270,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLangLocal(data.user.preferred_language as Language)
       }
 
-      // SYNC TOKEN ON EXPLICIT LOGIN
+      // SYNC TOKEN ON EXPLICIT LOGIN (show custom prompt)
       if (data.user) {
-        syncDeviceToken();
+        syncDeviceToken(true);
       }
 
       return {

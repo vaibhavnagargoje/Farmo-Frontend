@@ -657,9 +657,9 @@ function AuthPageContent() {
           {/* ── Terms footer ──────────────────────────────────────────── */}
           <p className="text-center text-muted text-xs leading-relaxed mt-auto pt-6">
             {t("auth.terms.agree")}
-            <a href="#" className="text-navy font-semibold hover:underline">{t("auth.terms.terms")}</a>
+            <a href="/terms" className="text-navy font-semibold hover:underline">{t("auth.terms.terms")}</a>
             {t("auth.terms.and")}
-            <a href="#" className="text-navy font-semibold hover:underline">{t("auth.terms.privacy")}</a>.
+            <a href="/privacy" className="text-navy font-semibold hover:underline">{t("auth.terms.privacy")}</a>.
           </p>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/contexts/auth-context"
 import { LanguageProvider } from "@/contexts/language-context"
 import { LanguagePicker } from "@/components/language-picker"
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt"
+import { PermissionProvider } from "@/contexts/permission-context"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -87,13 +89,16 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased min-h-screen bg-muted/30`}>
         <LanguageProvider>
-          <AuthProvider>
-            {/* Mobile: constrained width, Desktop: full width */}
-            <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
-              {children}
-            </div>
-          </AuthProvider>
+          <PermissionProvider>
+            <AuthProvider>
+              {/* Mobile: constrained width, Desktop: full width */}
+              <div className="mx-auto lg:max-w-none max-w-md min-h-screen bg-background lg:bg-transparent relative">
+                {children}
+              </div>
+            </AuthProvider>
+          </PermissionProvider>
           <LanguagePicker />
+          <PwaInstallPrompt />
         </LanguageProvider>
         <Analytics />
       </body>
