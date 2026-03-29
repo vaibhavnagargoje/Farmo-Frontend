@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || "Failed to send OTP",
+          error: data.error || data.message || "Failed to send OTP",
         }
       }
 
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || "Invalid OTP",
+          error: data.error || data.message || "Invalid OTP",
         }
       }
 
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.error || "Google login failed",
+          error: data.error || data.message || "Google login failed",
         }
       }
 

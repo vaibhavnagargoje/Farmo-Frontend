@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   // Token refresh is at /api/token/refresh/ (not under /api/v1/)
   TOKEN_REFRESH: `${API_BASE_URL?.replace('/api/v1', '/api')}/token/refresh/`,
   USER_PROFILE: `${API_BASE_URL}/users/profile/`,
+  DELETE_ACCOUNT: `${API_BASE_URL}/users/auth/delete-account/`,
 
   // Location (moved to locations app)
   USER_LOCATION: `${API_BASE_URL}/locations/user-location/`,
