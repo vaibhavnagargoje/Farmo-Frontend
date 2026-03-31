@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { BottomNav } from "@/components/bottom-nav"
@@ -31,8 +31,10 @@ interface LaborProfile {
 export default function LaborDetailPage() {
     const params = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
     const id = params.id as string
     const { t } = useLanguage()
+    const from = searchParams.get("from")
 
     const [labor, setLabor] = useState<LaborProfile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -62,6 +64,18 @@ export default function LaborDetailPage() {
         ? { color: "bg-green-500", label: t("status.online"), textColor: "text-green-700", bgColor: "bg-green-50", ringColor: "ring-green-500/20" }
         : { color: "bg-gray-400", label: t("status.offline"), textColor: "text-gray-600", bgColor: "bg-gray-50", ringColor: "ring-gray-400/20" }
 
+    const handleBack = () => {
+        if (from) {
+            router.push(from)
+            return
+        }
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back()
+            return
+        }
+        router.push("/?tab=labors")
+    }
+
     return (
         <div className="relative min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
             <DesktopHeader variant="farmer" />
@@ -70,7 +84,7 @@ export default function LaborDetailPage() {
             <main className="flex-1 max-w-2xl mx-auto w-full px-4 lg:px-6 py-4">
                 {/* Back Button */}
                 <button
-                    onClick={() => router.back()}
+                    onClick={handleBack}
                     className="size-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground shadow-sm active:scale-95 transition-transform mb-4"
                 >
                     <span className="material-symbols-outlined text-[20px]">arrow_back</span>
@@ -87,7 +101,7 @@ export default function LaborDetailPage() {
                         </div>
                         <h2 className="text-lg font-bold text-foreground mb-1">{error || t("labor_detail.not_found_title")}</h2>
                         <p className="text-sm text-muted-foreground mb-4">{t("labor_detail.not_found_desc")}</p>
-                        <Link href="/" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">{t("labor_detail.go_home")}</Link>
+                        <Link href="/?tab=labors" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">{t("labor_detail.go_home")}</Link>
                     </div>
                 ) : (
                     <div className="space-y-4">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { DesktopHeader } from "@/components/desktop-header"
 import { MobileHeader } from "@/components/mobile-header"
@@ -28,9 +28,11 @@ export default function CategoryServicesPage() {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isAuthenticated } = useAuth()
   const { lang, t } = useLanguage()
   const { requestLocationPermission, showLocationDeniedPrompt } = usePermission()
+  const from = searchParams.get("from")
 
   // ── Data ──
   const [services, setServices] = useState<Service[]>([])
@@ -72,8 +74,20 @@ export default function CategoryServicesPage() {
 
   // ── Build providers page URL ──
   const getProvidersUrl = useCallback(() => {
-    return `/category/${slug}/providers`
+    return `/category/${slug}/providers?from=${encodeURIComponent(`/category/${slug}`)}`
   }, [slug])
+
+  const handleBack = useCallback(() => {
+    if (from) {
+      router.push(from)
+      return
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push("/")
+  }, [from, router])
 
   // ── Client-side Geocoding Helper ──
   const reverseGeocodeClient = async (lat: number, lng: number): Promise<string | null> => {
@@ -501,12 +515,12 @@ export default function CategoryServicesPage() {
         <div className="max-w-6xl mx-auto">
           {/* Back + Title */}
           <div className="flex items-start gap-3 px-4 lg:px-6 pt-3 pb-2">
-            <Link
-              href="/"
+            <button
+              onClick={handleBack}
               className="size-9 lg:size-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground shadow-sm active:scale-95 transition-transform"
             >
               <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-            </Link>
+            </button>
             <div className="flex-1 min-w-0">
               <h1 className="text-base lg:text-lg font-bold text-foreground truncate">{categoryName}</h1>
               <div className="mt-0.5 flex items-center gap-2">

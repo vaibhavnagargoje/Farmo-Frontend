@@ -128,7 +128,7 @@
   "location.unable": "लोकेशन मिळवता आले नाही.",
   "location.not_supported": "तुमच्या ब्राउझरमध्ये लोकेशन सुविधा नाही.",
   "distance.all": "सर्व भाग",
-  "distance.range": "{km} किमी पर्यंत",
+  "distance.range": "किमी पर्यंत",
   "distance.within": "आत",
   "labor.workers_nearby": "{count} कामगार{plural} जवळ",
   "labor.within_km": "{km} किमी आत",

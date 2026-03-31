@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -31,7 +31,6 @@ export default function NewBookingPage() {
   const [quantity, setQuantity] = useState(1)
   const [selectedUnit, setSelectedUnit] = useState<string>("")
   const [priceUnits, setPriceUnits] = useState<PriceUnit[]>([])
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [scheduledDate, setScheduledDate] = useState("")
   const [scheduledTime, setScheduledTime] = useState("")
   const [note, setNote] = useState("")
@@ -189,8 +188,6 @@ export default function NewBookingPage() {
 
   const getPriceUnit = () => getPriceUnitLabel(selectedUnit || service?.price_unit || "")
 
-  const totalPrice = service ? parseFloat(service.price) * quantity : 0
-
   // Get all images including thumbnail
   const allImages = service?.images?.length
     ? service.images
@@ -227,7 +224,7 @@ export default function NewBookingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col pb-44 lg:pb-0 bg-background">
+    <div className="min-h-screen flex flex-col pb-24 lg:pb-0 bg-background">
       <DesktopHeader variant="farmer" />
       <MobileHeader />
 
@@ -387,72 +384,38 @@ export default function NewBookingPage() {
                     <div className="relative">
                       <select
                         value={selectedUnit || service.price_unit}
-                        disabled
-                        className="w-full h-11 pl-4 pr-10 border border-border rounded-xl bg-muted/30 font-medium appearance-none text-foreground cursor-not-allowed"
+                        onChange={(e) => setSelectedUnit(e.target.value)}
+                        className="w-full h-11 pl-4 pr-10 border border-border rounded-xl bg-background font-medium appearance-none text-foreground"
                       >
-                        <option value={service.price_unit}>{getPriceUnitLabel(service.price_unit).replace("/", "")}</option>
+                        {priceUnits.map((u) => {
+                          const mkKey = `unit.${u.value.toLowerCase()}`
+                          const translated = t(mkKey)
+                          const optLabel = translated === mkKey ? u.label : translated
+                          return (
+                            <option key={u.value} value={u.value}>
+                              {optLabel}
+                            </option>
+                          )
+                        })}
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground opacity-60">
-                        <span className="material-symbols-outlined text-[20px]">lock</span>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
+                        <span className="material-symbols-outlined text-[20px]">expand_more</span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Advanced Options Toggle */}
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-primary font-medium mb-4"
-              >
-                <span className="material-symbols-outlined text-lg">{showAdvanced ? "expand_less" : "expand_more"}</span>
-                {showAdvanced ? t("booking.hide_advanced") : t("booking.show_advanced")}
-              </button>
-
-              {/* Advanced Options */}
-              {showAdvanced && (
-                <div className="space-y-4 mb-4 p-4 bg-muted/20 rounded-xl">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.schedule_date")}</label>
-                    <input
-                      type="date"
-                      value={scheduledDate}
-                      onChange={(e) => setScheduledDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full h-10 px-3 border border-border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.schedule_time")}</label>
-                    <input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="w-full h-10 px-3 border border-border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t("booking.note_for_partner")}</label>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder={t("booking.any_instructions")}
-                      className="w-full p-3 border border-border rounded-lg bg-background resize-none h-20"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Price Summary */}
-              <div className="border-t border-border pt-4 mb-4">
-                <div className="flex justify-between items-center text-sm mb-2">
-                  <span className="text-muted">₹{service.price} × {quantity}</span>
-                  <span className="text-foreground">₹{Math.round(totalPrice)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-foreground">{t("booking.total")}</span>
-                  <span className="text-2xl font-bold text-primary">₹{Math.round(totalPrice)}</span>
-                </div>
+              {/* Additional Note */}
+              <div className="mb-4">
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{t("booking.additional_note")}</label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("booking.note_placeholder")}
+                  rows={2}
+                  className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
+                />
               </div>
 
               {/* Error Message */}
@@ -462,28 +425,15 @@ export default function NewBookingPage() {
                 </div>
               )}
 
-              {/* Book Button */}
-              <button
-                onClick={handleBookService}
-                disabled={isBooking || !service.is_available}
-                className={cn(
-                  "w-full h-14 rounded-xl font-bold text-lg transition-all",
-                  service.is_available
-                    ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                {isBooking ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin material-symbols-outlined text-xl">sync</span>
-                    {t("booking.creating_booking")}
-                  </span>
-                ) : service.is_available ? (
-                  t("booking.book_service")
-                ) : (
-                  t("booking.unavailable")
-                )}
-              </button>
+              {/* Swipe To Book */}
+              <SwipeToBookControl
+                onComplete={handleBookService}
+                isLoading={isBooking}
+                disabled={!service.is_available}
+                swipeText={t("booking.swipe_to_book")}
+                loadingText={t("booking.creating_booking")}
+                unavailableText={t("booking.unavailable")}
+              />
 
               {!isAuthenticated && (
                 <p className="text-xs text-center text-muted mt-3">
@@ -560,12 +510,12 @@ export default function NewBookingPage() {
             <p className="text-sm text-primary font-semibold mb-1">
               {service.category?.name_translations?.[lang] || service.category?.name || service.category_name}
             </p>
-            <h1 className="text-xl font-bold text-foreground mb-2 break-words">{service.title}</h1>
+            <h1 className="text-xl font-bold text-foreground mb-2 wrap-break-word">{service.title}</h1>
             <div className="flex items-end justify-between gap-2 mt-3">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="material-symbols-outlined text-yellow-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 <span className="font-semibold text-sm">{service.partner?.rating || service.partner_rating || "New"}</span>
-                <span className="text-muted text-xs truncate max-w-[120px]">• {service.partner?.full_name || service.partner_name}</span>
+                <span className="text-muted text-xs truncate max-w-30">• {service.partner?.full_name || service.partner_name}</span>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <div className="flex items-baseline gap-1">
@@ -620,102 +570,62 @@ export default function NewBookingPage() {
                   <div className="relative">
                     <select
                       value={selectedUnit || service.price_unit}
-                      disabled
-                      className="w-full h-11 pl-3 pr-8 border border-border rounded-xl bg-muted/30 font-medium appearance-none text-foreground text-sm cursor-not-allowed"
+                      onChange={(e) => setSelectedUnit(e.target.value)}
+                      className="w-full h-11 pl-3 pr-8 border border-border rounded-xl bg-background font-medium appearance-none text-foreground text-sm"
                     >
-                      <option value={service.price_unit}>{getPriceUnitLabel(service.price_unit).replace("/", "")}</option>
+                      {priceUnits.map((u) => {
+                        const mkKey = `unit.${u.value.toLowerCase()}`
+                        const translated = t(mkKey)
+                        const optLabel = translated === mkKey ? u.label : translated
+                        return (
+                          <option key={u.value} value={u.value}>
+                            {optLabel}
+                          </option>
+                        )
+                      })}
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground opacity-60">
-                      <span className="material-symbols-outlined text-[18px]">lock</span>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-muted-foreground">
+                      <span className="material-symbols-outlined text-[18px]">expand_more</span>
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Advanced Toggle */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm text-primary font-medium"
-            >
-              <span className="material-symbols-outlined text-lg">{showAdvanced ? "expand_less" : "schedule"}</span>
-              {t("booking.schedule_for_later")}
-            </button>
+            {/* Additional Note */}
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{t("booking.additional_note")}</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t("booking.note_placeholder")}
+                rows={2}
+                className="w-full border border-border rounded-lg bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-navy/20 resize-none placeholder:text-muted-foreground/50 transition-all"
+              />
+            </div>
 
-            {showAdvanced && (
-              <div className="space-y-3 p-3 bg-muted/20 rounded-xl">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted mb-1 block">{t("booking.schedule_date")}</label>
-                    <input
-                      type="date"
-                      value={scheduledDate}
-                      onChange={(e) => setScheduledDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted mb-1 block">{t("booking.schedule_time")}</label>
-                    <input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-background"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-muted mb-1 block">{t("booking.note_for_partner")}</label>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder={t("booking.any_instructions")}
-                    className="w-full p-2 text-sm border border-border rounded-lg bg-background resize-none h-16"
-                  />
-                </div>
-              </div>
+            {bookingError && (
+              <p className="text-xs text-destructive">{bookingError}</p>
             )}
+
+            <SwipeToBookControl
+              onComplete={handleBookService}
+              isLoading={isBooking}
+              disabled={!service.is_available}
+              swipeText={t("booking.swipe_to_book")}
+              loadingText={t("booking.creating_booking")}
+              unavailableText={t("booking.unavailable")}
+            />
           </div>
         </div>
       </main>
 
-      {/* Bottom Bar - Mobile */}
-      <div className="fixed bottom-[75px] left-0 right-0 bg-card border-t border-border p-4 lg:hidden z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] w-full">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-xs text-muted">{t("booking.total") || "Total Amount"}</p>
-            <p className="text-xl font-bold text-primary">₹{Math.round(totalPrice)}</p>
-          </div>
-          <div className="text-right text-xs text-muted">
-            ₹{service.price} × {quantity}
-          </div>
-        </div>
-
-        {bookingError && (
-          <p className="text-xs text-destructive mb-2">{bookingError}</p>
-        )}
-
-        <button
-          onClick={handleBookService}
-          disabled={isBooking || !service.is_available}
-          className={cn(
-            "w-full h-12 rounded-xl font-bold transition-all",
-            service.is_available
-              ? "bg-primary text-white shadow-lg shadow-primary/25"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          {isBooking ? t("booking.creating_booking") : service.is_available ? t("booking.book_service") : t("booking.unavailable")}
-        </button>
-      </div>
-
       {/* ─── DUPLICATE PROVIDER MODAL ─── */}
       {duplicateProvider && (
-        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center">
+        <div className="fixed inset-0 z-100 flex items-end lg:items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDuplicateProvider(false)} />
           <div className="relative w-full max-w-md mx-4 bg-card rounded-t-3xl lg:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
+            <div className="bg-linear-to-br from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
               <div className="size-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
                 <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
               </div>
@@ -754,6 +664,135 @@ export default function NewBookingPage() {
       )}
 
       <BottomNav variant="farmer" />
+    </div>
+  )
+}
+
+function SwipeToBookControl({
+  onComplete,
+  isLoading,
+  disabled,
+  swipeText,
+  loadingText,
+  unavailableText,
+}: {
+  onComplete: () => Promise<void> | void
+  isLoading: boolean
+  disabled: boolean
+  swipeText: string
+  loadingText: string
+  unavailableText: string
+}) {
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const sliderStartX = useRef(0)
+  const sliderWidth = useRef(0)
+  const [sliderProgress, setSliderProgress] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const triggerComplete = () => {
+    Promise.resolve(onComplete()).finally(() => {
+      setSliderProgress(0)
+      setIsDragging(false)
+    })
+  }
+
+  const onSliderTouchStart = (e: React.TouchEvent) => {
+    if (!sliderRef.current || isLoading || disabled) return
+    setIsDragging(true)
+    sliderStartX.current = e.touches[0].clientX
+    sliderWidth.current = sliderRef.current.offsetWidth - 64
+  }
+
+  const onSliderTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return
+    const pct = Math.min(Math.max((e.touches[0].clientX - sliderStartX.current) / sliderWidth.current, 0), 1)
+    setSliderProgress(pct)
+  }
+
+  const onSliderTouchEnd = () => {
+    setIsDragging(false)
+    if (sliderProgress > 0.85) {
+      setSliderProgress(1)
+      triggerComplete()
+    } else {
+      setSliderProgress(0)
+    }
+  }
+
+  const onSliderMouseDown = (e: React.MouseEvent) => {
+    if (!sliderRef.current || isLoading || disabled) return
+    setIsDragging(true)
+    sliderStartX.current = e.clientX
+    sliderWidth.current = sliderRef.current.offsetWidth - 64
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const pct = Math.min(Math.max((ev.clientX - sliderStartX.current) / sliderWidth.current, 0), 1)
+      setSliderProgress(pct)
+    }
+
+    const onMouseUp = () => {
+      setIsDragging(false)
+      document.removeEventListener("mousemove", onMouseMove)
+      document.removeEventListener("mouseup", onMouseUp)
+      setSliderProgress((prev) => {
+        if (prev > 0.85) {
+          setTimeout(() => triggerComplete(), 0)
+          return 1
+        }
+        return 0
+      })
+    }
+
+    document.addEventListener("mousemove", onMouseMove)
+    document.addEventListener("mouseup", onMouseUp)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="relative h-14 rounded-xl bg-navy/80 flex items-center justify-center gap-2">
+        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+        <p className="text-white/80 text-sm font-semibold">{loadingText}</p>
+      </div>
+    )
+  }
+
+  if (disabled) {
+    return (
+      <div className="relative h-14 bg-muted/60 border border-border rounded-xl flex items-center justify-center gap-2">
+        <span className="material-symbols-outlined text-muted-foreground text-[20px]">search_off</span>
+        <p className="text-sm font-medium text-muted-foreground">{unavailableText}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={sliderRef}
+      className="relative h-14 rounded-xl overflow-hidden select-none touch-none shadow-lg bg-navy"
+    >
+      <div className="absolute inset-0 flex items-center justify-center">
+        <p className={`text-white/60 text-sm font-semibold tracking-wide transition-opacity duration-200 ${sliderProgress > 0.15 ? "opacity-0" : "opacity-100"}`}>
+          {swipeText}
+        </p>
+      </div>
+      <div
+        className="absolute inset-y-0 left-0 bg-green-500/20 rounded-xl transition-[width] duration-75"
+        style={{ width: `${sliderProgress * 100}%` }}
+      />
+      <div
+        className="absolute top-1.5 bottom-1.5 w-13 rounded-[10px] bg-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-[left] duration-75"
+        style={{ left: `calc(6px + ${sliderProgress * (100 - 15)}%)` }}
+        onTouchStart={onSliderTouchStart}
+        onTouchMove={onSliderTouchMove}
+        onTouchEnd={onSliderTouchEnd}
+        onMouseDown={onSliderMouseDown}
+      >
+        {sliderProgress > 0.85 ? (
+          <span className="material-symbols-outlined text-green-600 text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+        ) : (
+          <span className="material-symbols-outlined text-navy text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>double_arrow</span>
+        )}
+      </div>
     </div>
   )
 }

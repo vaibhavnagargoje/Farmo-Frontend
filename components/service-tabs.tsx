@@ -2,7 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import type { Category } from "@/lib/api"
 import { LaborListingSection } from "@/components/labor-listing-section"
 import { useLanguage } from "@/contexts/language-context"
@@ -35,8 +36,16 @@ interface ServiceTabsProps {
 }
 
 export function ServiceTabs({ categories }: ServiceTabsProps) {
+    const searchParams = useSearchParams()
+    const tabParam = searchParams.get("tab")
     const [activeTab, setActiveTab] = useState<"equipment" | "labors">("equipment")
     const { t, lang } = useLanguage()
+
+    useEffect(() => {
+        if (tabParam === "equipment" || tabParam === "labors") {
+            setActiveTab(tabParam)
+        }
+    }, [tabParam])
 
     return (
         <>
@@ -84,10 +93,10 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                                     return (
                                         <Link
                                             key={category.id}
-                                            href={`/category/${category.slug}`}
+                                            href={`/category/${category.slug}/providers`}
                                             className="group flex flex-col overflow-hidden rounded-md bg-card border border-border shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                                         >
-                                            <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted/20">
+                                            <div className="relative w-full aspect-4/3 overflow-hidden bg-muted/20">
                                                 <Image
                                                     src={category.icon || image}
                                                     alt={displayName}
@@ -108,7 +117,7 @@ export function ServiceTabs({ categories }: ServiceTabsProps) {
                             <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 lg:gap-6 px-4 lg:px-6 pb-2">
                                 {[1, 2, 3, 4, 5, 6].map((i) => (
                                     <div key={i} className="rounded-md overflow-hidden bg-card border border-border animate-pulse">
-                                        <div className="w-full aspect-[4/3] bg-muted/30" />
+                                        <div className="w-full aspect-4/3 bg-muted/30" />
                                         <div className="px-3 py-2.5 lg:px-4 lg:py-3">
                                             <div className="h-4 bg-muted/30 rounded w-3/4 mx-auto" />
                                         </div>
