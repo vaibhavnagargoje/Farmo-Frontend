@@ -349,14 +349,16 @@ export default function ProvidersPage() {
                 {/* Results count */}
                 {locationStatus === "ready" && selectedLocation && !isLoading && (
                     <div className="px-4 lg:px-6 pt-4 pb-2">
-                        <div className="bg-card/70 border border-border rounded-lg px-3.5 py-2.5">
-                            <h2 className="text-sm font-bold text-foreground">
-                                {t("providers.count_label").replace("{count}", String(filteredServices.length)).replace("{plural}", filteredServices.length === 1 ? "" : "s")}
-                            </h2>
-                            <p className="text-[11px] text-muted-foreground">
+                        <p className="text-sm lg:text-[15px] font-semibold tracking-tight text-foreground flex items-center flex-wrap gap-1.5">
+                            <span className="material-symbols-outlined text-[16px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                            <span>
+                                {t("provider.available").replace("{count}", String(filteredServices.length)).replace("{plural}", filteredServices.length === 1 ? "" : "s")}
+                            </span>
+                            <span className="text-muted-foreground/70">|</span>
+                            <span className="text-muted-foreground font-medium">
                                 {t("distance.within")} {activeDistanceLabel}
-                            </p>
-                        </div>
+                            </span>
+                        </p>
                     </div>
                 )}
 
