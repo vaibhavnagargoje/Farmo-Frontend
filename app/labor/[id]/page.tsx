@@ -73,7 +73,7 @@ export default function LaborDetailPage() {
             router.back()
             return
         }
-        router.push("/?tab=labors")
+        router.push("/labor")
     }
 
     return (
@@ -101,7 +101,7 @@ export default function LaborDetailPage() {
                         </div>
                         <h2 className="text-lg font-bold text-foreground mb-1">{error || t("labor_detail.not_found_title")}</h2>
                         <p className="text-sm text-muted-foreground mb-4">{t("labor_detail.not_found_desc")}</p>
-                        <Link href="/?tab=labors" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">{t("labor_detail.go_home")}</Link>
+                        <Link href="/labor" className="px-5 py-2.5 bg-navy text-white text-sm font-semibold rounded-xl">{t("labor_detail.go_home")}</Link>
                     </div>
                 ) : (
                     <div className="space-y-4">

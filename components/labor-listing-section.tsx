@@ -290,7 +290,7 @@ export function LaborListingSection() {
                             const statusInfo = getStatusInfo(labor.is_available)
                             const skills = labor.skills?.split(",").map(s => s.trim()).filter(Boolean) || []
                             return (
-                                <Link key={labor.id} href={`/labor/${labor.id}?from=${encodeURIComponent("/?tab=labors")}`} className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow block">
+                                <Link key={labor.id} href={`/labor/${labor.id}?from=${encodeURIComponent("/labor")}`} className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow block">
                                     {/* Header: Name + Status */}
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex items-center gap-3 min-w-0">
