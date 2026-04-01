@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
@@ -37,8 +38,6 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const { t, lang } = useLanguage()
   const navItems = variant === "partner" ? partnerNavItems : farmerNavItems
-
-  const [locationName, setLocationName] = useState<string>("India")
   
   // Search State
   const [searchQuery, setSearchQuery] = useState("")
@@ -104,37 +103,23 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
     }
   }
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetch("/api/auth/location")
-        .then(res => res.json())
-        .then(data => {
-          if (data.has_location && data.location?.address) {
-            setLocationName(data.location.address.split(',')[0])
-          } else {
-            setLocationName(t("location.set_location"))
-          }
-        })
-        .catch(() => { })
-    } else {
-      setLocationName(t("location.set_location"))
-    }
-  }, [isAuthenticated])
-
   return (
     <header className="hidden lg:block sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Link href={variant === "partner" ? "/partner" : "/"} className="size-10 bg-navy rounded-xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-xl">agriculture</span>
-            </Link>
             <div className="flex flex-col justify-center">
-              <Link href={variant === "partner" ? "/partner" : "/"} className="text-xl font-bold text-navy leading-none tracking-tight">
-                Farmo
+              <Link href={variant === "partner" ? "/partner" : "/"} className="inline-flex items-center">
+                <Image
+                  src="/farmo-logo.png"
+                  alt="Farmo"
+                  width={172}
+                  height={50}
+                  className="h-9 w-auto object-contain"
+                  priority
+                />
               </Link>
-              <span className="text-xs text-muted-foreground leading-none mt-0.5 max-w-[120px] truncate">{locationName}</span>
             </div>
           </div>
 
@@ -164,7 +149,7 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
               
               {/* Dropdown */}
               {isDropdownOpen && searchResults && (
-                 <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden max-h-[400px] overflow-y-auto">
+                 <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden max-h-100 overflow-y-auto">
                    {/* Categories */}
                    {searchResults.categories?.length > 0 && (
                      <div className="p-2 border-b border-border/50">

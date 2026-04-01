@@ -25,7 +25,7 @@ export default async function HomePage() {
     "@type": "WebSite",
     "name": "Farmo",
     "url": "https://farmo.in",
-    "description": "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+    "description": "Find machinery and labour at your doorstep with Farmo.",
     "potentialAction": {
       "@type": "SearchAction",
       "target": "https://farmo.in/search?q={search_term_string}",

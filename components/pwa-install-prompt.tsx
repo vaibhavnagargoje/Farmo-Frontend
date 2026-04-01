@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
@@ -84,10 +85,14 @@ export function PwaInstallPrompt() {
         </button>
 
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-inner flex-shrink-0">
-             <span className="material-symbols-outlined text-primary text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              agriculture
-            </span>
+          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-inner shrink-0">
+            <Image
+              src="/farmo mobile logo.png"
+              alt="Farmo"
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-xl object-cover"
+            />
           </div>
           <div>
             <h3 className="font-bold text-white text-[15px]">{t("pwa.install_title")}</h3>

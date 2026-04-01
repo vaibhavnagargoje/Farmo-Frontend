@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { NotificationDropdown } from "@/components/notification-dropdown"
@@ -11,7 +12,6 @@ import { API_ENDPOINTS, SearchResponse, fetchPublic } from "@/lib/api"
 
 interface MobileHeaderProps {
   className?: string
-  location?: string
 }
 
 export function MobileHeader({ className }: MobileHeaderProps) {
@@ -28,25 +28,12 @@ export function MobileHeader({ className }: MobileHeaderProps) {
   const { t, lang } = useLanguage()
   const router = useRouter()
   const pathname = usePathname()
-  const [locationName, setLocationName] = useState<string>("India")
   const [hasPartnerAccount, setHasPartnerAccount] = useState<boolean>(false)
 
   const isPartnerView = pathname?.startsWith('/partner')
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Fetch location
-      fetch("/api/auth/location")
-        .then(res => res.json())
-        .then(data => {
-          if (data.has_location && data.location?.address) {
-            setLocationName(data.location.address.split(',')[0])
-          } else {
-            setLocationName(t("location.set_location"))
-          }
-        })
-        .catch(() => { })
-
       // Fetch partner status
       fetch("/api/profile")
         .then(res => res.json())
@@ -57,7 +44,6 @@ export function MobileHeader({ className }: MobileHeaderProps) {
         })
         .catch(() => { })
     } else {
-      setLocationName(t("location.set_location"))
       setHasPartnerAccount(false)
     }
   }, [isAuthenticated])
@@ -101,18 +87,23 @@ export function MobileHeader({ className }: MobileHeaderProps) {
     <header className={cn("sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 lg:hidden", className)}>
       <div className="flex items-center justify-between px-4 h-16 relative">
 
-        {/* Logo & Location Section */}
+        {/* Logo Section */}
         <div className={cn(
           "flex items-center gap-3 transition-all duration-300 ease-in-out",
           isSearchExpanded ? "opacity-0 -translate-x-full absolute pointer-events-none" : "opacity-100 translate-x-0 relative"
         )}>
           <div className="flex items-center gap-3 shrink-0">
-            <Link href="/" className="size-10 bg-navy rounded-xl flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-primary text-[24px]">agriculture</span>
-            </Link>
             <div className="flex flex-col justify-center">
-              <Link href="/" className="text-xl font-bold text-navy leading-none tracking-tight">Farmo</Link>
-              <span className="text-xs text-muted-foreground leading-none mt-0.5 max-w-[120px] truncate">{locationName}</span>
+              <Link href="/" className="inline-flex items-center">
+                <Image
+                  src="/farmo-logo.png"
+                  alt="Farmo"
+                  width={150}
+                  height={44}
+                  className="h-8 w-auto object-contain"
+                  priority
+                />
+              </Link>
             </div>
           </div>
         </div>

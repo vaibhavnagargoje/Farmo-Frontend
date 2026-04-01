@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s | Farmo",
   },
   description:
-    "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you. Fast, affordable & reliable.",
+    "Find machinery and labour at your doorstep. Book trusted farm services quickly with Farmo.",
   metadataBase: new URL("https://farmo.in"),
   keywords: [
     "farm equipment rental",
@@ -41,13 +41,13 @@ export const metadata: Metadata = {
     siteName: "Farmo",
     title: "Farmo - Farm Equipment & Services Rental",
     description:
-      "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+      "Find machinery and labour at your doorstep with Farmo.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Farmo - Farm Equipment & Services Rental",
     description:
-      "Rent tractors, harvesters, rotavators and farm equipment on demand. Book verified farm service providers near you.",
+      "Find machinery and labour at your doorstep with Farmo.",
   },
   robots: {
     index: true,
@@ -61,6 +61,15 @@ export const metadata: Metadata = {
     },
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/farmo-icon.ico", type: "image/x-icon" },
+    ],
+    shortcut: ["/farmo-icon.ico"],
+    apple: [
+      { url: "/farmo%20mobile%20logo.png", type: "image/png" },
+    ],
+  },
   alternates: {
     canonical: "https://farmo.in",
   },

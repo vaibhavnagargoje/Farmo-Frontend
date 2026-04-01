@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 
 const STORAGE_KEY = "farmo_dev_access"
 const STORAGE_VALUE = "granted"
@@ -35,7 +36,16 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-primary mb-2">Farmo</h1>
+            <div className="mb-3 inline-flex items-center justify-center">
+              <Image
+                src="/farmo-logo.png"
+                alt="Farmo"
+                width={190}
+                height={56}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+            </div>
             <p className="text-sm text-muted-foreground">
               This site is currently under development.
               <br />

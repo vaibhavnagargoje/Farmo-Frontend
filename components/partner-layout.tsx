@@ -121,11 +121,15 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
             {/* Logo */}
             <div className="h-20 flex items-center px-8 border-b border-gray-200/50">
                 <Link href="/partner" className="flex items-center gap-3" onClick={onNavClick}>
-                    <div className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center text-white shadow-md">
-                        <span className="material-symbols-outlined text-lg">agriculture</span>
-                    </div>
                     <div>
-                        <span className="font-bold text-xl tracking-tight text-navy">Farmo</span>
+                        <Image
+                            src="/farmo-logo.png"
+                            alt="Farmo"
+                            width={150}
+                            height={44}
+                            className="h-8 w-auto object-contain"
+                            priority
+                        />
                         <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">{t("partner_layout.partner")}</span>
                     </div>
                 </Link>
@@ -257,7 +261,7 @@ export function PartnerLayout({ children, pageTitle = "Partner Dashboard" }: Par
             {/* ═══ DESKTOP LAYOUT ═══ */}
             <div className="hidden lg:flex h-screen overflow-hidden">
                 {/* Desktop Sidebar */}
-                <aside className="w-72 bg-[#F3F4F6] h-screen flex flex-col flex-shrink-0 border-r border-gray-200">
+                <aside className="w-72 bg-[#F3F4F6] h-screen flex flex-col shrink-0 border-r border-gray-200">
                     <SidebarContent />
                 </aside>
 

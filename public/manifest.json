@@ -1,7 +1,7 @@
 {
-  "name": "Farmo - Farm Equipment & Services Rental",
+  "name": "Farmo - Find Machinery & Labour",
   "short_name": "Farmo",
-  "description": "Rent tractors, harvesters, and farm equipment on demand. Book verified farm service providers near you.",
+  "description": "Find machinery and labour at your doorstep with Farmo.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -9,24 +9,24 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "48x48",
+      "src": "/farmo-icon.ico",
+      "sizes": "any",
       "type": "image/x-icon"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/farmo%20mobile%20logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/farmo%20mobile%20logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/farmo%20mobile%20logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
