@@ -2,7 +2,54 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { API_ENDPOINTS } from "@/lib/api"
 import { USER_COOKIE_NAME } from "@/lib/auth"
-import { apiRequest, unauthenticatedResponse } from "@/lib/api-server"
+import { apiRequest, extractErrorMessage, getValidToken, unauthenticatedResponse } from "@/lib/api-server"
+
+const USER_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
+
+function getUserCookieOptions() {
+  return {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: USER_COOKIE_MAX_AGE,
+  }
+}
+
+async function parseResponseBody(response: Response): Promise<Record<string, unknown>> {
+  const contentType = response.headers.get("content-type") || ""
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as Record<string, unknown>
+  }
+
+  const text = await response.text()
+  return { message: text || "Unexpected response from backend" }
+}
+
+async function setUserCookie(user: unknown) {
+  if (!user || typeof user !== "object") {
+    return
+  }
+
+  const cookieStore = await cookies()
+  cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), getUserCookieOptions())
+}
+
+async function getUserFromCookie(): Promise<Record<string, unknown> | null> {
+  const cookieStore = await cookies()
+  const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
+
+  if (!userCookie) {
+    return null
+  }
+
+  try {
+    return JSON.parse(userCookie) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
 
 // GET - Fetch current user profile
 export async function GET() {
@@ -58,80 +105,153 @@ export async function GET() {
 // PATCH - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { full_name, address, default_lat, default_lng, ...otherData } = body
-
-    const { token } = await apiRequest(API_ENDPOINTS.USER_PROFILE)
+    const token = await getValidToken()
 
     if (!token) {
       return unauthenticatedResponse("Not authenticated")
     }
 
+    const requestContentType = request.headers.get("content-type") || ""
+
+    // Handle profile photo updates via multipart/form-data
+    if (requestContentType.includes("multipart/form-data")) {
+      const incomingFormData = await request.formData()
+      const djangoFormData = new FormData()
+
+      const fullName = incomingFormData.get("full_name")
+      if (typeof fullName === "string") {
+        djangoFormData.append("full_name", fullName.trim())
+      }
+
+      const photo = incomingFormData.get("profile_picture")
+      if (photo instanceof File) {
+        djangoFormData.append("profile_picture", photo)
+      }
+
+      const userResponse = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: djangoFormData,
+      })
+
+      const userData = await parseResponseBody(userResponse)
+
+      if (!userResponse.ok) {
+        const message = extractErrorMessage(userData, "Failed to update profile")
+        return NextResponse.json(
+          { message, errors: userData },
+          { status: userResponse.status }
+        )
+      }
+
+      await setUserCookie(userData.user)
+
+      return NextResponse.json({
+        message: typeof userData.message === "string" ? userData.message : "Profile updated successfully",
+        user: userData.user ?? null,
+        profile: userData.profile ?? null,
+        partner: null,
+      })
+    }
+
+    const body = (await request.json()) as Record<string, unknown>
+    const { full_name, address, default_lat, default_lng, ...otherData } = body
+
+    let updatedUser: Record<string, unknown> | null = null
+
     // 1. Update basic User info (Name) via /users/profile/
     if (full_name !== undefined) {
-      const userUpdatePayload: Record<string, string> = {}
-      if (full_name) userUpdatePayload.full_name = full_name
-      if (address) userUpdatePayload.village = address
+      const normalizedName = typeof full_name === "string" ? full_name.trim() : ""
+      const userUpdatePayload: Record<string, string> = {
+        full_name: normalizedName,
+      }
 
-      await apiRequest(API_ENDPOINTS.USER_PROFILE, {
+      const userResponse = await fetch(API_ENDPOINTS.USER_PROFILE, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(userUpdatePayload),
       })
+
+      const userData = await parseResponseBody(userResponse)
+      if (!userResponse.ok) {
+        const message = extractErrorMessage(userData, "Failed to update profile")
+        return NextResponse.json(
+          { message, errors: userData },
+          { status: userResponse.status }
+        )
+      }
+
+      if (userData.user && typeof userData.user === "object") {
+        updatedUser = userData.user as Record<string, unknown>
+        await setUserCookie(updatedUser)
+      }
     }
 
     // 1b. Save coordinates to UserLocation if provided
     if (default_lat != null && default_lng != null) {
-      await apiRequest(API_ENDPOINTS.USER_LOCATION, {
+      const locationResponse = await fetch(API_ENDPOINTS.USER_LOCATION, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           latitude: default_lat,
           longitude: default_lng,
-          address: address || "",
+          address: typeof address === "string" ? address : "",
         }),
       })
-    }
 
-    // 2. Update Partner Profile (Address/City) if exists
-    let partnerData = null
-    const partnerPayload: Record<string, unknown> = { ...otherData }
-
-    if (Object.keys(partnerPayload).length > 0) {
-      const { response: partnerResponse } = await apiRequest(
-        API_ENDPOINTS.PARTNER_PROFILE,
-        {
-          method: "PATCH",
-          body: JSON.stringify(partnerPayload),
-        }
-      )
-
-      if (partnerResponse?.ok) {
-        const contentType = partnerResponse.headers.get("content-type") || ""
-        if (contentType.includes("application/json")) {
-          partnerData = await partnerResponse.json()
-        }
+      if (!locationResponse.ok) {
+        const locationData = await parseResponseBody(locationResponse)
+        const message = extractErrorMessage(locationData, "Failed to update location")
+        return NextResponse.json(
+          { message, errors: locationData },
+          { status: locationResponse.status }
+        )
       }
     }
 
-    // 3. Update User Cookie
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get(USER_COOKIE_NAME)?.value
-    let user = userCookie ? JSON.parse(userCookie) : null
+    // 2. Update Partner Profile (Address/City) if exists
+    let partnerData: Record<string, unknown> | null = null
+    const partnerPayload: Record<string, unknown> = { ...otherData }
 
-    if (user && full_name) {
-      user.full_name = full_name
-
-      cookieStore.set(USER_COOKIE_NAME, JSON.stringify(user), {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60, // 7 days
+    if (Object.keys(partnerPayload).length > 0) {
+      const partnerResponse = await fetch(API_ENDPOINTS.PARTNER_PROFILE, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(partnerPayload),
       })
+
+      const partnerBody = await parseResponseBody(partnerResponse)
+      if (!partnerResponse.ok) {
+        const message = extractErrorMessage(partnerBody, "Failed to update partner profile")
+        return NextResponse.json(
+          { message, errors: partnerBody },
+          { status: partnerResponse.status }
+        )
+      }
+
+      if (partnerBody && typeof partnerBody === "object") {
+        partnerData = partnerBody
+      }
+    }
+
+    if (!updatedUser) {
+      updatedUser = await getUserFromCookie()
     }
 
     return NextResponse.json({
       message: "Profile updated successfully",
-      user,
+      user: updatedUser,
       partner: partnerData,
     })
   } catch (error) {
