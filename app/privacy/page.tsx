@@ -33,7 +33,8 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li><strong>Contact Information:</strong> Your phone number and email address to authenticate your identity.</li>
                 <li><strong>Profile Details:</strong> Your full name and optional profile picture.</li>
-                <li><strong>Location Data:</strong> With your permission, we collect precise device location (latitude/longitude) to connect you with nearby agricultural service providers and machinery rentals.</li>
+                <li><strong>Camera and Device Storage:</strong> We request access to your device's camera and media gallery solely so you can capture or upload profile photos and accurately showcase images of your machinery or services.</li>
+                <li><strong>Location Data:</strong> With your permission, we collect precise device location (latitude/longitude) to connect you with nearby agricultural service providers, machinery rentals, and to provide accurate navigation and directions.</li>
                 <li><strong>Device Information:</strong> We collect push notification tokens to send you essential booking updates.</li>
               </ul>
             </section>
