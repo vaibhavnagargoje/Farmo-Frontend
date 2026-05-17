@@ -126,6 +126,20 @@ export function DesktopHeader({ variant = "farmer" }: DesktopHeaderProps) {
 
           {/* Right Section */}
           <div className="flex items-center gap-4">
+            {/* Download App Button */}
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.farmoapp&pcampaignid=web_share" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hidden md:flex transition-transform hover:scale-105"
+            >
+              <img 
+                alt="Get it on Google Play" 
+                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
+                className="h-12 w-auto object-contain" 
+              />
+            </a>
+
             {/* Search Bar */}
             <div className="w-[320px] relative" ref={dropdownRef}>
               <form onSubmit={handleSearchSubmit} className="relative flex items-center h-10 rounded-full bg-muted/30 border border-transparent hover:border-primary/20 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-sm transition-all overflow-hidden group">

@@ -194,6 +194,26 @@ export default function CategoriesPage() {
                         </Link>
                     </div>
                 )}
+                
+                {/* Download App Banner */}
+                {!isLoading && categories.length > 0 && (
+                    <div className="mt-8 flex flex-col items-center justify-center p-6 bg-card border border-border mt-12 rounded-xl mb-4 text-center">
+                        <h3 className="text-lg font-bold text-foreground mb-2">Get the Full Experience</h3>
+                        <p className="text-sm text-muted-foreground mb-4">Download the Farmo app for instant access and seamless booking.</p>
+                        <a 
+                            href="https://play.google.com/store/apps/details?id=com.farmoapp&pcampaignid=web_share" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="transition-transform hover:scale-105"
+                        >
+                            <img 
+                                alt="Get it on Google Play" 
+                                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
+                                className="h-14 w-auto object-contain" 
+                            />
+                        </a>
+                    </div>
+                )}
             </main>
 
             <BottomNav variant="farmer" />

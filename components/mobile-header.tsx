@@ -207,6 +207,18 @@ export function MobileHeader({ className }: MobileHeaderProps) {
             "flex items-center gap-1 transition-opacity duration-300 ease-in-out",
             isSearchExpanded ? "opacity-0 pointer-events-none absolute right-4" : "opacity-100"
           )}>
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.farmoapp&pcampaignid=web_share" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="mr-1 active:scale-95 transition-transform shrink-0"
+            >
+              <img 
+                alt="Get it on Google Play" 
+                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
+                className="h-8 w-auto object-contain" 
+              />
+            </a>
             <NotificationDropdown />
             {hasPartnerAccount && (
               <Link
